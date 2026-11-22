@@ -1,0 +1,15 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><link rel="icon" href="data:,">
+<script type="importmap">{"imports":{"three":"../lib/three.module.js","three/addons/":"../lib/addons/"}}</script>
+<style>html,body{margin:0;background:#f2a93b}canvas{width:100vw;height:100vh;display:block}</style></head><body><canvas id=c></canvas>
+<script type="module">
+// App-icon source: a headshot of our own procedural Worm (rendered by test/make-icons.mjs).
+import * as THREE from 'three'; import { Engine } from '../src/engine.js'; import { createWorm } from '../src/worm.js';
+const e = new Engine(document.getElementById('c')); const sc = new THREE.Scene();
+const hdr = await e.loadHDR('../assets/hdri/kloofendal_day_1k.hdr'); sc.environment = hdr.env; sc.environmentIntensity = 0.7; sc.background = new THREE.Color(0xf0a030);
+const sun = new THREE.DirectionalLight(0xfff1d6, 2.6); sun.position.set(4, 8, 9); sc.add(sun);
+const w = createWorm(); sc.add(w.root); w.setPose('rest'); w.state.blend = 1;
+e.setScene(sc); e.camera.fov = 30; e.camera.updateProjectionMatrix();
+for (let i = 0; i < 90; i++) { w.state.happy = 1; w.state.blinkT = 9; w.lookAt(new THREE.Vector3(1.5, 3.2, 12)); w.update(1 / 60, 3 + i / 60); }
+const h = w.headWorld(); e.camera.position.set(h.x + 1.3, h.y + 0.5, h.z + 7.2); e.camera.lookAt(h.x, h.y + 0.12, h.z);
+let n = 0; function f() { w.state.happy = 1; w.state.blinkT = 9; w.update(0, 4.5); e.render(1 / 60); if (++n > 20) window.__t = 99; requestAnimationFrame(f); } f();
+</script></body></html>

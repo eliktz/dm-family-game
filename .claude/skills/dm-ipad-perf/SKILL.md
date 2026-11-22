@@ -8,5 +8,5 @@ description: iPad/iPhone Safari performance and touch rules for dmgame (budgets,
 - One shadow-casting light per scene (outdoor sun follows the player; cave spot). Use a 1–2K map.
 - Quality tiers live in `src/engine.js` (high/medium/low, downgrade-only after a 3 s warm-up). `?tier=` pins a tier for tests.
 - Touch: `touch-action:none`, block pinch/double-tap zoom, buttons ≥ 72 px, joystick bottom-left with a dead-zone, `env(safe-area-inset-*)`,
-  portrait shows the rotate prompt. Audio unlocks on the first tap (WebAudio), and speech is optional (he-IL voice).
+  portrait shows the rotate prompt. Audio unlocks on the first tap (WebAudio), and there is no speech synthesis.
 - Animations must be time-based (`performance.now()` or dt), never frame-count based (120 Hz iPads).

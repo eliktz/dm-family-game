@@ -7,4 +7,4 @@ description: Hebrew RTL UI conventions for dmgame (dir, bidi of numbers and equa
 - "Next" arrows point LEFT in RTL (`המשך ◀`). The joystick stays bottom-left (thumb), the action buttons bottom-right.
 - Names: דרייק, וורם, בו, אנה, רורי, פטרה, גריפית', המלך רולנד. Speaker chips use `FACES`/`NAMES` in `src/ui.js`.
 - Tone: age 7, short, warm, never scary. Male second person for the player. All text is original (never book text).
-- `speak()` in `src/audio.js` reads lines aloud with the device's Hebrew voice. Keep lines plain (emoji get stripped).
+- There is no read-aloud (removed; professional voice-over may come later). Keep lines short and plain so a 7-year-old can read them.

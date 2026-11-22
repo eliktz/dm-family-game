@@ -77,30 +77,56 @@ let until = null; // { test: () => bool, resolve }
 const waitFor = test => new Promise(res => { until = { test, resolve: res }; });
 const checkUntil = () => { if (until && until.test()) { const u = until; until = null; u.resolve(); } };
 
-// ---------------------------------------------------------------- progress (localStorage 'dm.progress' = {"done":[1,2]})
-const CHAPTERS = [1, 2];
-const progress = { done: new Set() };
-try { for (const n of JSON.parse(localStorage.getItem('dm.progress') || '{}').done || []) if (CHAPTERS.includes(n)) progress.done.add(n); } catch { /* fresh start */ }
-const unlockAll = params.get('all') === '1';
-const isUnlocked = n => n === 1 || unlockAll || progress.done.has(n - 1);
-function markDone(n) {
-  progress.done.add(n);
-  try { localStorage.setItem('dm.progress', JSON.stringify({ done: [...progress.done].sort() })); } catch { /* private mode: progress just isn't kept */ }
-  refreshTitle();
+// ---------------------------------------------------------------- progress + chapter map
+// localStorage 'dm.progress' = { done: [1, 2], last: { ch: 2, beat: 'warm' }, all: false }  (older saves only had `done`)
+const CHAPTERS = [
+  { n: 1, name: 'אבן הדרקון', badge: '💚' }, { n: 2, name: 'הביצה המסתורית', badge: '💧' }, { n: 3, name: 'השמש של אנה', badge: '☀️' }, { n: 4, name: 'הלהבה של רורי', badge: '🔥' },
+  { n: 5, name: 'מערת הקריסטלים של פטרה', badge: '💎' }, { n: 6, name: 'הענן הרטנן', badge: '🖌️' }, { n: 7, name: 'המסע אל הר הקשת', badge: '🗺️' }, { n: 8, name: 'קשת של חברים', badge: '🏅' },
+];
+const mods = {};                                    // built chapters: n → { start(beat) }
+const progress = { done: new Set(), last: null, all: false };
+try {
+  const p = JSON.parse(localStorage.getItem('dm.progress') || '{}') || {};
+  for (const n of p.done || []) if (CHAPTERS.some(c => c.n === n)) progress.done.add(n);
+  if (p.last && Number.isInteger(p.last.ch) && typeof p.last.beat === 'string') progress.last = { ch: p.last.ch, beat: p.last.beat };
+  progress.all = p.all === true;
+} catch { /* fresh start */ }
+const isUnlocked = n => n === 1 || params.get('all') === '1' || progress.all || progress.done.has(n - 1);
+function saveProgress() {
+  try { localStorage.setItem('dm.progress', JSON.stringify({ done: [...progress.done].sort(), last: progress.last, all: progress.all })); } catch { /* private mode: progress just isn't kept */ }
 }
-const TITLE_HINT = 'גע בוורם כדי להגיד לו שלום 👋';
-function refreshTitle() {
-  for (const n of CHAPTERS) {
-    const b = $(n === 1 ? '#btn-start' : `#btn-ch${n}`), open = isUnlocked(n), done = progress.done.has(n);
-    b.classList.toggle('locked', !open); b.classList.toggle('done', done);
-    b.querySelector('.lead').textContent = open ? '▶' : '🔒';
-    b.querySelector('.ks').hidden = !done;
+function checkpoint(ch, beat) { progress.last = { ch, beat }; saveProgress(); }
+function markDone(n) { progress.done.add(n); progress.last = { ch: mods[n + 1] ? n + 1 : n, beat: 'intro' }; saveProgress(); refreshTitle(); }
+const resumePoint = () => { const l = progress.last; return l && mods[l.ch] && isUnlocked(l.ch) ? l : null; };
+let titleToastT = null;
+function titleToast(text, ms = 2600) { const t = $('#title-toast'); t.textContent = text; t.hidden = false; clearTimeout(titleToastT); titleToastT = setTimeout(() => (t.hidden = true), ms); }
+function startChapter(n, beat = 'intro') { unlock(); if (settings.sound) music(true); guard(() => mods[n].start(beat)); }
+function buildChapterMap() {
+  const box = $('#chapters');
+  for (const c of CHAPTERS) {
+    const b = document.createElement('button'); b.className = 'chap'; b.dataset.ch = c.n; b.id = `ch-${c.n}`;
+    b.innerHTML = '<span class="top"><span class="num" dir="ltr"></span> <span class="ic"></span></span><span class="nm"></span><span class="soon" hidden>בקרוב</span>';
+    b.querySelector('.num').textContent = c.n; b.querySelector('.nm').textContent = c.name;
+    b.addEventListener('pointerup', () => {
+      unlock(); sfx.tap();
+      if (!mods[c.n]) { titleToast('הפרק הזה עוד בדרך… בקרוב! ✨'); worm.wiggle(0.8); return; }               // friendly nudges, never a fail
+      if (!isUnlocked(c.n)) { titleToast(`קודם מסיימים את פרק ${c.n - 1} עם וורם 💚`); worm.wiggle(1); return; }
+      startChapter(c.n);
+    });
+    box.appendChild(b);
   }
-  const next = CHAPTERS.find(n => isUnlocked(n) && !progress.done.has(n)) ?? 1;
-  for (const n of CHAPTERS) $(n === 1 ? '#btn-start' : `#btn-ch${n}`).classList.toggle('pulse', n === next);
-  $('#title .hint').textContent = TITLE_HINT;
 }
-
+function refreshTitle() {
+  for (const c of CHAPTERS) {
+    const b = $(`#ch-${c.n}`), built = !!mods[c.n], open = isUnlocked(c.n), done = progress.done.has(c.n);
+    b.classList.toggle('locked', !built || !open); b.classList.toggle('done', done);
+    b.querySelector('.ic').textContent = done ? c.badge : open && built ? '▶' : open ? '✨' : '🔒';
+    b.querySelector('.soon').hidden = built;
+    b.setAttribute('aria-label', `פרק ${c.n}: ${c.name}`);
+  }
+  const r = resumePoint();
+  $('#btn-continue').textContent = r ? `▶ המשך: פרק ${r.ch}` : '▶ מתחילים: פרק 1';
+}
 // ---------------------------------------------------------------- shared game state handed to the chapters
 const G = {
   THREE, engine, cam, fx, params, outdoor, caveScene, world, stars, cave, GATE_POS, heightAt, PLATEAU,
@@ -115,10 +141,11 @@ const G = {
   tick: null,         // chapter hook: (dt, time) every frame
   onLeave: null,      // chapter hook: called once when the chapter is left (home button, another chapter)
   get time() { return time; },
-  useScene, setupCave, faceEachOther, wormTapped, startFlight, glance, setCounter, markDone, enterTitle, resetOutdoorLook,
+  useScene, setupCave, faceEachOther, wormTapped, startFlight, glance, setCounter, markDone, checkpoint, enterTitle, resetOutdoorLook,
 };
-const fl = G.fl = { pos: new THREE.Vector3(), yaw: 0, vy: 0, yawRate: 0, idle: 0, got: 0, done: false, kingSaid: false, speed: 11, minClear: 5, bound: 110,
-  items: stars.list, onCollect: null, glanceT: 0, glanceAmt: 1, cam: { v: 0, vel: 0 } };
+const fl = G.fl = { pos: new THREE.Vector3(), yaw: 0, vy: 0, yawRate: 0, got: 0, done: false, kingSaid: false, speed: 8.5, minClear: 3,
+  items: stars.list, onCollect: null, glanceT: 0, glanceAmt: 1, cam: { v: 0, vel: 0 },
+  path: null, len: 1, u: 0, itemU: [], ox: 0, oy: 0, since: 0, helped: false, corridor: [5, 3.5] };
 
 function leaveChapter() { token++; until = null; const f = G.onLeave; G.onLeave = G.tap = G.tick = null; if (f) f(); G.busy = false; G.caveFree = false; G.walkTarget = null; G.camGoal = null; marker.visible = false; apple.visible = false; resetOutdoorLook(); }
 
@@ -129,10 +156,10 @@ function enterTitle() {
   useScene(outdoor); stars.group.visible = false;
   TITLE_POS.y = heightAt(TITLE_POS.x, TITLE_POS.z);
   worm.root.position.copy(TITLE_POS); worm.root.rotation.set(0, 0.25, 0); worm.setPose('coil'); worm.state.blend = 1; worm.setGlow(false);
-  drake.root.position.set(TITLE_POS.x + 2.6, heightAt(TITLE_POS.x + 2.6, TITLE_POS.z + 2.2), TITLE_POS.z + 2.2); drake.root.rotation.set(0, -0.35, 0); drake.setSit(0); drake.setWalk(0);
+  drake.root.position.set(TITLE_POS.x + 1.3, heightAt(TITLE_POS.x + 1.3, TITLE_POS.z + 3.4), TITLE_POS.z + 3.4); drake.root.rotation.set(0, -0.1, 0); // left of the title card drake.setSit(0); drake.setWalk(0);
   drake.root.scale.setScalar(1);
   refreshTitle();
-  $('#title').hidden = false; $('#hud').hidden = true; arrowEl.hidden = true; showJoy(false); $('#counter').hidden = true; aura.material.opacity = 0;
+  $('#title').hidden = false; $('#hud').hidden = true; arrowEl.hidden = true; showJoy(false); $('#joy').classList.remove('flight'); $('#counter').hidden = true; aura.material.opacity = 0;
 }
 
 // ---------------------------------------------------------------- CAVE
@@ -145,7 +172,7 @@ function setupCave() {
   drake.root.position.copy(DRAKE_START); drake.root.rotation.set(0, Math.PI + 0.4, 0); drake.setSit(0); drake.root.scale.setScalar(1); drake.setStoneGlow(0);
   griffith.root.position.set(7.2, 0, -3.5); griffith.root.rotation.set(0, -0.9, 0);
   G.camGoal = null; G.caveFree = false; G.walkTarget = null; G.stoneGlow = 0; marker.visible = false; camSnap = true;
-  $('#title').hidden = true; $('#hud').hidden = false; $('#counter').hidden = true; arrowEl.hidden = true; showJoy(false); aura.material.opacity = 0;
+  $('#title').hidden = true; $('#hud').hidden = false; $('#counter').hidden = true; arrowEl.hidden = true; showJoy(false); $('#joy').classList.remove('flight'); aura.material.opacity = 0;
 }
 function faceEachOther() {
   const hw = worm.headWorld(); drake.root.rotation.y = Math.atan2(hw.x - drake.root.position.x, hw.z - drake.root.position.z);
@@ -167,15 +194,26 @@ function smoothDamp(o, target, smoothTime, dt) {
   const om = 2 / smoothTime, x = om * dt, e = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x), ch = o.v - target, tmp = (o.vel + om * ch) * dt;
   o.vel = (o.vel - om * tmp) * e; o.v = target + (ch + tmp) * e;
 }
-// cfg: { items (list of {g, got, pop}), pos, yaw, speed?, minClear?, bound?, onCollect(i, item) }
+// Rail-guided flight (kid-proof): Worm always glides forward along a smooth path through every item, so he can never
+// get lost, stuck, turned around or blocked. The joystick only nudges him left/right/up/down inside a soft corridor
+// around the path (it springs back), and near each item a magnet pulls him onto it, so with no input at all he still
+// collects everything. (Before, free steering let a held joystick turn him in a ~7 m circle around an item that needs
+// 4.5 m to collect, forever: the autopilot only helped once the stick was released.)
+// cfg: { items (list of {g, base, got, pop}), loop (closed path, keeps cruising when done), lead / exit (extra path points
+//        before / after the items), startU, speed?, corridor? [side, up], onCollect(i, item) }
 function startFlight(cfg) {
   useScene(outdoor); G.mode = 'flight';
-  Object.assign(fl, { got: 0, done: false, kingSaid: false, idle: 0, vy: 0, yawRate: 0, glanceT: 0, items: cfg.items, onCollect: cfg.onCollect || null,
-    speed: cfg.speed ?? 11, minClear: cfg.minClear ?? 5, bound: cfg.bound ?? 110, yaw: cfg.yaw });
-  fl.cam.v = fl.cam.vel = 0; fl.pos.copy(cfg.pos);
+  const pts = [...(cfg.lead || []), ...cfg.items.map(it => it.base.clone()), ...(cfg.exit || [])];
+  const path = new THREE.CatmullRomCurve3(pts, !!cfg.loop, 'centripetal'); path.arcLengthDivisions = 400; path.updateArcLengths();
+  // arc-length position of every item on the path
+  const N = 800, itemU = cfg.items.map(() => 0), best = cfg.items.map(() => Infinity), q = new THREE.Vector3();
+  for (let k = 0; k <= N; k++) { path.getPointAt(k / N, q); cfg.items.forEach((it, i) => { const d = q.distanceToSquared(it.base); if (d < best[i]) { best[i] = d; itemU[i] = k / N; } }); }
+  Object.assign(fl, { got: 0, done: false, kingSaid: false, vy: 0, yawRate: 0, glanceT: 0, items: cfg.items, onCollect: cfg.onCollect || null,
+    speed: cfg.speed ?? 8.5, corridor: cfg.corridor ?? [5, 3.5], path, len: path.getLength(), loop: !!cfg.loop, itemU, u: cfg.startU ?? 0, ox: 0, oy: 0, since: 0, helped: false, yaw: null });
+  fl.cam.v = fl.cam.vel = 0; path.getPointAt(((fl.u % 1) + 1) % 1, fl.pos);
   worm.setPose('fly'); worm.state.blend = 1; worm.setGlow(false); worm.lookAt(null);
   drake.setSit(1); drake.setWalk(0); drake.root.scale.setScalar(1);
-  $('#title').hidden = true; $('#hud').hidden = false; $('#counter').hidden = false;
+  $('#title').hidden = true; $('#hud').hidden = false; $('#counter').hidden = false; arrowEl.hidden = true; $('#joy').classList.add('flight');
   camSnap = true; aura.material.opacity = 0.08;
 }
 function setCounter(text, icon = '⭐') {
@@ -183,51 +221,51 @@ function setCounter(text, icon = '⭐') {
   const c = $('#counter'); c.classList.remove('bump'); c.offsetWidth; c.classList.add('bump');
 }
 function collect(i) {
-  const s = fl.items[i]; if (!s || s.got) return; s.got = true; s.pop = 0; fl.got++;
+  const s = fl.items[i]; if (!s || s.got) return; s.got = true; s.pop = 0; fl.got++; fl.since = 0; fl.helped = false;
   fl.onCollect && fl.onCollect(i, s);
 }
-const arrowEl = document.getElementById('arrow');
-function pointArrow(target) {
-  if (!target) { arrowEl.hidden = true; return; }
-  const v = target.clone().project(cam); const behind = v.z > 1;
-  if (!behind && Math.abs(v.x) < 0.8 && Math.abs(v.y) < 0.75) { arrowEl.hidden = true; return; }
-  let x = v.x, y = v.y; if (behind) { x = -x; y = -y; }
-  const ang = Math.atan2(y, x); arrowEl.hidden = false;
-  const cx = innerWidth / 2 + Math.cos(ang) * innerWidth * 0.36, cy = innerHeight / 2 - Math.sin(ang) * innerHeight * 0.32;
-  arrowEl.style.transform = `translate(${cx - 40}px, ${cy - 40}px) rotate(${-ang}rad)`;
-}
+const arrowEl = document.getElementById('arrow'); // (unused in rail flight: the next item is always ahead on screen)
 function wrapAng(a) { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; return a; }
+const HELP_LINES = ['בוא, אני אקח אותך אל הבא! ✨', 'תחזיק חזק, אני מרחף לשם! 💚'];
+const _P = new THREE.Vector3(), _T = new THREE.Vector3(), _R = new THREE.Vector3(), _prev = new THREE.Vector3(), Y_UP = new THREE.Vector3(0, 1, 0);
 function updateFlight(dt) {
-  const inp = input(), active = Math.abs(inp.x) + Math.abs(inp.y) > 0.08;
-  fl.idle = active ? 0 : fl.idle + dt;
-  let yawRate = -inp.x * 1.5, vy = -inp.y * 8;
-  const ni = nextItem();
-  if ((!active && fl.idle > 1.2) || fl.done) {
-    // gentle autopilot: toward the next item, or a lazy circle around the castle when done
-    const tgt = ni >= 0 && !fl.done ? fl.items[ni].g.position : new THREE.Vector3(Math.cos(time * 0.25) * 40, PLATEAU + 18, Math.sin(time * 0.25) * 40);
-    const d = tgt.clone().sub(fl.pos); const want = Math.atan2(d.x, d.z);
-    yawRate = THREE.MathUtils.clamp(wrapAng(want - fl.yaw) * 1.3, -0.75, 0.75); vy = THREE.MathUtils.clamp(d.y * 0.8, -4, 4);
-  }
-  // keep inside the kingdom
-  const hd = Math.hypot(fl.pos.x, fl.pos.z);
-  if (hd > fl.bound) { const want = Math.atan2(-fl.pos.x, -fl.pos.z); yawRate = THREE.MathUtils.clamp(wrapAng(want - fl.yaw) * 2, -1.2, 1.2); }
-  fl.yawRate += (yawRate - fl.yawRate) * Math.min(1, dt * 4); fl.vy += (vy - fl.vy) * Math.min(1, dt * 3);
-  fl.yaw += fl.yawRate * dt;
+  const inp = input(), ni = nextItem(), going = ni >= 0 && !fl.done;
+  // never punish: if somehow 6 s pass without a catch, Worm glides straight to the next one by himself
+  fl.since += going ? dt : 0;
+  if (going && fl.since > 6 && !fl.helped) { fl.helped = true; toast('worm', HELP_LINES[fl.got % HELP_LINES.length], 2200); }
+  const help = fl.helped && going;
+  // forward along the rail (a touch faster while the kid is steering, so playing feels rewarding)
+  const active = Math.abs(inp.x) + Math.abs(inp.y) > 0.08;
+  fl.u += fl.speed * (help ? 1.5 : active ? 1.12 : 1) * dt / fl.len;
+  if (fl.loop) fl.u = ((fl.u % 1) + 1) % 1; else fl.u = Math.min(fl.u, 1);
+  fl.path.getPointAt(fl.u, _P); fl.path.getTangentAt(fl.u, _T);
+  _R.crossVectors(_T, Y_UP).setY(0); if (_R.lengthSq() < 1e-6) _R.set(1, 0, 0); _R.normalize(); // screen-right for the chase camera
+  // soft corridor: the stick nudges, the spring brings him back; the magnet near the next item squeezes the corridor shut
+  let squeeze = help ? 0 : 1;
+  if (going) { const du = ((fl.itemU[ni] - fl.u) % 1 + 1) % 1, ahead = Math.min(du, 1 - du) * fl.len; squeeze *= THREE.MathUtils.smoothstep(ahead, 3, 13); }
+  const spring = Math.min(1, dt * 3);
+  fl.ox += (inp.x * fl.corridor[0] * squeeze - fl.ox) * spring; fl.oy += (-inp.y * fl.corridor[1] * squeeze - fl.oy) * spring;
+  _prev.copy(fl.pos);
+  fl.pos.copy(_P).addScaledVector(_R, fl.ox); fl.pos.y += fl.oy;
+  fl.pos.y = Math.max(fl.pos.y, heightAt(fl.pos.x, fl.pos.z) + fl.minClear);   // the ground can only ever lift him, never block him
+  // collect: touching the item, or simply passing it on the rail (guaranteed)
+  fl.items.forEach((s, i) => {
+    if (s.got) return; const du = ((fl.u - fl.itemU[i]) % 1 + 1) % 1;
+    if (s.g.position.distanceTo(fl.pos) < 5 || (i === ni && du < 0.5 && du * fl.len < 6)) collect(i);
+  });
+  const yaw = Math.atan2(_T.x, _T.z); if (fl.yaw === null) { fl.yaw = yaw; _prev.copy(fl.pos); }
+  const sm = Math.min(1, dt * 4), inv = dt > 0 ? 1 / dt : 0;
+  fl.yawRate += ((wrapAng(yaw - fl.yaw) * inv - (fl.pos.clone().sub(_prev).dot(_R) - 0) * inv * 0.06) - fl.yawRate) * sm; // path turn + sideways nudge → banking
+  fl.vy += ((fl.pos.y - _prev.y) * inv - fl.vy) * sm;
+  fl.yaw = yaw;
   const fwd = new THREE.Vector3(Math.sin(fl.yaw), 0, Math.cos(fl.yaw));
-  fl.pos.addScaledVector(fwd, fl.speed * dt); fl.pos.y += fl.vy * dt;
-  const floorY = Math.max(heightAt(fl.pos.x, fl.pos.z), hd < 22 ? PLATEAU + 26 : 0) + fl.minClear;
-  fl.pos.y = THREE.MathUtils.clamp(fl.pos.y, Math.max(floorY, 3), 70);
-  // magnet + collect
-  fl.items.forEach((s, i) => { if (s.got) return; const d = s.g.position.distanceTo(fl.pos); if (d < 10) fl.pos.lerp(s.g.position, Math.min(1, dt * 1.4)); if (d < 4.5) collect(i); });
   worm.root.position.copy(fl.pos);
-  worm.root.rotation.set(-fl.vy * 0.04, fl.yaw, -fl.yawRate * 0.35, 'YXZ');
-  worm.state.bank = fl.yawRate * 1.2; worm.state.climb = fl.vy * 0.05;
+  worm.root.rotation.set(-fl.vy * 0.04, fl.yaw, THREE.MathUtils.clamp(-fl.yawRate * 0.35, -0.5, 0.5), 'YXZ');
+  worm.state.bank = THREE.MathUtils.clamp(fl.yawRate * 1.2, -1.5, 1.5); worm.state.climb = THREE.MathUtils.clamp(fl.vy * 0.05, -0.5, 0.5);
   // rider
   drake.root.position.copy(worm.seatWorld(0.16)); drake.root.quaternion.copy(worm.root.quaternion);
   aura.position.copy(worm.seatWorld(0.3));
   if (Math.random() < 0.35) fx.trail(worm.seatWorld(0.3 + Math.random() * 0.6), 0x7dffb0, 0.25);
-  // guide arrow toward the next item
-  pointArrow(ni >= 0 && !fl.done ? fl.items[ni].g.position : null);
   // King Roland waves when we pass the castle gate
   king.root.lookAt(fl.pos.x, king.root.position.y, fl.pos.z);
   if (fl.pos.distanceTo(king.root.position) < 34) { king.wave(0.5); if (!fl.kingSaid) { fl.kingSaid = true; toast('king', 'שלום, מאסטר הדרקונים הצעיר! 👋', 3000); } }
@@ -306,19 +344,31 @@ $('#c').addEventListener('pointerdown', e => {
 });
 
 // ---------------------------------------------------------------- chapters + buttons
-const ch1 = chapter1(G), ch2 = chapter2(G);
-const startMusic = () => { unlock(); sfx.tap(); if (settings.sound) music(true); };
-$('#btn-start').addEventListener('pointerup', () => { startMusic(); guard(() => ch1.start('intro')); });
-$('#btn-ch2').addEventListener('pointerup', () => {
-  unlock(); sfx.tap();
-  if (!isUnlocked(2)) { $('#title .hint').textContent = 'קודם מסיימים את פרק 1 עם וורם 💚'; worm.wiggle(1); return; } // friendly nudge, never a fail
-  if (settings.sound) music(true); guard(() => ch2.start('intro'));
-});
+const ch1 = mods[1] = chapter1(G), ch2 = mods[2] = chapter2(G);
+buildChapterMap();
+$('#btn-continue').addEventListener('pointerup', () => { sfx.tap(); const r = resumePoint(); startChapter(r ? r.ch : 1, r ? r.beat : 'intro'); });
 $('#btn-home').addEventListener('pointerup', () => { sfx.tap(); guard(async () => { token++; await fade(true); enterTitle(); await fade(false); }); });
-const syncToggles = () => { $('#btn-sound').classList.toggle('off', !settings.sound); $('#btn-voice').classList.toggle('off', !settings.voice); };
+const syncToggles = () => { $('#btn-sound').classList.toggle('off', !settings.sound); };
 $('#btn-sound').addEventListener('pointerup', () => { settings.sound = !settings.sound; save(); syncToggles(); music(settings.sound); });
-$('#btn-voice').addEventListener('pointerup', () => { settings.voice = !settings.voice; save(); syncToggles(); if (!settings.voice) speechSynthesis?.cancel(); });
 syncToggles();
+// hidden parent unlock: hold the title text for 3 seconds
+{ const h1 = $('#title-h1'); let t = null; const stop = () => { clearTimeout(t); t = null; };
+  h1.addEventListener('pointerdown', () => { stop(); t = setTimeout(() => { progress.all = true; saveProgress(); refreshTitle(); sfx.chime(); titleToast('🔓 כל הפרקים נפתחו (מצב הורים)'); }, 3000); });
+  for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) h1.addEventListener(ev, stop); }
+// full screen: where the browser has an API (iPad, Android), ask on the first tap; iPhone Safari has none, so there the
+// home-screen web app (manifest.json) is the way and a one-time, dismissable hint explains it
+const standalone = () => navigator.standalone === true || matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches;
+addEventListener('pointerup', () => {
+  try {
+    if (standalone() || document.fullscreenElement || document.webkitFullscreenElement) return;
+    const el = document.documentElement, f = el.requestFullscreen || el.webkitRequestFullscreen; if (!f) return;
+    const p = f.call(el, { navigationUI: 'hide' }); if (p && p.catch) p.catch(() => { });
+  } catch { /* full screen is a nice-to-have */ }
+}, { once: true });
+{ const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  let seen = false; try { seen = localStorage.getItem('dm.a2hs') === '1'; } catch { }
+  if (((isIOS && !standalone()) || params.get('a2hs') === '1') && !seen) $('#a2hs').hidden = false;
+  $('#a2hs-close').addEventListener('pointerup', e => { e.stopPropagation(); $('#a2hs').hidden = true; try { localStorage.setItem('dm.a2hs', '1'); } catch { } }); }
 document.addEventListener('gesturestart', e => e.preventDefault());
 document.addEventListener('dblclick', e => e.preventDefault());
 
@@ -357,8 +407,17 @@ window.__dm = {
   collectAll() { fl.items.forEach((s, i) => collect(i)); },
   // screen position (CSS px) of the next warm stone to tap in ch2, or null
   stoneScreen() { const p = ch2.nextStonePos(); if (!p) return null; const v = p.project(cam); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
-  get progress() { return [...progress.done].sort(); },
-  resetProgress() { progress.done.clear(); try { localStorage.removeItem('dm.progress'); } catch { } refreshTitle(); },
+  get progress() { return [...progress.done].sort(); }, get last() { return progress.last; },
+  resetProgress() { progress.done.clear(); progress.last = null; progress.all = false; try { localStorage.removeItem('dm.progress'); } catch { } refreshTitle(); },
+  // screen-space boxes [x0, y0, x1, y1] (CSS px) of Drake and of Worm's head, for layout checks
+  actorBoxes() {
+    const px = v => { v.project(cam); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; };
+    const box = pts => { const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]); return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)].map(Math.round); };
+    const corners = (obj, x, y0, y1, z) => { const out = []; for (const a of [-x, x]) for (const b of [y0, y1]) for (const c of [-z, z]) out.push(px(obj.localToWorld(new THREE.Vector3(a, b, c)))); return out; };
+    drake.root.updateMatrixWorld(true); worm.root.updateMatrixWorld(true);
+    const front = o => o.getWorldPosition(new THREE.Vector3()).project(cam).z < 1; // null when behind the camera
+    return { drake: front(drake.root) ? box(corners(drake.root, 0.4, 0, 1.85, 0.3)) : null, worm: front(worm.head) ? box(corners(worm.head, 1.15, -0.75, 1.2, 1.45)) : null };
+  },
   stats: () => ({ ...engine.info(), mode: G.mode, phase: G.phase, stars: fl.got, models: modelStatus(MODEL_KEYS, swapped) }),
   setTier: t => { engine.noAuto = true; engine.setTier(t); },
   worm, engine, G,

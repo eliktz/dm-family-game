@@ -1,7 +1,7 @@
-// Original synthesized sound (no recorded/copyrighted audio) + optional Hebrew read-aloud
-// via the device's speech engine (iPad has a he-IL voice), so a 7-year-old can follow along.
+// Original synthesized sound effects and music (no recorded or copyrighted audio). There is no read-aloud:
+// professional voice-over may come later.
 let ctx = null, master = null, musicGain = null, musicOn = false;
-export const settings = { sound: localStorage.getItem('dm.sound') !== '0', voice: localStorage.getItem('dm.voice') !== '0' };
+export const settings = { sound: localStorage.getItem('dm.sound') !== '0' };
 export function unlock() {
   if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); master = ctx.createGain(); master.gain.value = 0.5; master.connect(ctx.destination); } catch { return; } }
   if (ctx.state === 'suspended') ctx.resume();
@@ -40,18 +40,4 @@ export function music(on) {
   const pattern = [0, 2, 4, 2, 5, 4, 2, 1, 0, 2, 4, 6, 5, 4, 2, 4];
   musicTimer = setInterval(() => { if (!settings.sound) return; const t = now(); tone(scale[pattern[step % 16]], t, 0.9, 'sine', 0.35, 0, musicGain); if (step % 4 === 0) tone(scale[pattern[step % 16]] / 2, t, 1.6, 'triangle', 0.25, 0, musicGain); step++; }, 420);
 }
-// Hebrew read-aloud
-let heVoice = null;
-function pickVoice() { const vs = speechSynthesis.getVoices(); heVoice = vs.find(v => /^he/i.test(v.lang)) || null; }
-if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
-export function speak(text, who) {
-  if (!settings.voice || !('speechSynthesis' in window) || !heVoice) return;
-  try {
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text.replace(/[^\u0590-\u05FF0-9\s,.!?'"+\-=]/g, ' ').replace(/\+/g, ' ועוד '));
-    u.voice = heVoice; u.lang = heVoice.lang; u.rate = 0.92;
-    u.pitch = who === 'worm' ? 0.75 : who === 'drake' ? 1.4 : who === 'griffith' ? 0.85 : 1.0;
-    speechSynthesis.speak(u);
-  } catch { /* speech is optional */ }
-}
-export function save() { localStorage.setItem('dm.sound', settings.sound ? '1' : '0'); localStorage.setItem('dm.voice', settings.voice ? '1' : '0'); }
+export function save() { localStorage.setItem('dm.sound', settings.sound ? '1' : '0'); }

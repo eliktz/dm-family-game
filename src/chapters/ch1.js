@@ -7,7 +7,7 @@ export function chapter1(G) {
 
   async function storyCave(from = 'intro') {
     const step = runner();
-    G.setupCave();
+    G.setupCave(); G.checkpoint(1, from);
     if (from === 'intro') {
       await step(fade(true)); await step(card({ kicker: 'פרק 1', title: 'אבן הדרקון' })); await step(fade(false));
       G.phase = 'cave-intro';
@@ -38,7 +38,7 @@ export function chapter1(G) {
     }
     if (from === 'intro' || from === 'bond') {
       if (from === 'bond') { drake.root.position.copy(worm.headWorld().setY(0)).add(V(2.4, 0, 1.6)); G.faceEachOther(); }
-      G.phase = 'bond';
+      G.phase = 'bond'; G.checkpoint(1, 'bond');
       G.camGoal = { pos: drake.root.position.clone().add(V(3.2, 2.6, 5.2)), look: drake.root.position.clone().lerp(worm.headWorld(), 0.6).setY(1.4) };
       const done = { feed: false, pet: false };
       await step(new Promise(res => {
@@ -53,7 +53,7 @@ export function chapter1(G) {
       await step(say('griffith', 'יפה מאוד! עכשיו נפתח את שער המערה. הוא נפתח רק למי שפותר חידה קסומה.'));
     }
     // ---- riddle at the gate
-    G.phase = 'math';
+    G.phase = 'math'; G.checkpoint(1, 'math');
     G.camGoal = { pos: V(-1.5, 4.5, 5), look: GATE_POS.clone().setY(2.5) };
     const [a, b] = params.has('a') ? [+params.get('a'), +params.get('b')] : [3, 2];
     await step(riddle(a, b, { right: () => { worm.wiggle(1.4); sfx.happy(); }, wrong: () => toast('worm', 'אתה יכול! אני מאמין בך 💚', 2500) }));
@@ -94,16 +94,16 @@ export function chapter1(G) {
   }
   async function storyFlight(step) {
     step = step || runner();
-    const a0 = 0.35 - 0.5, R = 37;
     stars.group.visible = true; stars.reset();
-    G.startFlight({ items: stars.list, pos: V(Math.cos(a0) * R, PLATEAU + 14, Math.sin(a0) * R), yaw: Math.atan2(-Math.sin(a0), Math.cos(a0)), onCollect: onStar });
-    G.phase = 'fly'; G.setCounter(`0 / ${n}`);
+    // a closed loop around the castle through all 8 stars; Worm starts a little before the first one and keeps circling when done
+    G.startFlight({ items: stars.list, loop: true, startU: 1 - 0.085, onCollect: onStar });
+    G.phase = 'fly'; G.checkpoint(1, 'flight'); G.setCounter(`0 / ${n}`);
     await step(fade(false));
     showJoy(true);
     worm.wiggle(1); G.glance(1.5);
     toast('worm', 'תחזיק חזק! בוא נאסוף את כל 8 הכוכבים הזוהרים!', 3500);
     await step(wait(3600));
-    toast(null, 'הזז את הג׳ויסטיק כדי לכוון את וורם ⭐', 4000);
+    toast(null, 'וורם טס לבד! הג׳ויסטיק מזיז אותו קצת לצדדים ⭐', 4000);
     await step(waitFor(() => fl.got >= n));
     G.phase = 'celebrate'; fl.done = true; showJoy(false);
     sfx.fanfare(); worm.wiggle(2.5); G.glance(2.2);

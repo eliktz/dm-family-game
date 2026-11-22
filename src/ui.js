@@ -1,5 +1,5 @@
 // Hebrew RTL HUD: dialogue bubbles, toasts, action buttons, joystick, riddle panel, cards.
-import { sfx, speak } from './audio.js';
+import { sfx } from './audio.js';
 const $ = s => document.querySelector(s);
 export const FACES = { griffith: '🧙‍♂️', worm: '🐉', drake: '👦', king: '👑', bo: '🧒', baby: '💧' };
 export const NAMES = { griffith: "גריפית'", worm: 'וורם', drake: 'דרייק', king: 'המלך רולנד', bo: 'בו', baby: 'בועה' };
@@ -9,7 +9,7 @@ export function say(who, text) {
   const d = $('#dialog'); d.hidden = false; d.dataset.who = who;
   d.querySelector('.face').textContent = FACES[who]; d.querySelector('.name').textContent = NAMES[who];
   d.querySelector('.text').textContent = text; d.style.animation = 'none'; d.offsetWidth; d.style.animation = '';
-  speak(text, who); ui.onSay && ui.onSay(who, text);
+  ui.onSay && ui.onSay(who, text);
   return new Promise(res => {
     const done = () => { d.removeEventListener('pointerup', done); clearTimeout(t); sfx.tap(); d.hidden = true; res(); };
     const t = ui.fast ? setTimeout(done, 40) : null;
@@ -20,7 +20,6 @@ let toastT = null;
 export function toast(who, text, ms = 2800) {
   const t = $('#toast'); t.hidden = false; t.querySelector('.face').textContent = FACES[who] || '✨'; t.querySelector('.text').textContent = text;
   t.style.animation = 'none'; t.offsetWidth; t.style.animation = '';
-  if (who) speak(text, who);
   clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), ms);
 }
 export function hideToast() { $('#toast').hidden = true; }
@@ -70,11 +69,11 @@ function quiz({ title, qHTML, visHTML, ans, right, wrong1, wrong2, countSel }, c
       btn.addEventListener('pointerup', async () => {
         if (btn.classList.contains('wrong')) return;
         if (o === ans) {
-          btn.classList.add('right'); sfx.chime(); hint.textContent = right; speak(hint.textContent, 'griffith');
+          btn.classList.add('right'); sfx.chime(); hint.textContent = right;
           cb.right && cb.right(); setTimeout(() => { m.hidden = true; res(); }, ui.fast ? 50 : 1400);
         } else {
           tries++; btn.classList.add('wrong'); sfx.oops(); cb.wrong && cb.wrong();
-          hint.textContent = tries === 1 ? wrong1 : wrong2; speak(hint.textContent, 'griffith');
+          hint.textContent = tries === 1 ? wrong1 : wrong2;
           const aps = [...vis.querySelectorAll(countSel)];
           aps.forEach((ap, i) => setTimeout(() => { ap.classList.add('count'); sfx.tap(); setTimeout(() => ap.classList.remove('count'), 300); }, 350 * i));
         }
@@ -99,7 +98,6 @@ export function riddleMissing(a, total, cb = {}) {
 export function card({ kicker = '', title = '', text = '', buttons = [], cls = '' }) {
   const c = $('#card'); c.hidden = false; c.className = 'screen ' + cls;
   c.querySelector('.c-kicker').textContent = kicker; c.querySelector('.c-title').textContent = title; c.querySelector('.c-text').textContent = text;
-  if (text) speak(title + '. ' + text, 'griffith');
   const box = c.querySelector('.c-buttons'); box.innerHTML = '';
   return new Promise(res => {
     if (!buttons.length) { setTimeout(() => { c.hidden = true; res(); }, ui.fast ? 50 : 2000); return; }

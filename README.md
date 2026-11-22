@@ -12,13 +12,22 @@
 **פרק 2 – הביצה המסתורית** נפתח אחרי פרק 1: ביצה כחולה מתגלגלת למערה, מרחפים מעל הנהר ואוספים טיפות בזוגות,
 מחממים את הביצה ב-5 אבנים חמות, והיא בוקעת. בסוף מגיעים בו ודרקונית המים שלו. (העלילה המלאה ב-[STORY.md](STORY.md).)
 
+## Full screen on iPhone / iPad
+Open the page in Safari, tap **Share ⬆️ → "Add to Home Screen"** (הוסף למסך הבית). Started from the home-screen icon the game runs full screen in
+landscape, without Safari's bars (`manifest.json`, icons in `assets/icons/` rendered from our own Worm by `test/make-icons.mjs`). The game shows this hint once.
+
+Progress (finished chapters and the last checkpoint) is saved on the device; **המשך** on the title resumes it. Parents: hold the title text for 3 seconds
+to unlock every chapter (or add `?all=1`).
+
+There is no read-aloud for now: **professional voice-over may come later**.
+
 ## How to play
 - **Title** → tap **"פרק 1: אבן הדרקון"**. Tap Worm on the title for a hello wiggle.
 - **Cave**: tap the bubble (**המשך ◀**) to continue. Walk with the joystick (bottom-left) or tap the floor / Worm.
   Then **🍎 להאכיל** and **✋ ללטף**. Riddle: tap the right number (a wrong one only gives a hint and counting help).
 - **Flight**: the joystick steers (left/right = turn, up/down = climb). If you let go, Worm glides gently toward the next
   star on his own, so nobody gets stuck. The gold arrow points at stars that are off-screen.
-- 🔊 = sound, 🗣️ = Hebrew read-aloud (uses the iPad's built-in Hebrew voice), 🏠 = home.
+- 🔊 = sound, 🏠 = home.
 
 ## Run locally
 No build step: static ES modules plus an import map. three.js r187 and its addons are vendored in `lib/`.
@@ -52,7 +61,7 @@ the joystick, the friendly wrong-answer hint, the star counter, the celebration 
 | `src/outdoor.js` | Kingdom: terrain, lake, stone castle (CC0 textures, merged per material), instanced trees/flowers, 3D clouds, stars |
 | `src/engine.js` | WebGL2 renderer, ACES tone mapping, soft shadows, HDRI/PMREM env, bloom (UnrealBloom → OutputPass), quality tiers |
 | `src/fx.js`, `src/tex.js` | Particles (hearts/sparkles/confetti, 2 draw calls), procedural canvas textures |
-| `src/audio.js` | Synthesized SFX + soft music-box loop (all original), Hebrew speech synthesis |
+| `src/audio.js` | Synthesized SFX + soft music-box loop (all original); no read-aloud |
 | `src/assets.js`, `assets/models/models.json` | **GLB swap-in**: list a Blender GLB (worm/drake/griffith/king/castle) and it replaces the placeholder |
 
 ## Design notes

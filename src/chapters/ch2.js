@@ -142,7 +142,7 @@ export function chapter2(G) {
     if (from === 'intro') {
       await step(fade(true)); stageCave('intro');
       await step(card({ kicker: 'פרק 2', title: 'הביצה המסתורית' })); await step(fade(false));
-      G.phase = 'c2-intro';
+      G.phase = 'c2-intro'; G.checkpoint(2, 'intro');
       G.camGoal = { pos: V(0.5, 4.6, 9), look: V(1, 1.6, -4) };
       worm.wiggle(1); sfx.purr();
       await step(say('worm', 'בוקר טוב, דרייק! איזה כיף שבאת.'));
@@ -184,13 +184,14 @@ export function chapter2(G) {
   }
   async function glide(step) {
     showAll(false); stars.group.visible = false; bubbles.group.visible = true; bubbles.reset();
-    G.startFlight({ items: bubbles.list, pos: V(-100, RIVER_Y + 4.4, riverZ(-100)), yaw: Math.PI / 2, speed: 10, minClear: 4.6, bound: 190, onCollect: onPair });
-    G.phase = 'c2-glide'; G.setCounter('0', '💧');
+    const rp = x => V(x, RIVER_Y + 4.1, riverZ(x)); // low along the river: a lead-in, the 5 pairs, then on downstream
+    G.startFlight({ items: bubbles.list, lead: [rp(-96), rp(-80)], exit: [rp(92), rp(120), rp(150)], speed: 8, corridor: [5, 2.5], onCollect: onPair });
+    G.phase = 'c2-glide'; G.checkpoint(2, 'glide'); G.setCounter('0', '💧');
     await step(fade(false)); showJoy(true);
     worm.wiggle(1); G.glance(1.4);
     toast('worm', 'הנה הנהר! הטיפות באות בזוגות – נספור בקפיצות של 2!', 3800);
     await step(wait(3900));
-    toast(null, 'הזז את הג׳ויסטיק כדי לאסוף את הבועות 💧', 3600);
+    toast(null, 'וורם מרחף לבד! הג׳ויסטיק מזיז אותו קצת לצדדים 💧', 3600);
     await step(waitFor(() => fl.got >= N));
     G.phase = 'c2-glide-done'; fl.done = true; showJoy(false);
     sfx.fanfare(); worm.wiggle(2); G.glance(1.8);
@@ -219,7 +220,7 @@ export function chapter2(G) {
       });
   }
   async function warmEgg(step, direct) {
-    stageCave('warm'); G.camGoal = camEgg(); G.phase = 'c2-warm';
+    stageCave('warm'); G.camGoal = camEgg(); G.phase = 'c2-warm'; G.checkpoint(2, 'warm');
     if (!direct) { await step(fade(false)); fx.burst(EGG, 0x9fdcff, 50, 3, 0.4, 1.4, 0.5); sfx.chime(); }
     await step(say('griffith', 'הביצה שתתה את כל הטיפות! עכשיו היא צריכה חום.'));
     await step(say('griffith', 'צריך 5 אבנים חמות מסביב לביצה.'));
@@ -239,7 +240,7 @@ export function chapter2(G) {
   // ---- hatch + Bo arrives
   async function hatch(step, direct) {
     if (direct) { stageCave('hatch'); }
-    G.camGoal = { pos: V(-2.3, 3.6, 5.6), look: V(-1.8, 0.9, -3.0) }; G.phase = 'c2-hatch'; $('#counter').hidden = true;
+    G.camGoal = { pos: V(-2.3, 3.6, 5.6), look: V(-1.8, 0.9, -3.0) }; G.phase = 'c2-hatch'; G.checkpoint(2, 'hatch'); $('#counter').hidden = true;
     worm.lookAt(NEAR_EGG); worm.wiggle(1);
     await step(say('worm', 'חם ונעים… תראה, דרייק! הביצה זזה!'));
     crack.visible = true; sfx.munch();

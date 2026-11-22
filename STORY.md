@@ -75,3 +75,4 @@ Visual aids (apples, stones, drops, stars) are always on screen. A wrong answer 
 - New dragons get procedural placeholders first (recoloured/reshaped from the Worm rig: water = blue-teal with fins, sun = gold with sun crest,
   fire = red with small flame wings, crystal = lilac with faceted spikes). Each one gets a GLB swap-in slot in `models.json`.
 - The Grumble Cloud: a puffy grey cloud with big round eyes and a pouty mouth. It's cute, never menacing, and has no lightning.
+- Voice: there is no read-aloud in the game for now (the device's synthetic voice was removed). **Professional voice-over may come later.**

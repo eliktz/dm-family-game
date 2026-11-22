@@ -1,6 +1,6 @@
 test/node_modules/
 shots/live/
-shots/fail.png
+shots/fail*.png
 private-assets/
 .DS_Store
 *.log
