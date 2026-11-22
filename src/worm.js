@@ -74,20 +74,20 @@ export function createWorm() {
   smile.scale.setScalar(0.75); smile.rotation.set(-0.35, 0, Math.PI + Math.PI * 0.1);
   // horns + ear fins
   const hornM = new THREE.MeshPhysicalMaterial({ color: 0xf3e4c4, roughness: 0.35, clearcoat: 0.6 });
-  const fins = [];
+  const fins = [], cheeks = [];
   for (const sx of [-1, 1]) {
     const h = add(new THREE.ConeGeometry(0.13, 0.6, 16), hornM, [sx * 0.36, 0.82, -0.28]); h.rotation.set(-0.7, 0, sx * -0.3);
     const fin = new THREE.Group(); fin.position.set(sx * 0.84, 0.32, -0.18); headInner.add(fin);
     const f = add(new THREE.ConeGeometry(0.24, 0.7, 16), skin(0xc58a4f), [0, 0.3, 0], [1, 1, 0.35], fin); fin.rotation.set(0, sx * 0.3, sx * -1.1); fins.push(fin);
-    add(sph(0.2, 16, 10), new THREE.MeshBasicMaterial({ color: 0xff8f95, transparent: true, opacity: 0.4, depthWrite: false }), [sx * 0.6, -0.12, 0.98], [1, 0.6, 0.35], headInner, false);
+    cheeks.push(add(sph(0.2, 16, 10), new THREE.MeshBasicMaterial({ color: 0xff8f95, transparent: true, opacity: 0.4, depthWrite: false }), [sx * 0.6, -0.12, 0.98], [1, 0.6, 0.35], headInner, false));
   }
   // eyes
   const irisM = new THREE.MeshPhysicalMaterial({ color: 0x6b441a, roughness: 0.2, clearcoat: 1, emissive: new THREE.Color(0x3dff7a), emissiveIntensity: 0 });
-  const scleraM = new THREE.MeshPhysicalMaterial({ color: 0xfbf8ef, roughness: 0.12, clearcoat: 1 });
+  const scleraM = new THREE.MeshPhysicalMaterial({ color: 0xd9d6cf, roughness: 0.12, clearcoat: 1 });
   const pupilM = new THREE.MeshPhysicalMaterial({ color: 0x0d0704, roughness: 0.1, clearcoat: 1 });
   const shineM = new THREE.MeshBasicMaterial({ color: 0xffffff });
   const glowTex = glowSprite('rgba(120,255,160,1)', 'rgba(60,255,120,0)');
-  const lids = [], eyeGlows = [], eyes = [];
+  const lids = [], lowLids = [], eyeGlows = [], eyes = [];
   for (const sx of [-1, 1]) {
     const eye = new THREE.Group(); eye.position.set(sx * 0.4, 0.26, 0.66); eye.rotation.y = sx * 0.28; eye.scale.setScalar(1.22); headInner.add(eye); eyes.push(eye);
     add(sph(0.3), scleraM, [0, 0, 0], null, eye, false);
@@ -96,6 +96,8 @@ export function createWorm() {
     add(sph(0.05, 10, 8), shineM, [0.07, 0.09, 0.3], null, eye, false);
     add(sph(0.025, 8, 6), shineM, [-0.06, -0.05, 0.3], null, eye, false);
     const lid = new THREE.Mesh(new THREE.SphereGeometry(0.325, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2), brown); eye.add(lid); lids.push(lid);
+    // "smiling eyes": a round cheek puff that rises under the eye, so its top edge cuts the eye in a ^ arc
+    const low = add(sph(0.27, 24, 16), muzzleM, [0, -0.5, 0.05], null, eye, false); low.visible = false; lowLids.push(low);
     const g = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0 }));
     g.position.set(0, 0, 0.35); g.scale.setScalar(1.3); eye.add(g); eyeGlows.push(g);
   }
@@ -103,7 +105,7 @@ export function createWorm() {
 
   // ---- state -----------------------------------------------------------------------
   const st = { pose: 'rest', prevPose: 'rest', blend: 1, wiggle: 0, glow: 0, glowTarget: 0, mouth: 0, chomp: 0, blinkT: 2, blink: 0,
-    look: null, bank: 0, climb: 0, happy: 0, squint: 0, time: 0 };
+    look: null, bank: 0, climb: 0, happy: 0, squint: 0, smile: 0, glance: 0, time: 0 };
   const ctrl = Array.from({ length: N_CTRL }, () => new THREE.Vector3());
   const ctrlB = Array.from({ length: N_CTRL }, () => new THREE.Vector3());
   const curve = new THREE.CatmullRomCurve3(ctrl, false, 'centripetal');
@@ -194,7 +196,13 @@ export function createWorm() {
     for (const lid of lids) lid.rotation.x = lerp(-1.05, Math.PI / 2, close);
     st.chomp = Math.max(0, st.chomp - dt);
     const chompOpen = st.chomp > 0 ? Math.abs(Math.sin(st.chomp * 9)) * 0.6 : 0;
-    const mouth = Math.max(st.mouth, chompOpen, w * 0.25 + st.happy * 0.15);
+    // happy face: lower lids rise into ^^ smiling eyes, cheeks puff up, wider open smile (upper lids stay open: never sleepy)
+    st.smile += (Math.max(w, ss(st.happy, 0, 0.45)) - st.smile) * Math.min(1, dt * 9);
+    const hs = st.smile;
+    for (const low of lowLids) { low.visible = hs > 0.02; low.position.set(0, lerp(-0.5, -0.285, hs), lerp(0.05, 0.16, hs)); low.scale.setScalar(lerp(0.6, 1, hs)); }
+    cheeks.forEach((c, i) => { const sx = i ? 1 : -1; c.position.set(sx * (0.6 + 0.09 * hs), -0.12 + 0.08 * hs, 0.98 + 0.1 * hs); c.scale.set(1 + 0.35 * hs, 0.6 + 0.3 * hs, 0.35 + 0.12 * hs); c.material.opacity = 0.4 + 0.25 * hs; });
+    smile.scale.setScalar(0.75 + 0.2 * hs);
+    const mouth = Math.max(st.mouth, chompOpen, w * 0.2 + hs * 0.28);
     jawPivot.rotation.x = mouth * 0.5; tongue.visible = mouth > 0.05;
     fins.forEach((fn, i) => { const sx = i ? 1 : -1; fn.rotation.z = sx * (-1.1 + Math.sin(time * 2.2 + i) * 0.08 + w * Math.sin(time * 14) * 0.3); });
     // glow
