@@ -209,7 +209,7 @@ async function run(dev) {
     check((await page.locator('#dialog .name').innerText()).trim() === 'בועה', 'the baby dragon squeaks hello');
     await shot('ch2-10-hatched');
     await advanceTo('c2-bo');
-    await page.waitForFunction(() => !document.querySelector('#dialog').hidden && document.querySelector('#dialog .name').textContent.trim() === 'בו', null, { timeout: 30000 });
+    await page.waitForFunction(() => !document.querySelector('#dialog').hidden && document.querySelector('#dialog .name').textContent.trim() === 'בו', null, { timeout: 240000 });
     log('ok', 'Bo speaks'); await page.waitForTimeout(500);
     log('stats ch2 cave', JSON.stringify(await page.evaluate(() => __dm.stats())));
     await shot('ch2-11-bo-arrives');

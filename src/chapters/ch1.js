@@ -4,6 +4,12 @@ export function chapter1(G) {
   const { THREE, cam, fx, worm, drake, cave, stars, marker, apple, GATE_POS, PLATEAU, params, ui,
     say, toast, hideToast, actions, clearActions, showJoy, riddle, card, fade, sfx, runner, wait, waitFor, fl } = G;
   const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  // HD models: a two-shot from the side of the Drake→Worm line (whichever side the camera is already on), so Drake never hides Worm's face
+  function sideCam(dist, h, lookY) {
+    const a = drake.root.position.clone().setY(0), b = worm.headWorld().setY(0), mid = a.clone().lerp(b, 0.5), d = b.clone().sub(a).normalize();
+    const perp = V(-d.z, 0, d.x); if (perp.dot(cam.position.clone().sub(mid)) < 0) perp.negate();
+    return { pos: mid.clone().addScaledVector(perp, dist).addScaledVector(d, -dist * 0.25).setY(h), look: mid.setY(lookY) };
+  }
 
   async function storyCave(from = 'intro') {
     const step = runner();
@@ -11,7 +17,10 @@ export function chapter1(G) {
     if (from === 'intro') {
       await step(fade(true)); await step(card({ kicker: 'פרק 1', title: 'אבן הדרקון' })); await step(fade(false));
       G.phase = 'cave-intro';
-      G.camGoal = { pos: V(-1, 4.5, 9), look: V(-3, 2, -4) };
+      if (G.hd) { // HD models: Drake waits closer, and the opening shot is a tighter two-shot so Worm is big and Drake stands next to him
+        drake.root.position.set(-0.6, 0, -0.4); drake.root.rotation.y = Math.atan2(-4 + 0.6, -5.2 + 0.4);
+        G.camGoal = { pos: V(4.0, 2.7, 0.2), look: V(-2.6, 0.8, -3.3) };
+      } else G.camGoal = { pos: V(-1, 4.5, 9), look: V(-3, 2, -4) };
       worm.lookAt(drake.root.position.clone().setY(1.5));
       await step(say('griffith', 'שלום, דרייק! ברוך הבא למערת הדרקונים, עמוק מתחת לטירה של המלך רולנד.'));
       await step(say('griffith', "אני גריפית', הקוסם של הטירה. מישהו גדול וחמוד מחכה לך כאן..."));
@@ -25,7 +34,7 @@ export function chapter1(G) {
       // ---- Dragon Stone moment
       G.phase = 'stone';
       G.faceEachOther();
-      G.camGoal = { pos: drake.root.position.clone().lerp(worm.headWorld(), 0.5).add(V(3.5, 1.2, 4.2)), look: drake.root.position.clone().lerp(worm.headWorld(), 0.5).setY(1.6) };
+      G.camGoal = G.hd ? sideCam(5.6, 2.3, 1.3) : { pos: drake.root.position.clone().lerp(worm.headWorld(), 0.5).add(V(3.5, 1.2, 4.2)), look: drake.root.position.clone().lerp(worm.headWorld(), 0.5).setY(1.6) };
       await step(wait(500));
       G.stoneGlow = 1; worm.setGlow(true); sfx.magic(); fx.burst(drake.root.position.clone().setY(1.1), 0x7dffa0, 50, 3, 0.4, 1.6, 0.5);
       await step(say('griffith', 'תראה! אבן הדרקון שעל הצוואר שלך זוהרת!'));
@@ -39,7 +48,8 @@ export function chapter1(G) {
     if (from === 'intro' || from === 'bond') {
       if (from === 'bond') { drake.root.position.copy(worm.headWorld().setY(0)).add(V(2.4, 0, 1.6)); G.faceEachOther(); }
       G.phase = 'bond'; G.checkpoint(1, 'bond');
-      G.camGoal = { pos: drake.root.position.clone().add(V(3.2, 2.6, 5.2)), look: drake.root.position.clone().lerp(worm.headWorld(), 0.6).setY(1.4) };
+      G.camGoal = G.hd ? sideCam(5.4, 2.1, 1.2)
+        : { pos: drake.root.position.clone().add(V(3.2, 2.6, 5.2)), look: drake.root.position.clone().lerp(worm.headWorld(), 0.6).setY(1.4) };
       const done = { feed: false, pet: false };
       await step(new Promise(res => {
         const check = () => { if (done.feed && done.pet) res(); };
@@ -60,7 +70,7 @@ export function chapter1(G) {
     G.phase = 'gate'; cave.openGate(); sfx.whoosh(); fx.burst(GATE_POS.clone().setY(3), 0xfff2b0, 60, 5, 0.5, 1.6, -0.5);
     await step(wait(1200));
     await step(say('griffith', 'השער פתוח! כל הכבוד, דרייק!'));
-    G.camGoal = { pos: V(9, 5.5, 7), look: worm.headWorld().lerp(GATE_POS, 0.45).setY(2.2) };
+    G.camGoal = G.hd ? { pos: worm.headWorld().setY(0).add(V(4.2, 2.6, 5.6)), look: worm.headWorld().lerp(GATE_POS, 0.25).setY(1.5) } : { pos: V(9, 5.5, 7), look: worm.headWorld().lerp(GATE_POS, 0.45).setY(2.2) };
     worm.wiggle(1.5);
     await step(say('worm', 'עלה על הגב שלי, דרייק. אני אראה לך את הממלכה!'));
     await step(say('worm', 'אין לי כנפיים – אבל אני טס בכוח המחשבה שלי! ✨'));

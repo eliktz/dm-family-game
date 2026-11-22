@@ -84,6 +84,8 @@ export function chapter2(G) {
   cloud.visible = false; outdoor.add(cloud);
   const actors = [egg, shells, baby.root, shu.root, bo.root, cloud, ...stones.map(s => s.m)];
   function showAll(v) { for (const a of actors) a.visible = v; bubbles.group.visible = v; if (!v) crack.visible = false; }
+  // shadows only from the main characters and the egg (iPad/iPhone budget)
+  for (const o of [bo.root, shu.root, shells, ...stones.map(s => s.m)]) o.traverse(m => { m.castShadow = false; });
   showAll(false);
 
   // ---------------------------------------------------------------- tiny tweens (driven by the frame tick, so they pause with the tab)
@@ -134,7 +136,7 @@ export function chapter2(G) {
       stones.forEach((s, i) => { s.m.visible = true; s.placed = i < n; s.moving = false; s.m.position.copy(i < n ? SLOTS[i] : LOOSE[i - 2]); });
     }
   }
-  const camEgg = () => ({ pos: V(-1.6, 5.8, 8.6), look: V(-1.1, 1.0, -1.9) });
+  const camEgg = () => G.hd ? { pos: V(-1.4, 6.8, 8.2), look: V(-1.2, 0.5, -1.4) } : { pos: V(-1.6, 5.8, 8.6), look: V(-1.1, 1.0, -1.9) };
 
   // ---------------------------------------------------------------- the story
   async function story(from = 'intro') {

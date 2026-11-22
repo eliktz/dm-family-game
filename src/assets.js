@@ -17,18 +17,32 @@
 //
 // The procedural rig keeps running invisibly under a GLB, so game logic (seat, mouth and head
 // positions, look-at targets) is unchanged. Each swapped model gets a small driver that maps game
-// state to clips (idle / fly / coil / wiggle|happy / chomp / walk / sit / wave) and falls back to
-// bobbing and scaling the model when a clip is missing.
+// state to clips (idle / fly|glide / coil / wiggle|happy|cheer / chomp / walk / sit / wave / talk; names match
+// case-insensitively and crossfade) and falls back to bobbing and scaling the model when a clip is missing.
+// With a rigged dragon the head look-at, jaw, eye glow, seat and tap target are driven from its bones.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { glowSprite } from './tex.js';
 
 const MANIFEST = 'assets/models/models.json', DIR = 'assets/models/', TIMEOUT_MS = 30000;
 const ALIASES = {
-  idle: ['idle', 'rest', 'breath', 'stand'], wiggle: ['wiggle', 'happy', 'joy', 'dance', 'jump'], chomp: ['chomp', 'eat', 'bite'],
+  idle: ['idle', 'rest', 'breath', 'stand'], wiggle: ['wiggle', 'happy', 'cheer', 'joy', 'dance', 'jump'], chomp: ['chomp', 'eat', 'bite'], happy: ['happy', 'cheer'], cheer: ['cheer', 'happy'], talk: ['talk'], pet: ['pet'],
   fly: ['fly', 'glide', 'float', 'hover'], coil: ['coil', 'curl', 'sleep'], walk: ['walk', 'run'], sit: ['sit', 'ride'], wave: ['wave', 'greet', 'hello'],
 };
-const ss = THREE.MathUtils.smoothstep;
+const ss = THREE.MathUtils.smoothstep, clamp = THREE.MathUtils.clamp;
+// Code-side fit for the delivered HD models (HANDOFF.md: facing +Z, feet at the origin, Worm ~3.2 m long, Drake 1.35 m).
+// The game world was built around a much bigger procedural Worm and ~1.85 m chibi people, so the models are scaled up here
+// (the manifest belongs to the asset pipeline and stays untouched; its own `scale` multiplies these).
+const FIT = { worm: { scale: 2.8 }, drake: { scale: 1.3 }, griffith: { scale: 1.3 }, king: { scale: 1.3 } };
+const CURL_SPINE = 0.3, CURL_TAIL = 0.2; // radians per joint
+const X = new THREE.Vector3(1, 0, 0), Y = new THREE.Vector3(0, 1, 0), Z = new THREE.Vector3(0, 0, 1);
+const _q = new THREE.Quaternion(), _pq = new THREE.Quaternion(), _rq = new THREE.Quaternion(), _v = new THREE.Vector3();
+// rotate a bone by `ang` around an axis given in the model root's space, whatever the bone's own axes are
+function turnBone(bone, rootObj, axis, ang) {
+  if (!bone || !ang) return;
+  rootObj.getWorldQuaternion(_rq); _q.setFromAxisAngle(axis, ang); _q.premultiply(_rq).multiply(_rq.invert()); // world-space delta
+  bone.parent.getWorldQuaternion(_pq); bone.quaternion.premultiply(_q.premultiply(_pq.clone().invert()).multiply(_pq)); bone.updateMatrixWorld(true);
+}
 
 function entriesOf(manifest) {
   let m = manifest; if (!m || typeof m !== 'object') return {};
@@ -52,8 +66,9 @@ async function readManifest() {
 }
 const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
 
-function place(obj, e) {
+function place(obj, e, fit = 1) {
   if (Array.isArray(e.scale)) obj.scale.set(...e.scale); else obj.scale.setScalar(+e.scale || 1);
+  obj.scale.multiplyScalar(fit);
   if (Array.isArray(e.rotation)) obj.rotation.set(...e.rotation); else obj.rotation.y = e.rotYDeg != null ? THREE.MathUtils.degToRad(+e.rotYDeg) : +e.rotY || 0;
   if (e.height || e.ground) {
     obj.updateMatrixWorld(true); const box = new THREE.Box3().setFromObject(obj), h = box.max.y - box.min.y;
@@ -89,41 +104,97 @@ function makeSwap(key, t, gltf, e) {
   }
   if (mixer) mixer.addEventListener('finished', ev => { if (ev.action === shotAct) { shotAct.fadeOut(0.25); shotAct = null; } });
 
-  const base = { pos: obj.position.clone(), scale: obj.scale.clone(), rz: obj.rotation.z };
   const prev = {}; const rose = (k, v, d = 0.2) => { const r = v > (prev[k] ?? 0) + d; prev[k] = v; return r; };
-  // fallback Dragon-Stone glow for a GLB Worm: green halo at the head + emissive on eye-named materials
-  let halo = null; const eyeMats = [];
+  const bones = {}; obj.traverse(o => { if (o.isBone) bones[o.name.toLowerCase()] = o; });
+  const B = (...names) => { for (const n of names) if (bones[n]) return bones[n]; return null; };
+  const rest = new Map(); const posed = (...bs) => { for (const b of bs) if (b) rest.set(b, b.quaternion.clone()); return bs; };
+  const meshes = []; obj.traverse(o => { if (o.isMesh) meshes.push(o); });
+  const emi = re => { const out = []; obj.traverse(o => { for (const m of [].concat(o.material || [])) if (re.test(m.name || '') && m.emissive && !out.includes(m)) { m.userData.base = m.emissiveIntensity; out.push(m); } }); return out; };
   const isDragon = !!(t.state && 'pose' in t.state); // Worm and every dragon built on his rig
+  const S = obj.scale.y;
+  let halo = null, eyeMats = [], stoneMats = [], headB = null, jawB = null, neck = [], seatB = null, procHead = null, legs = null, yawOff = 0, flyDrop = 0, curlK = 0, spineB = [], tailB = [];
   if (isDragon) {
+    // the invisible procedural rig keeps running for game logic; its head sits at the rig origin, so the model's head goes there too
+    headB = B('head'); jawB = B('jaw'); neck = posed(B('neck1', 'neck_01', 'neck'), B('neck2', 'neck_02'), headB).filter(Boolean); posed(jawB); seatB = B('spine4', 'chest', 'spine3', 'spine_03');
+    // spine and tail joints, for the code-side 'curl' pose (a C around the egg) on top of the Idle clip
+    spineB = posed(...['spine1', 'spine2', 'spine3', 'spine4', 'chest', 'neck1'].map(n => B(n))).filter(Boolean);
+    tailB = posed(...Array.from({ length: 10 }, (_, i) => B('tail' + (i + 2)))).filter(Boolean);
+    obj.updateMatrixWorld(true);
+    if (headB) { const hz = (jawB || headB).getWorldPosition(_v).z; obj.position.z -= hz; }
+    // Dragon-Stone glow: the model's own emissive eye material when it has one, plus a soft green halo
+    eyeMats = emi(/^emi_.*eye/i); if (!eyeMats.length) eyeMats = emi(/eye|iris/i);
+    for (const m of eyeMats) if (m.emissive.getHex() === 0) { m.emissive.set(0x3dff7a); m.userData.base = m.emissiveIntensity = 0; }
     halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowSprite('rgba(120,255,160,1)', 'rgba(60,255,120,0)'), blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0 }));
-    halo.scale.setScalar(3.2); halo.visible = false; t.root.add(halo);
-    obj.traverse(o => { for (const m of [].concat(o.material || [])) if (/eye|iris/i.test(m.name || '') && m.emissive && !eyeMats.includes(m)) { m.userData.baseEmissive = m.emissiveIntensity; eyeMats.push(m); } });
+    halo.scale.setScalar(eyeMats.length ? 2.2 : 3.2); halo.visible = false; t.root.add(halo);
+    if (headB) {
+      // game-facing anchors now come from the model: head / mouth / seat positions, the tap target and the layout box
+      procHead = t.head; const proxy = new THREE.Group(); proxy.scale.setScalar(0.3 * S); t.root.add(proxy); t.head = proxy;
+      t.headWorld = (out = new THREE.Vector3()) => headB.getWorldPosition(out).add(_v.set(0, 0.12 * S, 0));
+      t.mouthWorld = (out = new THREE.Vector3()) => (jawB || headB).getWorldPosition(out).add(_v.set(0, -0.02 * S, 0.14 * S).applyQuaternion(t.root.getWorldQuaternion(_rq)));
+      if (seatB) t.seatWorld = (u, out = new THREE.Vector3()) => u < 0.25 ? seatB.getWorldPosition(out).add(_v.set(0, 0.2 * S, -0.08 * S).applyQuaternion(t.root.getWorldQuaternion(_rq)))
+        : t.root.localToWorld(out.set(0, obj.position.y + 0.4 * S, obj.position.z + (1.2 - u * 3.0) * S));
+      if (t.hitMeshes) t.hitMeshes.splice(0, t.hitMeshes.length, ...meshes);
+      if (t.state) t.state.proxy = true; // the procedural tube no longer needs to deform
+    }
+  } else if (key !== 'castle') {
+    stoneMats = emi(/^emi_/i);
+    // no "sit" clip: riding pose from the leg bones
+    const L = { thighL: B('thigh_l'), thighR: B('thigh_r'), calfL: B('calf_l'), calfR: B('calf_r') };
+    if (L.thighL && L.thighR) { legs = L; posed(L.thighL, L.thighR, L.calfL, L.calfR); }
   }
+  const base = { pos: obj.position.clone(), scale: obj.scale.clone(), rz: obj.rotation.z, ry: obj.rotation.y };
+  let sitK = 0;
   function update(dt, time) {
     const s = t.state || {}; let bob = 0, sway = 0, squash = 0, drop = 0;
+    for (const [b, q] of rest) b.quaternion.copy(q); // bones we pose by hand start from rest; clips then overwrite the ones they animate
     if (isDragon) {
       loop(s.pose === 'fly' ? ['fly', 'idle'] : s.pose === 'coil' ? ['coil', 'idle'] : ['idle']);
       const w = ss(s.wiggle || 0, 0, 0.5);
       if (rose('wiggle', s.wiggle || 0)) once('wiggle');
-      if (rose('chomp', s.chomp || 0)) once('chomp');
+      if (rose('chomp', s.chomp || 0)) once('chomp') || once('happy');
       if (!has('wiggle')) { bob = Math.abs(Math.sin(time * 7.5)) * 0.25 * w; sway = Math.sin(time * 10) * 0.1 * w; squash = Math.sin(time * 15) * 0.05 * w; }
       if (!has('idle')) squash += Math.sin(time * 1.7) * 0.012; // breathing
-      const g = s.glow || 0; halo.visible = g > 0.01; halo.material.opacity = g * 0.6; if (t.head) halo.position.copy(t.head.position);
-      for (const m of eyeMats) m.emissiveIntensity = (m.userData.baseEmissive || 0) + g * 2;
+      // pose offsets: curled beside the egg he lies at an angle; in flight the rig origin is his body centre, not his feet
+      const k = Math.min(1, dt * 3);
+      curlK += ((s.pose === 'curl' && spineB.length ? 1 : 0) - curlK) * Math.min(1, dt * 1.6); yawOff = CURL_SPINE * spineB.length * curlK; flyDrop += ((s.pose === 'fly' && seatB ? 0.34 * S : 0) - flyDrop) * k; drop = flyDrop;
     } else if (key !== 'castle') {
       const walk = Math.min(1, s.walk || 0), sit = s.sit || 0, wave = s.wave || 0;
       loop(sit > 0.5 ? ['sit', 'idle'] : walk > 0.1 ? ['walk', 'idle'] : ['idle']);
-      if (rose('wave', wave)) once('wave');
+      if (rose('wave', wave)) (wave >= 2.8 && once('cheer')) || once('wave');
       if (!has('walk')) bob = Math.abs(Math.sin(time * 9)) * 0.05 * walk;
       if (!has('wave') && wave > 0) sway = Math.sin(time * 12) * 0.08;
-      if (!has('sit')) drop = sit * 0.45;
+      sitK += ((sit > 0.5 ? 1 : 0) - sitK) * Math.min(1, dt * 6);
+      if (!has('sit')) drop = legs ? sitK * 0.52 * S : sit * 0.45;
+      for (const m of stoneMats) m.emissiveIntensity = (m.userData.base ?? 1) * (1 + (s.stone || 0) * 3) * (m.name.toLowerCase().includes('gem') ? 1 + 0.25 * Math.sin(time * 3) : 1);
     }
-    obj.position.y = base.pos.y + bob - drop; obj.rotation.z = base.rz + sway;
+    obj.position.x = base.pos.x; obj.position.z = base.pos.z;
+    obj.position.y = base.pos.y + bob - drop; obj.rotation.z = base.rz + sway; obj.rotation.y = base.ry + yawOff;
     obj.scale.set(base.scale.x * (1 - squash * 0.5), base.scale.y * (1 + squash), base.scale.z * (1 - squash * 0.5));
     mixer?.update(dt);
+    if (isDragon && headB) {
+      obj.updateMatrixWorld(true);
+      if (curlK > 0.002) { // bend spine and tail into a C, then put the head back at the rig origin (it faces the same way as before)
+        for (const b of spineB) turnBone(b, obj, Y, -CURL_SPINE * curlK);
+        for (const b of tailB) turnBone(b, obj, Y, CURL_TAIL * curlK);
+        t.root.updateMatrixWorld(true); obj.updateMatrixWorld(true);
+        t.root.worldToLocal((jawB || headB).getWorldPosition(_v)); obj.position.x -= _v.x; obj.position.z -= _v.z; obj.updateMatrixWorld(true);
+      }
+      // look-at: follow the procedural rig's smoothed look direction (rig-local), spread over the neck bones
+      const d = procHead?.userData.dir;
+      if (d && neck.length) { const yaw = clamp(Math.atan2(d.x, d.z), -1.5, 1.5), pitch = clamp(Math.asin(clamp(d.y, -1, 1)), -0.5, 0.5);
+        for (const b of neck) { turnBone(b, obj, Y, yaw / neck.length); turnBone(b, obj, X, -pitch / neck.length); } }
+      if (jawB && !has('chomp')) turnBone(jawB, obj, X, (s.jaw || 0) * 0.45);
+      const g = s.glow || 0; halo.visible = g > 0.01; halo.material.opacity = g * (eyeMats.length ? 0.35 : 0.6);
+      t.root.worldToLocal(headB.getWorldPosition(t.head.position)); halo.position.copy(t.head.position);
+      for (const m of eyeMats) m.emissiveIntensity = (m.userData.base || 0) + g * 3;
+    } else if (isDragon) { const g = s.glow || 0; halo.visible = g > 0.01; halo.material.opacity = g * 0.6; if (t.head) halo.position.copy(t.head.position); for (const m of eyeMats) m.emissiveIntensity = (m.userData.base || 0) + g * 2; }
+    if (legs && sitK > 0.01) { // seated astride: thighs forward and apart, shins down
+      obj.updateMatrixWorld(true);
+      for (const [th, ca, sx] of [[legs.thighL, legs.calfL, 1], [legs.thighR, legs.calfR, -1]]) { turnBone(th, obj, X, -1.25 * sitK); turnBone(th, obj, Y, sx * 0.55 * sitK); turnBone(ca, obj, X, 1.3 * sitK); }
+    }
   }
   loop(['idle']);
-  return { obj, mixer, clips: Object.fromEntries(byName), has, loop, once, play: once, update };
+  return { obj, mixer, clips: Object.fromEntries(byName), has, loop, once, play: once, update, get current() { return loopName; } };
 }
 
 export async function loadModels(targets) {
@@ -135,7 +206,7 @@ export async function loadModels(targets) {
     const e = manifest[key.toLowerCase()], url = urlOf(e);
     try {
       const gltf = await withTimeout(loader.loadAsync(url), TIMEOUT_MS);
-      const obj = gltf.scene; place(obj, e);
+      const obj = gltf.scene; place(obj, e, FIT[key]?.scale ?? 1);
       obj.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; if (o.isSkinnedMesh) o.frustumCulled = false; } });
       const swap = makeSwap(key, t, gltf, e);
       // only now hide the procedural visual; its root (and invisible rig) keeps driving positions and game logic

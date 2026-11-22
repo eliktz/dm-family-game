@@ -141,6 +141,7 @@ const G = {
   tick: null,         // chapter hook: (dt, time) every frame
   onLeave: null,      // chapter hook: called once when the chapter is left (home button, another chapter)
   get time() { return time; },
+  get hd() { return !!swapped.worm; }, // the HD Worm model is in use (more compact than the procedural one: some shots are framed differently)
   useScene, setupCave, faceEachOther, wormTapped, startFlight, glance, setCounter, markDone, checkpoint, enterTitle, resetOutdoorLook,
 };
 const fl = G.fl = { pos: new THREE.Vector3(), yaw: 0, vy: 0, yawRate: 0, got: 0, done: false, kingSaid: false, speed: 8.5, minClear: 3,
@@ -157,6 +158,7 @@ function enterTitle() {
   TITLE_POS.y = heightAt(TITLE_POS.x, TITLE_POS.z);
   worm.root.position.copy(TITLE_POS); worm.root.rotation.set(0, 0.25, 0); worm.setPose('coil'); worm.state.blend = 1; worm.setGlow(false);
   drake.root.position.set(TITLE_POS.x + 1.3, heightAt(TITLE_POS.x + 1.3, TITLE_POS.z + 3.4), TITLE_POS.z + 3.4); drake.root.rotation.set(0, -0.1, 0); // left of the title card drake.setSit(0); drake.setWalk(0);
+  if (swapped.worm) { const ph = !!engine.viewShift, dx = TITLE_POS.x + (ph ? 2.5 : 1.9), dz = TITLE_POS.z + (ph ? 0.4 : 1.2); drake.root.position.set(dx, heightAt(dx, dz), dz); drake.root.rotation.set(0, -0.2, 0); }
   drake.root.scale.setScalar(1);
   refreshTitle();
   $('#title').hidden = false; $('#hud').hidden = true; arrowEl.hidden = true; showJoy(false); $('#joy').classList.remove('flight'); $('#counter').hidden = true; aura.material.opacity = 0;
@@ -292,8 +294,16 @@ let camSnap = true; const camLook = new THREE.Vector3();
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 function updateTitle(dt) {
   const sway = Math.sin(time * 0.15) * 1.2;
-  cam.position.set(TITLE_POS.x - 1.0 + sway * 0.5, TITLE_POS.y + 2.8, TITLE_POS.z + 10.5);
-  cam.lookAt(TITLE_POS.x + 3.4 + sway * 0.2, TITLE_POS.y + 3.0, TITLE_POS.z - 2);
+  if (swapped.worm && engine.viewShift) { // phone: the title card covers the right 60%, so Worm and Drake are framed in the clear area on the left
+    cam.position.set(TITLE_POS.x + 3.2 + sway * 0.3, TITLE_POS.y + 2.0, TITLE_POS.z + 10.5);
+    cam.lookAt(TITLE_POS.x + 5.6 + sway * 0.15, TITLE_POS.y + 2.2, TITLE_POS.z - 2);
+  } else if (swapped.worm) { // the HD Worm stands lower and is more compact than the procedural one: come closer
+    cam.position.set(TITLE_POS.x + 0.2 + sway * 0.4, TITLE_POS.y + 2.1, TITLE_POS.z + 7.6);
+    cam.lookAt(TITLE_POS.x + 3.3 + sway * 0.2, TITLE_POS.y + 1.9, TITLE_POS.z - 2);
+  } else {
+    cam.position.set(TITLE_POS.x - 1.0 + sway * 0.5, TITLE_POS.y + 2.8, TITLE_POS.z + 10.5);
+    cam.lookAt(TITLE_POS.x + 3.4 + sway * 0.2, TITLE_POS.y + 3.0, TITLE_POS.z - 2);
+  }
   worm.lookAt(cam.position);
   if (Math.sin(time * 0.6) > 0.995) drake.wave(1.5);
   sun.position.copy(TITLE_POS).addScaledVector(world.sunDir, 120); sun.target.position.copy(TITLE_POS);
@@ -346,6 +356,7 @@ $('#c').addEventListener('pointerdown', e => {
 
 // ---------------------------------------------------------------- chapters + buttons
 const ch1 = mods[1] = chapter1(G), ch2 = mods[2] = chapter2(G);
+ui.onSay = who => { swapped[who]?.once('talk'); }; // GLB characters with a Talk clip gesture while they speak
 buildChapterMap();
 $('#btn-continue').addEventListener('pointerup', () => { sfx.tap(); const r = resumePoint(); startChapter(r ? r.ch : 1, r ? r.beat : 'intro'); });
 $('#btn-home').addEventListener('pointerup', () => { sfx.tap(); guard(async () => { token++; await fade(true); enterTitle(); await fade(false); }); });
@@ -410,6 +421,7 @@ window.__dm = {
   set fast(v) { ui.fast = !!v; }, get fast() { return ui.fast; },
   go(name) { hideOverlays(); $('#fade').classList.remove('on'); leaveChapter(); GO[name] && GO[name](); return name; },
   walkToWorm() { drake.root.position.copy(worm.headWorld().setY(0)).add(new THREE.Vector3(2.2, 0, 2.2)); },
+  clips: () => Object.fromEntries(Object.entries(swapped).map(([k, v]) => [k, v.current])),
   collectNext() { const i = nextItem(); if (i >= 0) collect(i); },
   collectAll() { fl.items.forEach((s, i) => collect(i)); },
   // screen position (CSS px) of the next warm stone to tap in ch2, or null

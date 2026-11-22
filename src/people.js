@@ -80,12 +80,12 @@ export function makeChibi(o) {
     parts.stone = mesh(new THREE.OctahedronGeometry(0.075, 0), new THREE.MeshPhysicalMaterial({ color: 0x3fd46a, emissive: 0x22ff66, emissiveIntensity: 0.3, roughness: 0.05, clearcoat: 1, flatShading: true }), [0, 0.96, 0.24], body, [0.8, 1.15, 0.6]);
   }
   root.scale.setScalar(o.scale ?? 1);
-  let phase = 0, walk = 0, wave = 0, sit = 0;
+  let phase = 0, walk = 0, wave = 0, sit = 0, stone = 0;
   return {
     root, parts,
-    get state() { return { walk, sit, wave }; }, // read by the GLB driver in assets.js
+    get state() { return { walk, sit, wave, stone }; }, // read by the GLB driver in assets.js
     setWalk(v) { walk = v; }, setSit(v) { sit = v; }, wave(v = 2.5) { wave = v; },
-    setStoneGlow(v) { if (parts.stone) parts.stone.material.emissiveIntensity = 0.3 + v * 5; },
+    setStoneGlow(v) { stone = v; if (parts.stone) parts.stone.material.emissiveIntensity = 0.3 + v * 5; },
     update(dt, time) {
       phase += dt * (4 + walk * 7) * (walk > 0.05 ? 1 : 0);
       const sw = Math.sin(phase) * 0.7 * Math.min(1, walk);

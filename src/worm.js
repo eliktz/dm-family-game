@@ -166,6 +166,7 @@ export function createWorm(opts = {}) {
       f.N.crossVectors(f.T, f.S).normalize();
       const bellyBreath = 1 + 0.045 * breath * Math.sin(Math.PI * ss(u, 0.05, 0.75));
       const r = f.r = radiusAt(u) * bellyBreath;
+      if (st.proxy) continue; // a GLB is shown instead: keep the frames for game logic, skip the tube
       for (let k = 0; k <= RAD; k++) {
         const a = -Math.PI / 2 + k / RAD * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
         const rx = r * 1.06, ry = r * (s < 0 ? 0.8 : 0.95), o = (j * (RAD + 1) + k) * 3;
@@ -174,7 +175,7 @@ export function createWorm(opts = {}) {
         P[o + 2] = f.p.z + f.S.z * c * rx + f.N.z * s * ry;
       }
     }
-    tubeGeo.attributes.position.needsUpdate = true; tubeGeo.computeVertexNormals();
+    if (!st.proxy) { tubeGeo.attributes.position.needsUpdate = true; tubeGeo.computeVertexNormals(); }
     const last = frames[RINGS - 1]; tailTip.position.copy(last.p);
     // spikes
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), dir = new THREE.Vector3(), sc = new THREE.Vector3();
@@ -217,7 +218,7 @@ export function createWorm(opts = {}) {
     cheeks.forEach((c, i) => { const sx = i ? 1 : -1; c.position.set(sx * (0.6 + 0.09 * hs), -0.12 + 0.08 * hs, 0.98 + 0.1 * hs); c.scale.set(1 + 0.35 * hs, 0.6 + 0.3 * hs, 0.35 + 0.12 * hs); c.material.opacity = 0.4 + 0.25 * hs; });
     smile.scale.setScalar(0.75 + 0.2 * hs);
     const mouth = Math.max(st.mouth, chompOpen, w * 0.2 + hs * 0.28);
-    jawPivot.rotation.x = mouth * 0.5; tongue.visible = mouth > 0.05;
+    jawPivot.rotation.x = mouth * 0.5; tongue.visible = mouth > 0.05; st.jaw = mouth;
     fins.forEach((fn, i) => { const sx = i ? 1 : -1; fn.rotation.z = sx * (-1.1 + Math.sin(time * 2.2 + i) * 0.08 + w * Math.sin(time * 14) * 0.3); });
     // glow
     irisM.emissiveIntensity = st.glow * 2.5; if (glowLight) glowLight.intensity = st.glow * 4;
