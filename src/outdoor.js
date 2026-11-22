@@ -120,11 +120,39 @@ export function buildOutdoor() {
     foliage.setColorAt(i, new THREE.Color().setHSL(0.24 + k * 0.08, 0.55, 0.28 + k * 0.12));
   });
   for (const m of [foliage, trunks]) { m.castShadow = true; m.receiveShadow = true; group.add(m); }
-  const NF = 260, flowers = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.12, 1).scale(1, 0.5, 1), new THREE.MeshStandardMaterial({ roughness: 0.6 }), NF);
-  const fc = [0xff7aa8, 0xffe14a, 0xffffff, 0xb38cff, 0xff9a3c];
-  for (let i = 0; i < NF; i++) { const a = R() * Math.PI * 2, d = 19 + R() * 30, x = Math.cos(a) * d, z = Math.sin(a) * d;
-    m4.compose(v.set(x, heightAt(x, z) + 0.12, z), q.identity(), sc.setScalar(0.7 + R() * 0.8)); flowers.setMatrixAt(i, m4); flowers.setColorAt(i, new THREE.Color(fc[i % fc.length])); }
-  group.add(flowers);
+  // flower clusters: 3 little flowers on stems per instance, grouped into patches of one colour.
+  // Two instanced draws: stems/leaves/centres (vertex colours) + petals (tinted per instance).
+  const greens = [], petals = [];
+  const paint = (g, hex) => { g = g.index ? g.toNonIndexed() : g; const c = new THREE.Color(hex), n = g.attributes.position.count, a = new Float32Array(n * 3); for (let i = 0; i < n; i++) a.set([c.r, c.g, c.b], i * 3); g.setAttribute('color', new THREE.BufferAttribute(a, 3)); g.deleteAttribute('uv'); return g; };
+  for (const [ox, oz, h, tilt, yaw] of [[0, 0, 0.62, 0.5, 0.3], [0.2, 0.1, 0.44, 0.75, 2.4], [-0.14, 0.17, 0.5, 0.65, 4.4]]) {
+    const lean = new THREE.Matrix4().makeRotationY(yaw).multiply(new THREE.Matrix4().makeRotationX(tilt * 0.25));
+    const top = new THREE.Vector3(0, h, 0).applyMatrix4(lean).add(new THREE.Vector3(ox, 0, oz));
+    greens.push(paint(new THREE.CylinderGeometry(0.014, 0.02, h, 3, 1, true).translate(0, h / 2, 0).applyMatrix4(lean).translate(ox, 0, oz), 0x3f8a2e));
+    greens.push(paint(new THREE.PlaneGeometry(0.2, 0.08).rotateX(-0.9).translate(0.1, h * 0.4, 0).applyMatrix4(lean).translate(ox, 0, oz), 0x4c9a35));
+    // flower head faces up and outward so it reads both from the ground and from the air
+    const face = new THREE.Matrix4().makeRotationY(yaw).multiply(new THREE.Matrix4().makeRotationX(tilt));
+    const pg = new THREE.CircleGeometry(1, 20), pp = pg.attributes.position;
+    for (let i = 1; i < pp.count; i++) { const a = Math.atan2(pp.getY(i), pp.getX(i)), r = 0.17 * (0.42 + 0.58 * Math.pow(Math.abs(Math.cos(a * 2.5)), 0.6)); pp.setXYZ(i, Math.cos(a) * r, Math.sin(a) * r, 0.045); }
+    pg.rotateX(-Math.PI / 2).applyMatrix4(face).translate(top.x, top.y, top.z); pg.deleteAttribute('uv'); petals.push(pg.toNonIndexed());
+    greens.push(paint(new THREE.IcosahedronGeometry(0.05, 0).scale(1, 0.6, 1).translate(0, 0.02, 0).applyMatrix4(face).translate(top.x, top.y, top.z), 0xd9a520));
+  }
+  const greenG = mergeGeometries(greens), petalG = mergeGeometries(petals); greenG.computeVertexNormals(); petalG.computeVertexNormals();
+  const NF = 176, flowerGreen = new THREE.InstancedMesh(greenG, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, side: THREE.DoubleSide }), NF);
+  const flowers = new THREE.InstancedMesh(petalG, new THREE.MeshStandardMaterial({ roughness: 0.65, side: THREE.DoubleSide }), NF);
+  const fc = [0xe8668f, 0xe6c63a, 0xd8d6cf, 0x9c7ae0, 0xe8862f], col = new THREE.Color(), yAxis = new THREE.Vector3(0, 1, 0);
+  let nf = 0;
+  for (let pch = 0; pch < 400 && nf < NF; pch++) {
+    const a = R() * Math.PI * 2, d = 20 + R() * 30, px = Math.cos(a) * d, pz = Math.sin(a) * d, c = fc[pch % fc.length];
+    for (let j = 0; j < 4 && nf < NF; j++) {
+      const x = px + (R() - 0.5) * 3.2, z = pz + (R() - 0.5) * 3.2;
+      if (z > 10 && Math.abs(x - pathX(z)) < 3) continue;          // keep the path clear
+      if (Math.hypot(x + 6, z - 44) < 5.5) continue;                // …and the title spot where Worm lies
+      m4.compose(v.set(x, heightAt(x, z) - 0.02, z), q.setFromAxisAngle(yAxis, R() * 6.28), sc.setScalar(1.1 + R() * 0.9));
+      flowers.setMatrixAt(nf, m4); flowerGreen.setMatrixAt(nf, m4); flowers.setColorAt(nf, col.set(c).offsetHSL((R() - 0.5) * 0.03, 0, (R() - 0.5) * 0.06)); nf++;
+    }
+  }
+  flowers.count = flowerGreen.count = nf; flowers.receiveShadow = flowerGreen.receiveShadow = true;
+  group.add(flowerGreen, flowers);
   // ---- clouds (merged puffs)
   const puffs = [];
   for (let i = 0; i < 18; i++) {
