@@ -132,7 +132,10 @@ try {
   }
   await advanceTo('c2-hatch'); await page.waitForTimeout(1200);
   check((await page.locator('#count').innerText()).trim() === '5 / 5', 'all 5 stones placed by tapping');
-  await advanceTo('c2-bo', 90000); await page.waitForTimeout(300); await shot('ch2-10-hatched');
+  await advanceTo('c2-baby', 90000); await page.waitForTimeout(1500);
+  check((await page.locator('#dialog .name').innerText()).trim() === 'בועה', 'the baby dragon squeaks hello');
+  await shot('ch2-10-hatched');
+  await advanceTo('c2-bo', 90000);
   await page.waitForFunction(() => !document.querySelector('#dialog').hidden && document.querySelector('#dialog .name').textContent.trim() === 'בו', null, { timeout: 30000 });
   log('ok', 'Bo speaks'); await page.waitForTimeout(500);
   log('stats ch2 cave', JSON.stringify(await page.evaluate(() => __dm.stats())));

@@ -36,7 +36,29 @@ export function chapter2(G) {
   const eggTex = noiseTexture(256, [96, 168, 232], 70, 9, 260); eggTex.colorSpace = THREE.SRGBColorSpace; eggTex.repeat.set(2, 1);
   const eggM = new THREE.MeshPhysicalMaterial({ map: eggTex, color: 0xd6d6d6, emissive: 0x1e6fd0, emissiveIntensity: 0.45, roughness: 0.25, clearcoat: 1, side: THREE.DoubleSide });
   const egg = new THREE.Group(), eggTop = new THREE.Mesh(half(0, CUT), eggM), eggBottom = new THREE.Mesh(half(CUT, Math.PI), eggM);
-  const crack = new THREE.Mesh(new THREE.TorusGeometry(eggPt(CUT).x + 0.004, 0.018, 6, 40).rotateX(Math.PI / 2).translate(0, eggPt(CUT).y, 0), new THREE.MeshStandardMaterial({ color: 0x143a5c, roughness: 0.8 }));
+  // jagged break line: the crack drawn on the whole egg and the rims of the shell pieces share it, so they fit
+  const TEETH = 9, rim = phi => CUT + 0.14 * (Math.abs((((phi * TEETH / (Math.PI * 2)) % 1) + 1) % 1 - 0.5) * 4 - 1);
+  function shellGeo(p0, p1, thA, thB, nP, nT = 8) { // a patch of the egg surface between two longitudes and two (per-longitude) latitudes
+    const pos = [], uv = [], idx = [];
+    for (let i = 0; i <= nP; i++) { const phi = p0 + (p1 - p0) * i / nP, a = thA(phi), b = thB(phi);
+      for (let j = 0; j <= nT; j++) { const th = a + (b - a) * j / nT, p = eggPt(th); pos.push(p.x * Math.sin(phi), p.y, p.x * Math.cos(phi)); uv.push(phi / (Math.PI * 2), 1 - th / Math.PI); } }
+    for (let i = 0; i < nP; i++) for (let j = 0; j < nT; j++) { const a = i * (nT + 1) + j, b = a + nT + 1; idx.push(a, b, a + 1, b, b + 1, a + 1); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals(); return g;
+  }
+  const crack = new THREE.Mesh(shellGeo(0, Math.PI * 2, p => rim(p) - 0.022, p => rim(p) + 0.022, TEETH * 4, 1).scale(1.012, 1.012, 1.012), new THREE.MeshStandardMaterial({ color: 0x143a5c, roughness: 0.8, side: THREE.DoubleSide }));
+  // the broken shell: two jagged half-bowls that tip outward and a cap that lands upside down; all stay on the floor
+  const shells = new THREE.Group(), innerM = new THREE.MeshStandardMaterial({ color: 0xd4dcdf, roughness: 0.7, side: THREE.DoubleSide });
+  const shard = (geo, pivotY) => { const g = new THREE.Group(), piv = new THREE.Group(), hold = new THREE.Group(); piv.position.y = pivotY; hold.position.y = -pivotY;
+    const outer = new THREE.Mesh(geo, eggM), inner = new THREE.Mesh(geo, innerM); inner.scale.setScalar(0.965); outer.castShadow = true; hold.add(outer, inner); piv.add(hold); g.add(piv); shells.add(g); return { g, piv }; };
+  const shR = shard(shellGeo(0, Math.PI, rim, () => Math.PI - 0.001, TEETH * 2), -0.86), shL = shard(shellGeo(Math.PI, Math.PI * 2, rim, () => Math.PI - 0.001, TEETH * 2), -0.86);
+  const shCap = shard(shellGeo(0, Math.PI * 2, () => 0.001, rim, TEETH * 4, 6), 0);
+  const Z_AXIS = new THREE.Vector3(0, 0, 1);
+  function setShells(e) { // 0 = closed egg … 1 = lying open on the floor
+    shR.piv.quaternion.setFromAxisAngle(Z_AXIS, -1.32 * e); shR.g.position.set(1.05 * e, 0, -0.25 * e);
+    shL.piv.quaternion.setFromAxisAngle(Z_AXIS, 1.32 * e); shL.g.position.set(-1.05 * e, 0, -0.25 * e);
+    shCap.g.position.set(-0.5 * e, Math.sin(e * Math.PI) * 1.7, -1.7 * e); shCap.piv.rotation.set(Math.PI * e, 0, 0.5 * e);
+  }
+  shells.visible = false; caveScene.add(shells);
   const eggGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowSprite('rgba(140,205,255,1)', 'rgba(60,140,255,0)'), blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.4 }));
   eggGlow.scale.setScalar(4.2);
   eggTop.castShadow = eggBottom.castShadow = true; egg.add(eggBottom, eggTop, crack, eggGlow); caveScene.add(egg);
@@ -46,7 +68,8 @@ export function chapter2(G) {
   const stones = Array.from({ length: 5 }, (_, i) => { const m = new THREE.Mesh(stoneG, stoneM); m.rotation.y = i * 1.3; m.castShadow = true; caveScene.add(m); return { m, placed: false, moving: false }; });
   // the baby, Bo and Shu
   const baby = createWorm({ name: 'babyDragon', colors: BABY, length: 6.2, headScale: 1.55, finScale: 1.5, horns: false, dorsal: 'fin', lod: 0.5, light: false, shadow: false, simple: true });
-  baby.root.scale.setScalar(0.24);
+  const BABY_S = 0.48, BABY_FRONT = V(0.2, 0, -0.6); // she ends up in front of her shells, facing the kid
+  baby.root.scale.setScalar(BABY_S);
   const shu = createWorm({ name: 'waterDragon', colors: WATER, finScale: 1.7, horns: false, dorsal: 'fin', lod: 0.6, light: false, shadow: 'body', simple: true });
   shu.root.scale.setScalar(0.8);
   const bo = makeBo();
@@ -59,8 +82,8 @@ export function chapter2(G) {
     const pup = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 8), new THREE.MeshStandardMaterial({ color: 0x20242c, roughness: 0.2 })); pup.position.set(sx * 0.75, 0.2, 2.3); cloud.add(pup);
   }
   cloud.visible = false; outdoor.add(cloud);
-  const actors = [egg, baby.root, shu.root, bo.root, cloud, ...stones.map(s => s.m)];
-  function showAll(v) { for (const a of actors) a.visible = v; bubbles.group.visible = v; if (!v) { eggTop.visible = true; crack.visible = false; } }
+  const actors = [egg, shells, baby.root, shu.root, bo.root, cloud, ...stones.map(s => s.m)];
+  function showAll(v) { for (const a of actors) a.visible = v; bubbles.group.visible = v; if (!v) crack.visible = false; }
   showAll(false);
 
   // ---------------------------------------------------------------- tiny tweens (driven by the frame tick, so they pause with the tab)
@@ -103,7 +126,7 @@ export function chapter2(G) {
     drake.root.position.copy(DRAKE_POS); drake.root.rotation.y = Math.atan2(EGG.x - DRAKE_POS.x, EGG.z - DRAKE_POS.z);
     griffith.root.position.copy(GRIFF_POS);
     cave.openGate(); placed = 0; placing = false; warm = 0; eggShake = 0;
-    egg.rotation.set(0, 0, 0); eggTop.position.set(0, 0, 0); eggTop.rotation.set(0, 0, 0); eggTop.scale.setScalar(1); eggTop.visible = true; crack.visible = false;
+    egg.rotation.set(0, 0, 0); eggTop.visible = eggBottom.visible = eggGlow.visible = true; crack.visible = false; shells.visible = false; shells.position.copy(EGG); setShells(0); baby.root.scale.setScalar(BABY_S);
     if (stage === 'intro') { worm.setPose('rest'); worm.state.blend = 1; worm.lookAt(drake.root.position.clone().setY(1.4)); }
     else {
       worm.setPose('curl'); worm.state.blend = 1; worm.lookAt(NEAR_EGG); egg.visible = true; egg.position.copy(EGG);
@@ -223,13 +246,20 @@ export function chapter2(G) {
     await step(tween(1.8, k => { eggShake = k; }));
     eggShake = 0; sfx.chime(); sfx.happy();
     fx.burst(EGG.clone().add(V(0, 0.5, 0)), 0x9fdcff, 70, 5, 0.5, 1.5, -1); fx.confetti(EGG.clone().add(V(0, 0.6, 0)), 30);
-    // the baby sits coiled inside the lower shell (coil centre = egg centre)
-    baby.root.visible = true; baby.root.position.set(EGG.x + 2.9 * 0.24, 0.25, EGG.z); baby.root.rotation.set(0, 0, 0); baby.setPose('coil'); baby.state.blend = 1;
-    baby.lookAt(cam.position); baby.wiggle(2);
-    tween(0.9, k => { const e = ease(k); eggTop.position.set(-1.2 * e, 1.6 * Math.sin(e * Math.PI) + 0.1 * e, -0.8 * e); eggTop.rotation.z = e * 2.4; eggTop.scale.setScalar(1 - 0.999 * ss(e, 0.7, 1)); }).then(() => { eggTop.visible = false; });
-    worm.wiggle(1.8); fx.hearts3(worm.headWorld().add(V(0, 0.5, 0)).lerp(cam.position, 0.15), 6);
-    await step(wait(900));
+    // the shell breaks into jagged pieces that tip outward; the baby uncurls between them (coil centre = egg centre)
+    eggTop.visible = eggBottom.visible = crack.visible = eggGlow.visible = false; shells.visible = true;
+    baby.root.visible = true; baby.root.rotation.set(0, 0, 0); baby.setPose('coil'); baby.state.blend = 1; baby.lookAt(cam.position);
+    worm.wiggle(1.8); worm.lookAt(BABY_FRONT.clone().setY(0.9));
+    await step(tween(0.9, k => { const e = ease(k), sc = BABY_S * (0.35 + 0.65 * e); setShells(e); baby.root.scale.setScalar(sc); baby.root.position.set(EGG.x + 2.9 * sc, 0.05, EGG.z); }));
+    // she hops out in front of her shells and the camera comes close so the kid sees her face
+    const h0 = baby.root.position.clone();
+    G.camGoal = { pos: V(0.9, 2.0, 4.4), look: V(-0.1, 1.0, -0.8) };
+    await step(tween(0.8, k => { const e = ease(k); baby.root.position.lerpVectors(h0, BABY_FRONT, e); baby.root.position.y += Math.sin(e * Math.PI) * 1.0; }));
+    G.phase = 'c2-baby';
+    baby.wiggle(1.6); baby.state.blink = 1; sfx.squeak(); fx.hearts3(baby.headWorld().add(V(0, 0.7, 0)), 5);
+    await step(wait(900)); baby.state.blink = 1; sfx.squeak();
     await step(say('baby', 'פיפ! פיפ! הי הי הי!'));
+    G.camGoal = { pos: V(-1.0, 3.2, 5.8), look: V(-1.0, 1.0, -2.0) };
     await step(say('drake', 'וואו! דרקונית מים קטנטונת!'));
     baby.lookAt(worm.headWorld()); baby.wiggle(1.5); worm.wiggle(1.2); sfx.purr();
     await step(say('worm', 'שלום, קטנטונת! אני וורם. אל תפחדי, אני כאן.'));
@@ -257,7 +287,7 @@ export function chapter2(G) {
     bo.wave(2);
     await step(say('bo', 'תודה ששמרתם עליה, דרייק ווורם!'));
     // the baby hops over to her new friend
-    const b0 = baby.root.position.clone(), b1 = V(0.3, 0, -1.7);
+    const b0 = baby.root.position.clone(), b1 = V(0.9, 0, -1.7);
     baby.lookAt(worm.headWorld()); worm.lookAt(b1.clone().setY(0.4));
     await step(tween(1.2, k => { const e = ease(k); baby.root.position.lerpVectors(b0, b1, e); baby.root.position.y += Math.sin(e * Math.PI) * 1.2; }));
     baby.wiggle(2.5); worm.wiggle(2); sfx.purr(); fx.hearts3(b1.clone().setY(1.2), 8);

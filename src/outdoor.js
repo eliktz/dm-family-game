@@ -3,7 +3,7 @@
 // Swap point: models.json "castle" GLB replaces `castleGroup` contents.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { glowSprite, blobShadow } from './tex.js';
+import { glowSprite, blobShadow, noiseTexture } from './tex.js';
 
 const ss = THREE.MathUtils.smoothstep;
 export const PLATEAU = 3;
@@ -63,7 +63,12 @@ export function buildOutdoor() {
   const rv = [], ri = [];
   for (let i = 0; i <= 120; i++) { const x = -240 + i * 4, z = riverZ(x); rv.push(x, RIVER_Y, z - 8.5, x, RIVER_Y, z + 8.5); if (i < 120) { const a = i * 2; ri.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); } }
   const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.Float32BufferAttribute(rv, 3)); rg.setIndex(ri); rg.computeVertexNormals();
-  group.add(new THREE.Mesh(rg, water.material));
+  const uvs = []; for (let i = 0; i <= 120; i++) uvs.push(i * 4 / 14, 0, i * 4 / 14, 17 / 14);
+  rg.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  // its own matte-ish material: no mirror-like sun glare (which bloomed into a white blob), gentle drifting ripples instead
+  const ripple = noiseTexture(256, [128, 128, 128], 110, 17, 500);
+  const riverM = new THREE.MeshStandardMaterial({ color: 0x2a7fc0, roughness: 0.78, metalness: 0, envMapIntensity: 0.3, bumpMap: ripple, bumpScale: 1.2, emissive: 0x0b3f70, emissiveIntensity: 0.3, transparent: true, opacity: 0.93 });
+  group.add(new THREE.Mesh(rg, riverM));
 
   // ---- castle (merged per material)
   const castle = new THREE.Group(); castle.name = 'castleGroup'; castle.position.y = PLATEAU; group.add(castle);
@@ -183,7 +188,7 @@ export function buildOutdoor() {
   blob.scale.set(9, 1, 14); group.add(blob);
 
   function update(dt, time) {
-    clouds.rotation.y = time * 0.004;
+    clouds.rotation.y = time * 0.004; ripple.offset.set(time * 0.05, Math.sin(time * 0.3) * 0.05);
     for (const f of flags) { const a = f.geometry.attributes.position, b = f.userData.base;
       for (let i = 0; i < a.count; i++) { const x = b[i * 3]; a.setZ(i, Math.sin(x * 2.2 - time * 5) * 0.18 * x / 2.4); } a.needsUpdate = true; }
   }
