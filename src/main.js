@@ -189,12 +189,19 @@ function wormTapped() {
 }
 
 // ---------------------------------------------------------------- FLIGHT
-const fl = { pos: new THREE.Vector3(), yaw: 0, vy: 0, yawRate: 0, idle: 0, got: 0, done: false, kingSaid: false, speed: 11 };
+const fl = { pos: new THREE.Vector3(), yaw: 0, vy: 0, yawRate: 0, idle: 0, got: 0, done: false, kingSaid: false, speed: 11, glanceT: 0, glanceAmt: 1, cam: { v: 0, vel: 0 } };
+// "look at me!" moment: Worm turns his head back to Drake with a happy wiggle while the camera eases
+// around to a 3/4 side view of his face, then drifts back to the chase view (smooth-damped, no cuts).
+function glance(hold = 1.1, amount = 1) { fl.glanceT = hold; fl.glanceAmt = amount; worm.glanceBack(hold + 0.15); }
+function smoothDamp(o, target, smoothTime, dt) {
+  const om = 2 / smoothTime, x = om * dt, e = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x), ch = o.v - target, tmp = (o.vel + om * ch) * dt;
+  o.vel = (o.vel - om * tmp) * e; o.v = target + (ch + tmp) * e;
+}
 const nextStar = () => stars.list.findIndex(s => !s.got);
 async function storyFlight(step) {
   step = step || runner();
   useScene(outdoor); mode = 'flight'; phase = 'fly'; stars.group.visible = true; stars.reset();
-  Object.assign(fl, { got: 0, done: false, kingSaid: false, idle: 0, vy: 0, yawRate: 0 });
+  Object.assign(fl, { got: 0, done: false, kingSaid: false, idle: 0, vy: 0, yawRate: 0, glanceT: 0 }); fl.cam.v = fl.cam.vel = 0;
   const a0 = 0.35 - 0.5, R = 37; fl.pos.set(Math.cos(a0) * R, PLATEAU + 14, Math.sin(a0) * R);
   fl.yaw = Math.atan2(-Math.sin(a0), Math.cos(a0));
   worm.setPose('fly'); worm.state.blend = 1; worm.setGlow(false); worm.lookAt(null);
@@ -203,12 +210,13 @@ async function storyFlight(step) {
   camSnap = true; aura.material.opacity = 0.08;
   await step(fade(false));
   showJoy(true);
+  worm.wiggle(1); glance(1.5);
   toast('worm', 'תחזיק חזק! בוא נאסוף את כל 8 הכוכבים הזוהרים!', 3500);
   await step(wait(3600));
   toast(null, 'הזז את הג׳ויסטיק כדי לכוון את וורם ⭐', 4000);
   await step(waitFor(() => fl.got >= stars.list.length));
   phase = 'celebrate'; fl.done = true; showJoy(false); arrowEl.hidden = true;
-  sfx.fanfare(); worm.wiggle(2.5);
+  sfx.fanfare(); worm.wiggle(2.5); glance(2.2);
   for (let i = 0; i < 3; i++) setTimeout(() => fx.confetti(fl.pos.clone().add(new THREE.Vector3(0, 3, 0)), 70), i * 500);
   toast('worm', 'זאת הייתה הטיסה הכי כיפית שלי!', 3000);
   await step(wait(2600));
@@ -226,7 +234,7 @@ function updateCounter() { $('#count').textContent = `${fl.got} / ${stars.list.l
 const STAR_LINES = ['יש! ⭐', 'עוד אחד!', 'וואו, אתה מעולה!', 'חצי דרך! 🎉', 'כל הכבוד!', 'אנחנו צוות מנצח!', 'רק עוד אחד!', ''];
 function collect(i) {
   const s = stars.list[i]; if (s.got) return; s.got = true; s.pop = 0; fl.got++;
-  sfx.star(fl.got - 1); fx.burst(s.g.position.clone(), 0xffe27a, 40, 7, 0.6, 1.2, -2); worm.wiggle(0.8); updateCounter();
+  sfx.star(fl.got - 1); fx.burst(s.g.position.clone(), 0xffe27a, 40, 7, 0.6, 1.2, -2); worm.wiggle(0.8); glance(1.0, 0.8); updateCounter();
   if (fl.got < stars.list.length && STAR_LINES[fl.got - 1]) toast('worm', STAR_LINES[fl.got - 1], 1800);
 }
 const arrowEl = document.getElementById('arrow');
@@ -279,8 +287,12 @@ function updateFlight(dt) {
   world.blob.position.set(fl.pos.x, heightAt(fl.pos.x, fl.pos.z) + 0.15, fl.pos.z); world.blob.rotation.y = fl.yaw;
   // camera
   const side = new THREE.Vector3(-fwd.z, 0, fwd.x);
-  const camPos = fl.pos.clone().addScaledVector(fwd, -15).addScaledVector(side, 3.2).add(new THREE.Vector3(0, 6.5, 0));
-  const look = fl.pos.clone().addScaledVector(fwd, 10).add(new THREE.Vector3(0, 0.5, 0));
+  fl.glanceT = Math.max(0, fl.glanceT - dt);
+  smoothDamp(fl.cam, fl.glanceT > 0 ? fl.glanceAmt : 0, 0.42, dt);
+  const k = fl.cam.v, lerp = THREE.MathUtils.lerp;
+  const ang = lerp(0.21, 1.85, k), rad = lerp(15.3, 11, k); // orbit from behind (chase) round to his face side
+  const camPos = fl.pos.clone().addScaledVector(fwd, -Math.cos(ang) * rad).addScaledVector(side, Math.sin(ang) * rad).add(new THREE.Vector3(0, lerp(6.5, 3.2, k), 0));
+  const look = fl.pos.clone().addScaledVector(fwd, lerp(10, 1.0, k)).add(new THREE.Vector3(0, lerp(0.5, 0.8, k), 0));
   if (camSnap) { cam.position.copy(camPos); camLook.copy(look); camSnap = false; }
   cam.position.lerp(camPos, Math.min(1, dt * 3)); camLook.lerp(look, Math.min(1, dt * 4)); cam.lookAt(camLook);
   if (until && until.test()) { const u = until; until = null; u.resolve(); }
