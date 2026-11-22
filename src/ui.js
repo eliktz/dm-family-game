@@ -35,6 +35,9 @@ export const joy = { x: 0, y: 0, active: false, enabled: false };
 const jEl = $('#joy'), knob = $('#knob'); let jId = null;
 function jSet(e) {
   const r = jEl.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, R = r.width / 2;
+  // a finger still held (and moving) on the stick after it was hidden has no box to measure: dividing by its zero radius
+  // gave NaN input, which poisoned the next flight's positions and crashed the frame
+  if (!joy.enabled || !(R > 0)) { joy.x = joy.y = 0; return; }
   let dx = (e.clientX - cx) / R, dy = (e.clientY - cy) / R; const m = Math.hypot(dx, dy); if (m > 1) { dx /= m; dy /= m; }
   knob.style.transform = `translate(${dx * R * 0.6}px, ${dy * R * 0.6}px)`;
   const mm = Math.min(1, m), k = mm < 0.12 ? 0 : Math.pow((mm - 0.12) / 0.88, 1.3) / (mm || 1);
@@ -44,13 +47,17 @@ jEl.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation
 jEl.addEventListener('pointermove', e => { if (e.pointerId === jId) jSet(e); });
 const jEnd = e => { if (e.pointerId !== jId) return; jId = null; joy.active = false; joy.x = joy.y = 0; knob.style.transform = ''; };
 jEl.addEventListener('pointerup', jEnd); jEl.addEventListener('pointercancel', jEnd);
-export function showJoy(on) { jEl.hidden = !on; joy.enabled = on; if (!on) { joy.x = joy.y = 0; knob.style.transform = ''; } }
+export function showJoy(on) {
+  jEl.hidden = !on; joy.enabled = on;
+  if (!on) { if (jId !== null) { try { jEl.releasePointerCapture(jId); } catch { } jId = null; } joy.active = false; joy.x = joy.y = 0; knob.style.transform = ''; }
+}
 // keyboard (desktop testing)
 const keys = new Set(); addEventListener('keydown', e => keys.add(e.key)); addEventListener('keyup', e => keys.delete(e.key));
 export function input() {
   let x = joy.x, y = joy.y;
   if (keys.has('ArrowLeft') || keys.has('a')) x -= 1; if (keys.has('ArrowRight') || keys.has('d')) x += 1;
   if (keys.has('ArrowUp') || keys.has('w')) y -= 1; if (keys.has('ArrowDown') || keys.has('s')) y += 1;
+  if (!Number.isFinite(x)) x = 0; if (!Number.isFinite(y)) y = 0;
   return { x: Math.max(-1, Math.min(1, x)), y: Math.max(-1, Math.min(1, y)) };
 }
 
