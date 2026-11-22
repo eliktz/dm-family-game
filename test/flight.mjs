@@ -39,7 +39,7 @@ for (const dev of DEVICES) {
     let st = await state(), last = st.t, lastGot = 0, msg = '', maxGap = 0, shotDone = false; const t0 = st.t, w0 = Date.now(); // game time: slow test machines drop frames
     while (true) {
       st = await state(); const now = st.t;
-      if (Date.now() - w0 > 240000) { msg = 'test timeout (240 s wall clock)'; break; }
+      if (Date.now() - w0 > 240000) { const d = await page.evaluate(async () => { const G = __dm.G, t0 = G.time; let raf = 0; const f = () => { raf++; requestAnimationFrame(f); }; requestAnimationFrame(f); await new Promise(r => setTimeout(r, 3000)); return `game clock +${(G.time - t0).toFixed(2)}s and ${raf} animation frames in 3 s, mode ${G.mode}, phase ${G.phase}, u ${G.fl.u}, hidden ${document.hidden}`; }); msg = `test timeout (240 s wall clock) at ${st.got}/${st.total}: ${d}`; break; }
       if (st.got > lastGot) { maxGap = Math.max(maxGap, now - last); lastGot = st.got; last = now; }
       if (st.got >= st.total) break;
       if (now - last > STALL_MS) { msg = `STALLED at ${st.got}/${st.total} for ${STALL_MS / 1000}s (next item ${st.dist} m away, worm at ${st.pos})`; break; }
@@ -48,7 +48,7 @@ for (const dev of DEVICES) {
       await page.waitForTimeout(150);
     }
     if (mode !== 'none') await page.mouse.up();
-    if (!msg && errors.length) msg = 'errors: ' + errors.join(' | ');
+    if (errors.length) msg = (msg ? msg + '; ' : '') + 'errors: ' + errors.join(' | ');
     console.log(`${msg ? 'FAIL' : 'ok  '} ${dev.name.padEnd(6)} ${chapter} ${mode.padEnd(14)} ${msg || `${st.total}/${st.total} in ${((st.t - t0) / 1000).toFixed(0)}s game time (${((Date.now() - w0) / 1000).toFixed(0)}s real), longest gap ${(maxGap / 1000).toFixed(1)}s`}`);
     if (msg) fails++; errors.length = 0;
   }

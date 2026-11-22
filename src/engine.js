@@ -55,8 +55,7 @@ export class Engine {
     const fov = w / h < 1.2 ? 62 : 50;
     // short landscape screens (phones): the dialog and HUD take a big slice of the top, so the picture is framed lower.
     // We render the upper part of a taller virtual frame: the scene centre moves down by shift/2 of the screen height.
-    // (tablets get a small shift too, so toasts and dialogs sit above Worm's head rather than on it)
-    const short = h < 520 && w > h, s = this.viewShift = short ? 0.3 : w > h ? 0.12 : 0;
+    const short = h < 520 && w > h, s = this.viewShift = short ? 0.3 : 0;
     if (s) {
       this.camera.fov = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(fov + (short ? 6 : 0)) / 2) * (1 + s)));
       this.camera.aspect = w / (h * (1 + s)); this.camera.setViewOffset(w, h * (1 + s), 0, 0, w, h);

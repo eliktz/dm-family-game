@@ -374,7 +374,14 @@ document.addEventListener('dblclick', e => e.preventDefault());
 
 // ---------------------------------------------------------------- loop
 let lastMode = '';
+// The loop must never die: one bad frame (an exception anywhere below) used to stop requestAnimationFrame for good,
+// which froze the game. Now the next frame is always scheduled first and an error is only logged (once per message).
+const frameErrors = new Set();
 function frame() {
+  requestAnimationFrame(frame);
+  try { frameBody(); } catch (e) { const m = String(e && e.message); if (!frameErrors.has(m)) { frameErrors.add(m); console.error('frame error:', (e && e.stack) || e); } }
+}
+function frameBody() {
   timer.update(); const dt = Math.min(0.05, timer.getDelta()); time += dt;
   if (G.mode !== lastMode) { camSnap = true; lastMode = G.mode; }
   if (G.mode === 'title') updateTitle(dt); else if (G.mode === 'cave') updateCave(dt); else if (G.mode === 'flight') updateFlight(dt);
@@ -386,7 +393,6 @@ function frame() {
   for (const k in swapped) swapped[k].update(dt, time);
   fx.setScale(innerHeight * Math.min(devicePixelRatio, engine.maxDpr)); fx.update(dt);
   if (engine.scene) engine.render(dt);
-  requestAnimationFrame(frame);
 }
 
 // ---------------------------------------------------------------- test / debug hook
