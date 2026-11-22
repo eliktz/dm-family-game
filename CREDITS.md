@@ -26,8 +26,8 @@ No book text, illustrations, or music are included. All dialogue here is origina
 | File | Source | Author | Licence | Notes |
 |---|---|---|---|---|
 | `drake.glb` | "Young Medieval Boy [MESHY]" https://sketchfab.com/3d-models/802543ab36f3443594bc3c999c624499 (retrieved 2026-11-22) | EthanfromEngland | CC BY 4.0 | rigged, recoloured tunic, Dragon Stone added |
-| `griffith.glb`, `roland.glb` | "An Old Man \| Full Body [MESHY]" https://sketchfab.com/3d-models/3176a35f258946d69f67730313cbba36 (retrieved 2026-11-22) | EthanfromEngland | CC BY 4.0 | rigged, recoloured, hat / crown added |
-| rigs and animation clips (drake, griffith, roland) | Quaternius Universal Base Characters + Universal Animation Library 1 & 2 (itch.io) | Quaternius | CC0 | skeleton and Idle/Walk/Talk/Wave/etc clips |
+| `griffith.glb`, `roland.glb` | Original procedural models built in Blender for this project (vertex colours, no third-party assets) | this repo | n/a | rigged, Idle/Talk/Wave |
+| Drake rig and animation clips | Quaternius Universal Base Characters + Universal Animation Library 1 & 2 (itch.io) | Quaternius | CC0 | skeleton and Idle/Walk/Talk/Wave clips |
 | `worm.glb` | Original model built in Blender for this project, from a FLUX.1-schnell (Apache-2.0) concept image | this repo | n/a | procedural skin textures |
 
 ## Procedural (original, this repo)
