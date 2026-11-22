@@ -96,7 +96,7 @@ export function chapter1(G) {
     step = step || runner();
     stars.group.visible = true; stars.reset();
     // a closed loop around the castle through all 8 stars; Worm starts a little before the first one and keeps circling when done
-    G.startFlight({ items: stars.list, loop: true, startU: 1 - 0.085, onCollect: onStar });
+    G.startFlight({ items: stars.list, loop: true, startU: 1 - 0.085, camSide: -1, onCollect: onStar }); // camera on the outside of the loop: the castle stays behind Worm and no tower can get in the way
     G.phase = 'fly'; G.checkpoint(1, 'flight'); G.setCounter(`0 / ${n}`);
     await step(fade(false));
     showJoy(true);

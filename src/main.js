@@ -189,7 +189,7 @@ function wormTapped() {
 const nextItem = () => fl.items.findIndex(s => !s.got);
 // "look at me!" moment: Worm turns his head back to Drake with a happy wiggle while the camera eases
 // around to a 3/4 side view of his face, then drifts back to the chase view (smooth-damped, no cuts).
-function glance(hold = 1.1, amount = 1) { fl.glanceT = hold; fl.glanceAmt = amount; worm.glanceBack(hold + 0.15); }
+function glance(hold = 1.1, amount = 1) { fl.glanceT = hold; fl.glanceAmt = amount; worm.glanceBack(hold + 0.15, fl.camSide); }
 function smoothDamp(o, target, smoothTime, dt) {
   const om = 2 / smoothTime, x = om * dt, e = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x), ch = o.v - target, tmp = (o.vel + om * ch) * dt;
   o.vel = (o.vel - om * tmp) * e; o.v = target + (ch + tmp) * e;
@@ -199,6 +199,7 @@ function smoothDamp(o, target, smoothTime, dt) {
 // around the path (it springs back), and near each item a magnet pulls him onto it, so with no input at all he still
 // collects everything. (Before, free steering let a held joystick turn him in a ~7 m circle around an item that needs
 // 4.5 m to collect, forever: the autopilot only helped once the stick was released.)
+// camSide: which side the chase / glance camera sits on (1 = left of the flight direction, -1 = right).
 // cfg: { items (list of {g, base, got, pop}), loop (closed path, keeps cruising when done), lead / exit (extra path points
 //        before / after the items), startU, speed?, corridor? [side, up], onCollect(i, item) }
 function startFlight(cfg) {
@@ -209,7 +210,7 @@ function startFlight(cfg) {
   const N = 800, itemU = cfg.items.map(() => 0), best = cfg.items.map(() => Infinity), q = new THREE.Vector3();
   for (let k = 0; k <= N; k++) { path.getPointAt(k / N, q); cfg.items.forEach((it, i) => { const d = q.distanceToSquared(it.base); if (d < best[i]) { best[i] = d; itemU[i] = k / N; } }); }
   Object.assign(fl, { got: 0, done: false, kingSaid: false, vy: 0, yawRate: 0, glanceT: 0, items: cfg.items, onCollect: cfg.onCollect || null,
-    speed: cfg.speed ?? 8.5, corridor: cfg.corridor ?? [5, 3.5], path, len: path.getLength(), loop: !!cfg.loop, itemU, u: cfg.startU ?? 0, ox: 0, oy: 0, since: 0, helped: false, yaw: null });
+    speed: cfg.speed ?? 8.5, corridor: cfg.corridor ?? [5, 3.5], path, len: path.getLength(), loop: !!cfg.loop, itemU, u: cfg.startU ?? 0, ox: 0, oy: 0, since: 0, helped: false, yaw: null, camSide: cfg.camSide ?? 1 });
   fl.cam.v = fl.cam.vel = 0; path.getPointAt(((fl.u % 1) + 1) % 1, fl.pos);
   worm.setPose('fly'); worm.state.blend = 1; worm.setGlow(false); worm.lookAt(null);
   drake.setSit(1); drake.setWalk(0); drake.root.scale.setScalar(1);
@@ -278,7 +279,7 @@ function updateFlight(dt) {
   smoothDamp(fl.cam, fl.glanceT > 0 ? fl.glanceAmt : 0, 0.42, dt);
   const k = fl.cam.v, lerp = THREE.MathUtils.lerp;
   const ang = lerp(0.21, 1.85, k), rad = lerp(15.3, 11, k); // orbit from behind (chase) round to his face side
-  const camPos = fl.pos.clone().addScaledVector(fwd, -Math.cos(ang) * rad).addScaledVector(side, Math.sin(ang) * rad).add(new THREE.Vector3(0, lerp(6.5, 3.2, k), 0));
+  const camPos = fl.pos.clone().addScaledVector(fwd, -Math.cos(ang) * rad).addScaledVector(side, Math.sin(ang) * rad * fl.camSide).add(new THREE.Vector3(0, lerp(6.5, 3.2, k), 0));
   const look = fl.pos.clone().addScaledVector(fwd, lerp(10, 1.0, k)).add(new THREE.Vector3(0, lerp(0.5, 0.8, k), 0));
   camPos.y = Math.max(camPos.y, heightAt(camPos.x, camPos.z) + 1.5);
   if (camSnap) { cam.position.copy(camPos); camLook.copy(look); camSnap = false; }

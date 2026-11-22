@@ -196,7 +196,7 @@ export function createWorm(opts = {}) {
     }
     // glance back over his shoulder at the rider (flight): overrides look-at for a moment
     st.glance = Math.max(0, st.glance - dt);
-    if (st.glance > 0) { lookDir.copy(fwd).applyAxisAngle(UP, -1.92); lookDir.y = 0.14; lookDir.normalize(); }
+    if (st.glance > 0) { lookDir.copy(fwd).applyAxisAngle(UP, -1.92 * (st.glanceSide || 1)); lookDir.y = 0.14; lookDir.normalize(); }
     if (!head.userData.dir) head.userData.dir = lookDir.clone();
     head.userData.dir.lerp(lookDir, Math.min(1, dt * (st.glance > 0 ? 5 : 3))).normalize();
     root.updateMatrixWorld(); head.lookAt(root.localToWorld(head.position.clone().add(head.userData.dir)));
@@ -232,7 +232,7 @@ export function createWorm(opts = {}) {
     openMouth(v) { st.mouth = v; },
     setGlow(on) { st.glowTarget = on ? 1 : 0; },
     lookAt(v) { st.look = v ? v.clone() : null; },
-    glanceBack(sec = 1) { st.glance = sec; },
+    glanceBack(sec = 1, side = 1) { st.glance = sec; st.glanceSide = side; }, // side -1 = over the other shoulder
     // local-space frame at body fraction u (for riders / effects)
     frameAt(u) { return frames[Math.round(clamp(u, 0, 1) * (RINGS - 1))]; },
     seatWorld(u, out = new THREE.Vector3()) { const f = frames[Math.round(u * (RINGS - 1))]; return root.localToWorld(out.copy(f.p).addScaledVector(f.N, f.r * 0.9)); },
