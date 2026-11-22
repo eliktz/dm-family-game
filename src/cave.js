@@ -91,7 +91,7 @@ export function buildCave() {
   for (let i = 0; i <= 12; i++) { const a = Math.PI - i / 12 * Math.PI; arch.push(new THREE.BoxGeometry(0.9, 0.9, 1.2).rotateZ(a).translate(Math.cos(a) * 2.9, 3.4 + Math.sin(a) * 2.6, 0).toNonIndexed()); }
   for (const sx of [-1, 1]) for (let j = 0; j < 4; j++) arch.push(new THREE.BoxGeometry(1.0, 0.85, 1.2).translate(sx * 2.95, 0.42 + j * 0.86, 0).toNonIndexed());
   const archM = new THREE.Mesh(mergeGeometries(arch), new THREE.MeshStandardMaterial({ map: rockCol, color: 0xd8c4a8, roughness: 0.85 })); archM.castShadow = true; gate.add(archM);
-  const daylight = new THREE.Mesh(new THREE.CircleGeometry(3.0, 32, 0, Math.PI).translate(0, 3.4, -0.4), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 2.6, 3.0) }));
+  const daylight = new THREE.Mesh(new THREE.CircleGeometry(3.0, 32, 0, Math.PI).translate(0, 3.4, -0.4), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.95, 1.2, 1.55) }));
   const dayRect = new THREE.Mesh(new THREE.PlaneGeometry(5.2, 3.4).translate(0, 1.7, -0.4), daylight.material);
   gate.add(daylight, dayRect);
   const wtex = new THREE.TextureLoader().load('assets/textures/wood_1k.jpg'); wtex.colorSpace = THREE.SRGBColorSpace;
