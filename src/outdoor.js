@@ -14,8 +14,13 @@ export function heightAt(x, z) {
   h += PLATEAU * (1 - ss(d, 24, 55)) + 1.5 * ss(d, 24, 55) * 0;
   h -= 7 * Math.exp(-((x - 70) ** 2 + (z - 45) ** 2) / 1100);
   h += ss(d, 150, 300) * (30 + 18 * Math.sin(Math.atan2(z, x) * 5) + 10 * Math.sin(Math.atan2(z, x) * 13));
+  // the river behind the castle (chapter 2): a gentle valley with a shallow channel
+  const dz = Math.abs(z - riverZ(x));
+  if (dz < 24) { const k = 1 - ss(Math.abs(x), 200, 240); h += (0.5 - h) * (1 - ss(dz, 10, 24)) * k; h -= 2.6 * (1 - ss(dz, 3, 7.5)) * k; }
   return h;
 }
+export const RIVER_Y = -0.5;
+export function riverZ(x) { return -78 + 9 * Math.sin(x * 0.03); }
 const pathX = z => 7 * Math.sin(z * 0.045);
 
 function texLoad(url, rep, srgb = true) {
@@ -44,6 +49,7 @@ export function buildOutdoor() {
     c.copy(g1).lerp(g2, n * 0.7).lerp(g3, ss(-h, -1, 4) * 0.6);
     if (z > 12 && z < 140 && Math.abs(x - pathX(z)) < 2.6) c.lerp(dirt, 0.85 * (1 - ss(Math.abs(x - pathX(z)), 1.6, 2.6)));
     c.lerp(rock, ss(h, 18, 40));
+    c.lerp(dirt, 0.75 * (1 - ss(Math.abs(z - riverZ(x)), 5, 11)) * (1 - ss(Math.abs(x), 200, 240)));
     cols.set([c.r, c.g, c.b], i * 3);
   }
   tg.setAttribute('color', new THREE.BufferAttribute(cols, 3)); tg.computeVertexNormals();
@@ -53,6 +59,11 @@ export function buildOutdoor() {
   // lake
   const water = new THREE.Mesh(new THREE.CircleGeometry(44, 64).rotateX(-Math.PI / 2), new THREE.MeshPhysicalMaterial({ color: 0x2f7fb8, roughness: 0.06, metalness: 0.1, clearcoat: 1, transparent: true, opacity: 0.88 }));
   water.position.set(70, -2.2, 45); group.add(water);
+  // river ribbon (same water material), banks are carved by heightAt()
+  const rv = [], ri = [];
+  for (let i = 0; i <= 120; i++) { const x = -240 + i * 4, z = riverZ(x); rv.push(x, RIVER_Y, z - 8.5, x, RIVER_Y, z + 8.5); if (i < 120) { const a = i * 2; ri.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); } }
+  const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.Float32BufferAttribute(rv, 3)); rg.setIndex(ri); rg.computeVertexNormals();
+  group.add(new THREE.Mesh(rg, water.material));
 
   // ---- castle (merged per material)
   const castle = new THREE.Group(); castle.name = 'castleGroup'; castle.position.y = PLATEAU; group.add(castle);
@@ -110,6 +121,7 @@ export function buildOutdoor() {
   for (let i = 0; i < 3000 && trees.length < NT; i++) {
     const a = R() * Math.PI * 2, d = 34 + Math.pow(R(), 0.8) * 190, x = Math.cos(a) * d, z = Math.sin(a) * d;
     if (Math.hypot(x - 70, z - 45) < 50) continue; if (z > 10 && Math.abs(x - pathX(z)) < 5) continue;
+    if (Math.abs(z - riverZ(x)) < 13) continue;
     trees.push([x, heightAt(x, z) - 0.2, z, 0.8 + R() * 0.8, R()]);
   }
   const foliage = new THREE.InstancedMesh(foliageG, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85 }), trees.length);
@@ -203,6 +215,38 @@ export function buildStars(n = 8) {
       it.star.rotation.y = time * 1.6 + i; it.g.position.y = it.base.y + Math.sin(time * 1.5 + i) * 0.5;
       const hi = i === nextIdx ? 1 : 0; const pulse = 1 + hi * 0.18 * Math.sin(time * 5);
       it.ring.scale.setScalar(pulse); it.sp.material.opacity = 0.3 + hi * 0.3;
+    });
+  }
+  function reset() { list.forEach(it => { it.got = false; it.pop = 0; it.g.visible = true; it.g.scale.setScalar(1); }); }
+  return { group, list, update, reset };
+}
+
+// ---- water-drop bubbles over the river (chapter 2): collected in pairs ----------------------
+export function buildBubbles(n = 5) {
+  const group = new THREE.Group(); const list = [];
+  const shellG = new THREE.SphereGeometry(1.25, 24, 16);
+  const shellM = new THREE.MeshPhysicalMaterial({ color: 0xbfe6ff, roughness: 0.04, clearcoat: 1, transparent: true, opacity: 0.32, depthWrite: false });
+  const pts = []; for (let i = 0; i <= 12; i++) { const a = i / 12 * Math.PI, r = Math.sin(a) * (0.5 + 0.22 * Math.cos(a)) * (a < 0.5 ? a * 2 : 1); pts.push(new THREE.Vector2(r, 0.95 * Math.cos(a) + (a < 1 ? 0.25 * (1 - a) : 0))); }
+  const dropG = new THREE.LatheGeometry(pts, 16);
+  const dropM = new THREE.MeshPhysicalMaterial({ color: 0x3f9fe8, roughness: 0.1, clearcoat: 1, emissive: 0x2a8ae0, emissiveIntensity: 0.9 });
+  const glow = glowSprite('rgba(170,225,255,1)', 'rgba(90,170,255,0)');
+  for (let i = 0; i < n; i++) {
+    const x = -64 + i * 32, z = riverZ(x), y = RIVER_Y + 3.9;
+    const g = new THREE.Group(); g.position.set(x, y, z); const drops = [];
+    for (const sz of [-1, 1]) {
+      const b = new THREE.Group(); b.position.set(0, 0, sz * 1.55);
+      const d = new THREE.Mesh(dropG, dropM); d.scale.setScalar(0.78); b.add(d); const sh = new THREE.Mesh(shellG, shellM); sh.renderOrder = 2; b.add(sh);
+      g.add(b); drops.push(b);
+    }
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.35 })); sp.scale.setScalar(8.5); g.add(sp);
+    group.add(g); list.push({ g, drops, sp, got: false, base: g.position.clone(), pop: 0 });
+  }
+  function update(dt, time, nextIdx) {
+    list.forEach((it, i) => {
+      if (it.got) { it.pop += dt; const k = Math.max(0, 1 - it.pop * 2.5); it.g.scale.setScalar(k * (1 + it.pop * 3)); it.g.visible = k > 0; return; }
+      it.g.position.y = it.base.y + Math.sin(time * 1.4 + i) * 0.35;
+      it.drops.forEach((b, j) => { b.position.y = Math.sin(time * 2.2 + i + j * 1.7) * 0.25; b.rotation.y = time * 1.2 + j; });
+      const hi = i === nextIdx ? 1 : 0; it.sp.material.opacity = 0.4 + hi * (0.3 + 0.12 * Math.sin(time * 5));
     });
   }
   function reset() { list.forEach(it => { it.got = false; it.pop = 0; it.g.visible = true; it.g.scale.setScalar(1); }); }
