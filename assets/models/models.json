@@ -1,0 +1,3 @@
+{
+  "_doc": "Optional Blender-built GLBs that replace the procedural placeholders. Add an entry like \"worm\": { \"url\": \"assets/models/worm.glb\", \"scale\": 1, \"y\": 0, \"rotY\": 0 }. Keys: worm, drake, griffith, king, castle. Animation clips named idle / wiggle / fly / walk / sit / wave are played automatically when present. Empty = all procedural."
+}

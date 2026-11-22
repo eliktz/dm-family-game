@@ -1,0 +1,16 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="icon" href="data:,">
+<script type="importmap">{"imports":{"three":"./lib/three.module.js","three/addons/":"./lib/addons/"}}</script>
+<style>body{margin:0}canvas{width:100vw;height:100vh;display:block}</style></head><body><canvas id=c></canvas>
+<script type="module">
+import * as THREE from 'three'; import { Engine } from './src/engine.js'; import { createWorm } from './src/worm.js';
+const e = new Engine(document.getElementById('c')); const sc = new THREE.Scene();
+const q = new URLSearchParams(location.search);
+const hdr = await e.loadHDR('assets/hdri/kloofendal_day_1k.hdr'); sc.background = hdr.background; sc.environment = hdr.env; sc.environmentIntensity = 0.55; sc.backgroundIntensity=0.8;
+const sun = new THREE.DirectionalLight(0xfff1d6, 2.5); sun.position.set(6, 12, 8); sun.castShadow = true; sun.shadow.mapSize.set(2048,2048); Object.assign(sun.shadow.camera,{left:-10,right:10,top:10,bottom:-10}); sc.add(sun);
+const g = new THREE.Mesh(new THREE.CircleGeometry(30, 48).rotateX(-Math.PI/2), new THREE.MeshStandardMaterial({color:0x6aa84f})); g.receiveShadow = true; sc.add(g);
+const w = createWorm(); sc.add(w.root); w.setPose(q.get('pose')||'rest'); w.state.blend=1; if(q.get('glow')) { w.setGlow(1); w.state.glow=1; }
+w.root.rotation.y = +(q.get('ry')||0.6);
+e.setScene(sc); e.camera.position.set(+(q.get('cx')||7), +(q.get('cy')||4), +(q.get('cz')||9)); e.camera.lookAt(0, 1.5, -2);
+let t = 0; window.__t = 0;
+function f(){ t += 1/60; w.update(1/60, t); e.render(1/60); window.__t++; requestAnimationFrame(f);} f();
+</script></body></html>
