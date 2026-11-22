@@ -6,4 +6,4 @@ model: sonnet
 Read CLAUDE.md. Write ORIGINAL Hebrew lines (never quote or paraphrase the books). Keep each line ≤ 90 characters, warm and funny, and male
 second person for the player (Drake). Worm reacts warmly in every scene. Each chapter needs a story card, 3–6 dialogue beats, ONE clear activity
 (math up to 10, counting, shapes, patterns, simple Hebrew words), a celebration, and a "המשך יבוא…" teaser.
-Return the script as a JS array of {who, text} beats ready to paste into src/main.js, plus the activity spec.
+Return the script as a JS array of {who, text} beats ready to paste into src/chapters/chN.js, plus the activity spec.

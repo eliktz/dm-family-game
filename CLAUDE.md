@@ -21,7 +21,8 @@ A Hebrew, iPad-first, **plot-driven** three.js game for Elik's 7-year-old son, b
   in `dir="ltr"` spans. Speaker names: דרייק, וורם, בו, אנה, רורי, פטרה, גריפית', המלך רולנד.
 - **Plot-driven chapters**, not free exploration. Each chapter is a short story card, then scenes with dialogue bubbles,
   then one clear activity (riddle, guided flight, …), then a celebration and a "המשך יבוא…" teaser.
-  The story runner is in `src/main.js` (cancellable async script: `runner()`, `step()`, `waitFor()`).
+  The story runner is in `src/main.js` (cancellable async script: `runner()`, `step()`, `waitFor()`); each chapter's script is
+  `src/chapters/chN.js` and receives the shared core as `G`. The arc is in `STORY.md`. Progress: localStorage `dm.progress`; `?all=1` unlocks all.
 - **Worm is the star** (the kid's favourite). He gets the most polished model and animation (breathing, happy wiggle, chomp,
   look-at, Dragon-Stone eye glow) and warm reactions everywhere. In the books Worm has no wings and moves with mind power,
   so in flight he *floats/glides* with a green aura.
@@ -36,9 +37,10 @@ A Hebrew, iPad-first, **plot-driven** three.js game for Elik's 7-year-old son, b
 - iPad budget: DPR ≤ 2, ≤ ~200k triangles in the main pass, ≤ ~150 draw calls in the main pass, textures ≤ 150 MB, one shadow light,
   lights created once (never add lights at runtime), and the auto quality tier only ever downgrades (`src/engine.js`).
 - Procedural placeholders can be swapped for GLBs through `assets/models/models.json` → `src/assets.js`.
-- Debug hook: `window.__dm` (`go()`, `walkToWorm()`, `collectNext()`, `collectAll()`, `stats()`, `setTier()`, `fast`).
+- Debug hook: `window.__dm` (`go('ch2' | 'ch2-glide' | 'ch2-warm' | 'ch2-hatch' | …)`, `walkToWorm()`, `collectNext()`, `collectAll()`, `stoneScreen()`,
+  `progress`, `resetProgress()`, `stats()`, `setTier()`, `fast`).
 
 ## Layout
-`index.html` `style.css` | `src/` (main, worm, people, cave, outdoor, engine, fx, tex, ui, audio, assets) | `lib/` vendored |
+`index.html` `style.css` | `src/` (main, chapters/chN, worm, people, cave, outdoor, engine, fx, tex, ui, audio, assets) | `lib/` vendored |
 `assets/` CC0 textures/HDRI/models | `test/` Playwright (`smoke.mjs`, `peek.mjs`, `serve.mjs`) | `shots/` screenshots.
 Serve locally with `python3 -m http.server 8765`, or use `test/serve.mjs`.

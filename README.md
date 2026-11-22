@@ -9,6 +9,9 @@
 מאכילים ומלטפים את וורם, פותרים חידת חשבון קטנה ליד השער, ואז טסים על וורם מסביב לטירה של המלך רולנד
 ואוספים 8 כוכבים. הפרק נגמר במסך חגיגה וב"המשך יבוא…".
 
+**פרק 2 – הביצה המסתורית** נפתח אחרי פרק 1: ביצה כחולה מתגלגלת למערה, מרחפים מעל הנהר ואוספים טיפות בזוגות,
+מחממים את הביצה ב-5 אבנים חמות, והיא בוקעת. בסוף מגיעים בו ודרקונית המים שלו. (העלילה המלאה ב-[STORY.md](STORY.md).)
+
 ## How to play
 - **Title** → tap **"פרק 1: אבן הדרקון"**. Tap Worm on the title for a hello wiggle.
 - **Cave**: tap the bubble (**המשך ◀**) to continue. Walk with the joystick (bottom-left) or tap the floor / Worm.
@@ -41,7 +44,8 @@ the joystick, the friendly wrong-answer hint, the star counter, the celebration 
 | File | What |
 |---|---|
 | `index.html`, `style.css` | Hebrew RTL HUD (Rubik font, vendored), safe areas, rotate-to-landscape prompt, noindex |
-| `src/main.js` | Story runner (cancellable async chapter script), cave + flight gameplay, cameras, debug hook |
+| `src/main.js` | Shared core: story runner (cancellable async scripts), cave + flight engines, cameras, title + progress (`dm.progress`), debug hook |
+| `src/chapters/ch1.js`, `ch2.js` | One story script per chapter; each gets the core through `G` (`?all=1` unlocks every chapter) |
 | `src/worm.js` | **Worm**: deforming spline-tube body, scaled skin, ridge spikes, expressive head (blink, look-at, jaw/chomp, ear fins, blush), breathing, happy wiggle, Dragon-Stone eye glow, flight pose |
 | `src/people.js` | Drake (with Dragon Stone pendant), Griffith, King Roland: procedural chibi figures with walk, sit, and wave |
 | `src/cave.js` | Cosy Dragon Cave: rock dome, sunbeam spot + shadows, torches, crystals, glowing mushrooms, straw bed, cave gate |
@@ -65,4 +69,4 @@ Clips named `idle`, `fly`, `coil`, `wiggle`/`happy`, `chomp`, `walk`, `sit`, and
 A missing or empty manifest, or a GLB that fails to load, just leaves that character procedural. `__dm.stats().models` shows which is in use.
 
 ## Next steps
-See the "Next increments" section of the latest report: more dragons (Shadow, Kepri, Vulcan…), chapter 2 (the egg), and more kinds of math.
+See [STORY.md](STORY.md) for the 8-chapter arc. Chapters 1–2 are built; chapter 3 (Ana and the sun dragon) is next.
