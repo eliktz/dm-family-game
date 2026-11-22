@@ -83,6 +83,7 @@ export function makeChibi(o) {
   let phase = 0, walk = 0, wave = 0, sit = 0;
   return {
     root, parts,
+    get state() { return { walk, sit, wave }; }, // read by the GLB driver in assets.js
     setWalk(v) { walk = v; }, setSit(v) { sit = v; }, wave(v = 2.5) { wave = v; },
     setStoneGlow(v) { if (parts.stone) parts.stone.material.emissiveIntensity = 0.3 + v * 5; },
     update(dt, time) {

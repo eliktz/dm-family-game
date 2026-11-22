@@ -10,7 +10,7 @@ import { FX } from './fx.js';
 import { ui, say, toast, hideToast, actions, clearActions, showJoy, input, joy, riddle, card, hideOverlays, fade } from './ui.js';
 import { sfx, unlock, settings, save, music } from './audio.js';
 import { glowSprite } from './tex.js';
-import { loadModels } from './assets.js';
+import { loadModels, modelStatus } from './assets.js';
 
 const $ = s => document.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -52,6 +52,7 @@ const aura = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowSprite('rgba(1
 aura.scale.setScalar(9);
 
 let envOutdoor = null, swapped = {};
+const MODEL_KEYS = ['worm', 'drake', 'griffith', 'king', 'castle'];
 async function loadEnv() {
   try {
     const { background, env } = await engine.loadHDR('assets/hdri/kloofendal_day_1k.hdr');
@@ -373,7 +374,7 @@ function frame() {
   worm.update(dt, time); drake.update(dt, time); griffith.update(dt, time); king.update(dt, time);
   world.update(dt, time); cave.update(dt, time);
   stars.update(dt, time, nextStar());
-  for (const k in swapped) swapped[k].mixer?.update(dt);
+  for (const k in swapped) swapped[k].update(dt, time);
   fx.setScale(innerHeight * Math.min(devicePixelRatio, engine.maxDpr)); fx.update(dt);
   if (engine.scene) engine.render(dt);
   requestAnimationFrame(frame);
@@ -393,7 +394,7 @@ window.__dm = {
   walkToWorm() { drake.root.position.copy(worm.headWorld().setY(0)).add(new THREE.Vector3(2.2, 0, 2.2)); },
   collectNext() { const i = nextStar(); if (i >= 0) collect(i); },
   collectAll() { stars.list.forEach((s, i) => collect(i)); },
-  stats: () => ({ ...engine.info(), mode, phase, stars: fl.got }),
+  stats: () => ({ ...engine.info(), mode, phase, stars: fl.got, models: modelStatus(MODEL_KEYS, swapped) }),
   setTier: t => { engine.noAuto = true; engine.setTier(t); },
   worm, engine,
 };

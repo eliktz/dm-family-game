@@ -59,8 +59,10 @@ the joystick, the friendly wrong-answer hint, the star counter, the celebration 
 
 ## Swapping in Blender assets
 Export a GLB from the pipeline (`/workspace/dmgame-assets/exports/game/`) into `assets/models/` and add it to `models.json`:
-`"worm": { "url": "assets/models/worm.glb", "scale": 1 }`. The procedural mesh is hidden and the game logic still drives the root.
-Clips named `idle`, `wiggle`, `fly`, `walk`, `sit`, and `wave` are picked up. The procedural Worm stays the default because it is fully animated.
+`"worm": { "url": "assets/models/worm.glb", "scale": 1 }` (also `height`, `ground`, `y`/`position`, `rotY`, `clips`; see the header of `src/assets.js`).
+Convention: origin at the feet/belly, facing +z, metres. The procedural mesh is hidden and its invisible rig still drives the game logic.
+Clips named `idle`, `fly`, `coil`, `wiggle`/`happy`, `chomp`, `walk`, `sit`, and `wave` are picked up; when one is missing the model is bobbed/scaled instead.
+A missing or empty manifest, or a GLB that fails to load, just leaves that character procedural. `__dm.stats().models` shows which is in use.
 
 ## Next steps
 See the "Next increments" section of the latest report: more dragons (Shadow, Kepri, Vulcan…), chapter 2 (the egg), and more kinds of math.
