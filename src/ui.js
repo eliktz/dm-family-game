@@ -1,8 +1,8 @@
 // Hebrew RTL HUD: dialogue bubbles, toasts, action buttons, joystick, riddle panel, cards.
 import { sfx, speak } from './audio.js';
 const $ = s => document.querySelector(s);
-export const FACES = { griffith: '🧙‍♂️', worm: '🐉', drake: '👦', king: '👑' };
-export const NAMES = { griffith: "גריפית'", worm: 'וורם', drake: 'דרייק', king: 'המלך רולנד' };
+export const FACES = { griffith: '🧙‍♂️', worm: '🐉', drake: '👦', king: '👑', bo: '🧒', baby: '💧' };
+export const NAMES = { griffith: "גריפית'", worm: 'וורם', drake: 'דרייק', king: 'המלך רולנד', bo: 'בו', baby: 'בועה' };
 export const ui = { fast: false, onSay: null };
 
 export function say(who, text) {
@@ -55,12 +55,11 @@ export function input() {
   return { x: Math.max(-1, Math.min(1, x)), y: Math.max(-1, Math.min(1, y)) };
 }
 
-// gentle riddle: wrong answers only give a hint; resolves when the right one is tapped
-export function riddle(a, b, cb = {}) {
-  const m = $('#math'); m.hidden = false; const ans = a + b;
-  m.querySelector('.eq').textContent = `${a} + ${b}`;
-  const vis = m.querySelector('.m-visual');
-  vis.innerHTML = '<span class="grp">' + '<span class="ap">🍎</span>'.repeat(a) + '</span><span class="plus">+</span><span class="grp">' + '<span class="ap">🍎</span>'.repeat(b) + '</span>';
+// gentle riddles: wrong answers only give a hint + a counting animation; resolves when the right one is tapped
+function quiz({ title, qHTML, visHTML, ans, right, wrong1, wrong2, countSel }, cb = {}) {
+  const m = $('#math'); m.hidden = false;
+  m.querySelector('.m-title').textContent = title; m.querySelector('.m-q').innerHTML = qHTML;
+  const vis = m.querySelector('.m-visual'); vis.innerHTML = visHTML;
   const hint = m.querySelector('.m-hint'); hint.textContent = 'בחר את התשובה הנכונה 👇';
   const opts = [...new Set([ans, ans + 1, Math.max(1, ans - 1) === ans ? ans + 2 : ans - 1])].sort(() => Math.random() - 0.5);
   const box = m.querySelector('.m-answers'); box.innerHTML = '';
@@ -71,20 +70,34 @@ export function riddle(a, b, cb = {}) {
       btn.addEventListener('pointerup', async () => {
         if (btn.classList.contains('wrong')) return;
         if (o === ans) {
-          btn.classList.add('right'); sfx.chime(); hint.textContent = `נכון מאוד! ${a} ועוד ${b} זה ${ans}! 🎉`; speak(hint.textContent, 'griffith');
+          btn.classList.add('right'); sfx.chime(); hint.textContent = right; speak(hint.textContent, 'griffith');
           cb.right && cb.right(); setTimeout(() => { m.hidden = true; res(); }, ui.fast ? 50 : 1400);
         } else {
           tries++; btn.classList.add('wrong'); sfx.oops(); cb.wrong && cb.wrong();
-          hint.textContent = tries === 1 ? 'כמעט! בוא נספור יחד את התפוחים 🍎' : 'אתה ממש קרוב! נסה עוד פעם 💚'; speak(hint.textContent, 'griffith');
-          const aps = [...vis.querySelectorAll('.ap')];
+          hint.textContent = tries === 1 ? wrong1 : wrong2; speak(hint.textContent, 'griffith');
+          const aps = [...vis.querySelectorAll(countSel)];
           aps.forEach((ap, i) => setTimeout(() => { ap.classList.add('count'); sfx.tap(); setTimeout(() => ap.classList.remove('count'), 300); }, 350 * i));
         }
       });
     }
   });
 }
-export function card({ kicker = '', title = '', text = '', buttons = [] }) {
-  const c = $('#card'); c.hidden = false;
+const rep = (html, n) => html.repeat(n);
+// "3 + 2 = ?" with apples
+export function riddle(a, b, cb = {}) {
+  return quiz({ title: '🔮 חידת השער', qHTML: `כמה זה <span dir="ltr" class="eq">${a} + ${b}</span>?`,
+    visHTML: `<span class="grp">${rep('<span class="ap">🍎</span>', a)}</span><span class="plus">+</span><span class="grp">${rep('<span class="ap">🍎</span>', b)}</span>`,
+    ans: a + b, right: `נכון מאוד! ${a} ועוד ${b} זה ${a + b}! 🎉`, wrong1: 'כמעט! בוא נספור יחד את התפוחים 🍎', wrong2: 'אתה ממש קרוב! נסה עוד פעם 💚', countSel: '.ap' }, cb);
+}
+// missing addend "2 + ? = 5" with warm stones and empty places
+export function riddleMissing(a, total, cb = {}) {
+  const miss = total - a;
+  return quiz({ title: '🔥 חידת האבנים החמות', qHTML: `כמה חסר? <span dir="ltr" class="eq">${a} + <span class="miss">?</span> = ${total}</span>`,
+    visHTML: `<span class="grp">${rep('<span class="st ap"></span>', a)}</span><span class="plus">+</span><span class="grp">${rep('<span class="st slot ap">?</span>', miss)}</span><span class="plus">=</span><span class="tot">${total}</span>`,
+    ans: miss, right: `נכון מאוד! ${a} ועוד ${miss} זה ${total}! 🎉`, wrong1: 'כמעט! בוא נספור יחד את המקומות הריקים', wrong2: 'אתה ממש קרוב! נסה עוד פעם 💚', countSel: '.slot' }, cb);
+}
+export function card({ kicker = '', title = '', text = '', buttons = [], cls = '' }) {
+  const c = $('#card'); c.hidden = false; c.className = 'screen ' + cls;
   c.querySelector('.c-kicker').textContent = kicker; c.querySelector('.c-title').textContent = title; c.querySelector('.c-text').textContent = text;
   if (text) speak(title + '. ' + text, 'griffith');
   const box = c.querySelector('.c-buttons'); box.innerHTML = '';

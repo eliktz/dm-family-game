@@ -5,7 +5,8 @@
 // Robustness: a missing / empty / invalid manifest means "all procedural" (no errors); a GLB that
 // fails to load or times out only warns and that character stays procedural.
 //
-// Accepted manifest shapes (keys: worm, drake, griffith, king, castle; keys starting with "_" are ignored):
+// Accepted manifest shapes (keys, case-insensitive: worm, drake, griffith, king, castle, bo, waterDragon, babyDragon;
+// keys starting with "_" are ignored):
 //   { "worm": "worm.glb" }                                   bare file name → assets/models/worm.glb
 //   { "worm": { "url": "assets/models/worm.glb", "scale": 1, "y": 0, "rotY": 0 } }
 //   { "models": { ... } }   or   [ { "name": "worm", "url": "…" }, … ]
@@ -92,14 +93,15 @@ function makeSwap(key, t, gltf, e) {
   const prev = {}; const rose = (k, v, d = 0.2) => { const r = v > (prev[k] ?? 0) + d; prev[k] = v; return r; };
   // fallback Dragon-Stone glow for a GLB Worm: green halo at the head + emissive on eye-named materials
   let halo = null; const eyeMats = [];
-  if (key === 'worm') {
+  const isDragon = !!(t.state && 'pose' in t.state); // Worm and every dragon built on his rig
+  if (isDragon) {
     halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowSprite('rgba(120,255,160,1)', 'rgba(60,255,120,0)'), blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0 }));
     halo.scale.setScalar(3.2); halo.visible = false; t.root.add(halo);
     obj.traverse(o => { for (const m of [].concat(o.material || [])) if (/eye|iris/i.test(m.name || '') && m.emissive && !eyeMats.includes(m)) { m.userData.baseEmissive = m.emissiveIntensity; eyeMats.push(m); } });
   }
   function update(dt, time) {
     const s = t.state || {}; let bob = 0, sway = 0, squash = 0, drop = 0;
-    if (key === 'worm') {
+    if (isDragon) {
       loop(s.pose === 'fly' ? ['fly', 'idle'] : s.pose === 'coil' ? ['coil', 'idle'] : ['idle']);
       const w = ss(s.wiggle || 0, 0, 0.5);
       if (rose('wiggle', s.wiggle || 0)) once('wiggle');
@@ -126,11 +128,11 @@ function makeSwap(key, t, gltf, e) {
 
 export async function loadModels(targets) {
   const manifest = await readManifest(), out = {};
-  const jobs = Object.entries(targets).filter(([key]) => manifest[key] && urlOf(manifest[key]));
+  const jobs = Object.entries(targets).filter(([key]) => manifest[key.toLowerCase()] && urlOf(manifest[key.toLowerCase()]));
   if (!jobs.length) return out;
   const loader = new GLTFLoader();
   await Promise.all(jobs.map(async ([key, t]) => {
-    const e = manifest[key], url = urlOf(e);
+    const e = manifest[key.toLowerCase()], url = urlOf(e);
     try {
       const gltf = await withTimeout(loader.loadAsync(url), TIMEOUT_MS);
       const obj = gltf.scene; place(obj, e);
