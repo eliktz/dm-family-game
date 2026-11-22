@@ -1,0 +1,22 @@
+{
+  "enabledPlugins": {
+    "playwright@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true,
+    "claude-md-management@claude-plugins-official": true,
+    "commit-commands@claude-plugins-official": true,
+    "code-review@claude-plugins-official": true,
+    "feature-dev@claude-plugins-official": true,
+    "frontend-design@claude-plugins-official": true
+  },
+  "permissions": {
+    "additionalDirectories": ["/workspace/dmgame-assets"],
+    "deny": [
+      "Edit(/workspace/hpgame-*/**)", "Write(/workspace/hpgame-*/**)",
+      "Edit(/workspace/hp-*/**)", "Write(/workspace/hp-*/**)",
+      "Bash(git push --force*)", "Bash(git push -f*)", "Bash(claude -p*)"
+    ]
+  },
+  "workflowKeywordTriggerEnabled": true,
+  "workflowSizeGuideline": "small"
+}
