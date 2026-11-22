@@ -105,3 +105,4 @@ export function makeChibi(o) {
 export const makeDrake = () => makeChibi({ hairStyle: 'tousled', hair: 0x5a2f10, tunic: 0x6f9a3d, sleeve: 0x8fb35a, pants: 0x7b5634, belt: 0x5e3d20, pendant: true });
 export const makeGriffith = () => makeChibi({ hairStyle: 'wizard', hair: 0xf2f2f2, brow: 0xe8e8e8, robe: 0x4a3c8f, tunic: 0x4a3c8f, sleeve: 0x5a4aa5, trim: 0xe3b54a, belt: 0xe3b54a, beard: 0xf5f5f5, beardLen: 0.8, hat: 0x3b2f78, staff: true, skin: 0xf0c4a2, scale: 1.12 });
 export const makeKing = () => makeChibi({ hairStyle: 'wizard', hair: 0x8a5a2a, robe: 0xb3262e, tunic: 0xb3262e, sleeve: 0xc4383f, trim: 0xffc83a, belt: 0xffc83a, beard: 0x8a5a2a, beardLen: 0.35, crown: true, cape: 0x7a1a3a, scale: 1.05 });
+export const makeBo = () => makeChibi({ hairStyle: 'tousled', hair: 0x1c1a1a, eye: 0x1a1210, tunic: 0x3f7fc4, sleeve: 0x5a9ad8, pants: 0x3a4a6a, belt: 0xe3c04a, shoes: 0x2a2a3a, skin: 0xeec49a, pendant: true });
