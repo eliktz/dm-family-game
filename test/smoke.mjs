@@ -44,6 +44,9 @@ try {
   await page.waitForTimeout(1500);
   check(await page.evaluate(() => document.documentElement.dir === 'rtl' && document.documentElement.lang === 'he'), 'html is lang=he dir=rtl');
   check(await page.locator('#title h1').isVisible(), 'title visible');
+  check(await page.locator('#btn-ch2.locked').count() === 1, 'chapter 2 is locked on a fresh start');
+  await tap('#btn-ch2'); await page.waitForTimeout(300);
+  check(await page.evaluate(() => __dm.mode === 'title'), 'tapping the locked chapter only gives a friendly nudge');
   check((await page.locator('#title h1').innerText()).includes('דרקונים'), 'title text Hebrew');
   check(await page.evaluate(() => getComputedStyle(document.querySelector('#title h1')).direction === 'rtl'), 'title direction rtl');
   await shot('01-title');
@@ -91,6 +94,63 @@ try {
   await tap('#card button[data-v="home"]');
   await page.waitForFunction(() => window.__dm.mode === 'title', null, { timeout: 15000 });
   const stats = await page.evaluate(() => __dm.stats()); log('stats', JSON.stringify(stats));
+
+  // ---------------- chapter 2: הביצה המסתורית
+  await page.waitForTimeout(1200);
+  check(await page.evaluate(() => JSON.parse(localStorage.getItem('dm.progress')).done.includes(1)), 'progress saved in dm.progress');
+  check(await page.locator('#btn-ch2.locked').count() === 0, 'chapter 2 unlocked after chapter 1');
+  check(await page.locator('#btn-start .ks').isVisible(), 'chapter 1 keepsake badge shown');
+  await shot('ch2-01-title-unlocked');
+  await tap('#btn-ch2');
+  await advanceTo('c2-intro'); await page.waitForTimeout(1500);
+  check((await page.locator('#dialog .name').innerText()).includes('וורם'), 'ch2 opens with Worm');
+  await shot('ch2-02-cave');
+  await advanceTo('c2-egg'); await page.waitForTimeout(4600); await shot('ch2-03-egg-rolls-in');
+  await advanceTo('c2-ready'); await page.waitForTimeout(900); await shot('ch2-04-worm-curls');
+  await tap('#btn-river');
+  await advanceTo('c2-glide'); await page.waitForTimeout(5200);
+  check(await page.locator('#counter').isVisible(), 'drop counter visible');
+  await shot('ch2-05-river-glide');
+  for (let i = 0; i < 2; i++) { await page.evaluate(() => __dm.collectNext()); await page.waitForTimeout(400); }
+  await page.waitForTimeout(2300);
+  const sum = (await page.locator('#count').innerText()).trim(); check(/^\d+ \+ 2 = \d+$/.test(sum), `pairs counter shows a sum (${sum})`);
+  check(await page.evaluate(() => getComputedStyle(document.querySelector('#count')).direction === 'ltr'), 'sum is laid out ltr');
+  await shot('ch2-06-river-pairs');
+  await page.evaluate(() => __dm.collectAll());
+  await advanceTo('c2-warm'); await page.waitForTimeout(1500); await shot('ch2-07-warm-egg');
+  await advanceTo('c2-math'); await page.waitForTimeout(800);
+  const eq2 = (await page.locator('#math .eq').innerText()).replace(/\s+/g, ' ').trim(); check(eq2 === '2 + ? = 5', `missing-addend riddle (${eq2})`);
+  await page.locator('#math .m-answers button:not([data-v="3"])').first().dispatchEvent('pointerup'); await page.waitForTimeout(700);
+  check((await page.locator('#math .m-hint').innerText()).includes('כמעט'), 'ch2 wrong answer gives a friendly hint');
+  check(await page.evaluate(() => __dm.phase === 'c2-math'), 'ch2 wrong answer does not punish/advance');
+  await shot('ch2-08-riddle');
+  await tap('#math .m-answers button[data-v="3"]');
+  await advanceTo('c2-place'); await page.waitForTimeout(1300); await shot('ch2-09-stones');
+  for (let i = 0; i < 3; i++) { // real taps on the 3D stones
+    const xy = await page.evaluate(() => __dm.stoneScreen()); check(!!xy, `stone ${i + 1} is on screen`);
+    await page.mouse.click(xy[0], xy[1]); await page.waitForTimeout(1500);
+  }
+  await advanceTo('c2-hatch'); await page.waitForTimeout(1200);
+  check((await page.locator('#count').innerText()).trim() === '5 / 5', 'all 5 stones placed by tapping');
+  await advanceTo('c2-bo', 90000); await page.waitForTimeout(300); await shot('ch2-10-hatched');
+  await page.waitForFunction(() => !document.querySelector('#dialog').hidden && document.querySelector('#dialog .name').textContent.trim() === 'בו', null, { timeout: 30000 });
+  log('ok', 'Bo speaks'); await page.waitForTimeout(500);
+  log('stats ch2 cave', JSON.stringify(await page.evaluate(() => __dm.stats())));
+  await shot('ch2-11-bo-arrives');
+  await advanceTo('c2-celebrate'); await page.waitForTimeout(1300); await shot('ch2-12-celebrate');
+  await page.locator('#card:not([hidden])').waitFor({ timeout: 15000 });
+  check((await page.locator('#card').innerText()).includes('עוד פעם'), "ch2 celebration shows 'עוד פעם?'");
+  await shot('ch2-13-celebrate-card');
+  await tap('#card button[data-v="end"]');
+  await page.waitForFunction(() => window.__dm.phase === 'c2-end'); await page.waitForTimeout(1600);
+  check((await page.locator('#card').innerText()).includes('המשך יבוא'), 'ch2 teaser card');
+  await shot('ch2-14-mist-teaser');
+  const stats2 = await page.evaluate(() => __dm.stats()); log('stats ch2', JSON.stringify(stats2));
+  await tap('#card button[data-v="home"]');
+  await page.waitForFunction(() => window.__dm.mode === 'title', null, { timeout: 15000 }); await page.waitForTimeout(1200);
+  check(await page.locator('#btn-ch2 .ks').isVisible(), 'chapter 2 keepsake badge shown');
+  check(JSON.stringify(await page.evaluate(() => __dm.progress)) === '[1,2]', 'progress is [1,2]');
+  await shot('ch2-15-title-badges');
   check(errors.length === 0, 'no console/page/network errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
   ok = true;
 } catch (e) {

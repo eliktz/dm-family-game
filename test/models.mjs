@@ -14,14 +14,14 @@ const gltf = JSON.stringify({ asset: { version: '2.0' }, scene: 0, scenes: [{ no
   meshes: [{ primitives: [{ attributes: { POSITION: 0 }, material: 0 }] }], materials: [{ name: 'eye', emissiveFactor: [0, 1, 0] }],
   buffers: [{ byteLength: 36, uri: 'data:application/octet-stream;base64,' + buf.toString('base64') }],
   bufferViews: [{ buffer: 0, byteLength: 36 }], accessors: [{ bufferView: 0, componentType: 5126, count: 3, type: 'VEC3', min: [0, 0, 0], max: [1, 1, 0] }] });
-const ALL = { worm: 'procedural', drake: 'procedural', griffith: 'procedural', king: 'procedural', castle: 'procedural' };
+const ALL = { worm: 'procedural', drake: 'procedural', griffith: 'procedural', king: 'procedural', castle: 'procedural', bo: 'procedural', waterDragon: 'procedural', babyDragon: 'procedural' };
 const cases = [
   { name: 'manifest missing (404)', manifest: { status: 404, body: 'nf' }, expect: ALL, allow404: true },
   { name: 'manifest empty file', manifest: { status: 200, body: '' }, expect: ALL },
   { name: 'manifest invalid JSON', manifest: { status: 200, body: '{ oops' }, expect: ALL },
   { name: 'manifest with only _doc', manifest: { status: 200, body: '{"_doc":"x"}' }, expect: ALL },
-  { name: 'good worm GLB + failing drake GLB', manifest: { status: 200, body: JSON.stringify({ worm: { url: 'assets/models/__t_worm.glb', height: 2, ground: true }, drake: '__t_missing.glb', king: { scale: 2 } }) },
-    expect: { ...ALL, worm: 'glb' }, allow404: true, wantWarn: /drake/, play: true },
+  { name: 'good worm GLB + failing drake GLB', manifest: { status: 200, body: JSON.stringify({ worm: { url: 'assets/models/__t_worm.glb', height: 2, ground: true }, drake: '__t_missing.glb', king: { scale: 2 }, waterDragon: { file: '__t_worm.glb' } }) },
+    expect: { ...ALL, worm: 'glb', waterDragon: 'glb' }, allow404: true, wantWarn: /drake/, play: true },
 ];
 let fails = 0;
 for (const c of cases) {
@@ -41,6 +41,7 @@ for (const c of cases) {
     if (c.play) { // exercise the driver: wiggle / chomp / glow / flight without clips
       await page.evaluate(() => { __dm.fast = true; __dm.worm.wiggle(2); __dm.worm.chomp(); __dm.worm.setGlow(true); }); await page.waitForTimeout(600);
       await page.evaluate(() => __dm.go('flight')); await page.waitForTimeout(1500); await page.evaluate(() => __dm.collectNext()); await page.waitForTimeout(800);
+      await page.evaluate(() => __dm.go('ch2-hatch')); await page.waitForTimeout(2500); // chapter 2 actors with a swapped water dragon
     }
     if (errs.length) msg ||= errs.join(' | ');
   } catch (e) { msg = e.message; }
