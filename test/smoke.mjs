@@ -39,12 +39,16 @@ async function run(dev) {
   page.on('response', r => { if (r.status() >= 400) errors.push(`http ${r.status()}: ${r.url()}`); });
   const log = (...a) => console.log(`[${engineName} ${dev.name}]`, ...a);
   const phase = () => page.evaluate(() => window.__dm?.phase);
-  const shot = async name => { if (shots) await page.screenshot({ path: join(shotDir, `${dev.name}-${name}.png`), scale: 'css' }); log('shot', name); };
+  // at most ONE speech bubble or banner may be on screen at any moment (checked at every poll and every screenshot)
+  let bubbleChecks = 0;
+  const oneBubble = async where => { const v = await page.evaluate(() => ['#dialog', '#toast', '#title-toast'].filter(s => { const e = document.querySelector(s); return e && !e.hidden && e.offsetParent !== null; })); bubbleChecks++;
+    if (v.length > 1) throw new Error(`CHECK FAILED: two bubbles/banners at once (${v.join(' + ')}) at ${where}: "${await page.locator('#dialog .text').innerText()}" + "${await page.locator('#toast .text').innerText()}"`); };
+  const shot = async name => { await oneBubble('shot ' + name); if (shots) await page.screenshot({ path: join(shotDir, `${dev.name}-${name}.png`), scale: 'css' }); log('shot', name); };
   const tap = sel => page.locator(sel).first().dispatchEvent('pointerup');
   async function advanceTo(target, timeout = 240000) { // generous: a loaded software-rendering test machine runs the game in slow motion
     const t0 = Date.now();
     while (Date.now() - t0 < timeout) {
-      const p = await phase(); if (p === target) return;
+      const p = await phase(); await oneBubble(p); if (p === target) return;
       if (await page.locator('#dialog:not([hidden])').count()) await tap('#dialog');
       await page.waitForTimeout(250);
     }
@@ -372,6 +376,7 @@ async function run(dev) {
     // ---- no read-aloud anywhere
     check(await page.evaluate(() => window.__speech === 0), 'no speechSynthesis use');
     for (const f of ['src/audio.js', 'src/ui.js', 'src/main.js']) check(!/speechSynthesis|SpeechSynthesisUtterance/.test(await (await page.request.get(base + f)).text()), `${f} has no speech code`);
+    check(bubbleChecks > 150, `never more than one bubble or banner on screen (${bubbleChecks} checks across chapters 1-4)`);
     { const f = await page.evaluate(() => ({ ...__dm.frameStats, watchdog: __dm.watchdog })); log('frames', JSON.stringify(f)); check(f.watchdog === 0, 'the story watchdog never had to nudge'); }
     check(errors.length === 0, 'no console/page/network errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
     ok = true;

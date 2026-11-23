@@ -36,7 +36,8 @@ const ss = THREE.MathUtils.smoothstep, clamp = THREE.MathUtils.clamp;
 // The water dragons' rig roots are themselves scaled by the chapter (Shu 0.8, the baby 0.48), so their fit compensates:
 // Shu ends up about 9.5 m long (Worm's size), the baby about 1.25 m long and 0.65 m tall (tiny next to Bo, big enough to read on a phone).
 // `coil`: offset (rig units) while the rig is in its coiled pose, whose centre is 2.9 units beside the head (the baby inside her shell).
-const FIT = { worm: { scale: 2.8 }, drake: { scale: 1.3 }, griffith: { scale: 1.3 }, king: { scale: 1.3 }, bo: { scale: 1.3 }, waterDragon: { scale: 3.1 }, babyDragon: { scale: 2.7, coil: [-2.9, 0, 0.5] } };
+const FIT = { worm: { scale: 2.8 }, drake: { scale: 1.3 }, griffith: { scale: 1.3 }, king: { scale: 1.3 }, bo: { scale: 1.3 }, waterDragon: { scale: 3.1 }, babyDragon: { scale: 2.7, coil: [-2.9, 0, 0.5] },
+  ana: { scale: 1.3 }, sunDragon: { scale: 3.1, glow: 0xffc850 } };   // Kepri: about 8.5 m long on her 0.9-scaled rig; her glow is sun-gold, not Worm's green
 const CURL_SPINE = 0.28, CURL_TAIL = 0.2; // radians per joint: about 210° in all, a C that stays open toward the camera
 const CURL_AT = new THREE.Vector3(-3.6, 0, 0), CURL_HEAD_ANG = 0.3; // rig-local: what he curls around, and where his head sits on that circle
 const wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
@@ -128,10 +129,11 @@ function makeSwap(key, t, gltf, e) {
     obj.updateMatrixWorld(true);
     if (headB) { const hz = (jawB || headB).getWorldPosition(_v).z; obj.position.z -= hz; }
     // Dragon-Stone glow: the model's own emissive eye material when it has one, plus a soft green halo
-    eyeMats = emi(/^emi_.*eye/i); if (!eyeMats.length) eyeMats = emi(/eye|iris/i);
-    for (const m of eyeMats) if (m.emissive.getHex() === 0) { m.emissive.set(0x3dff7a); m.userData.base = m.emissiveIntensity = 0; }
+    const glowCol = FIT[key]?.glow ?? 0x3dff7a;
+    eyeMats = emi(/^emi_.*eye/i); if (!eyeMats.length) eyeMats = emi(/eye|iris/i); if (!eyeMats.length && FIT[key]?.glow) eyeMats = emi(/gloss/i); // no glow material: light the glossy eyes
+    for (const m of eyeMats) if (m.emissive.getHex() === 0) { m.emissive.set(glowCol); m.userData.base = m.emissiveIntensity = 0; }
     halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowSprite('rgba(120,255,160,1)', 'rgba(60,255,120,0)'), blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0 }));
-    halo.scale.setScalar(eyeMats.length ? 2.2 : 3.2); halo.visible = false; t.root.add(halo);
+    halo.scale.setScalar(eyeMats.length ? 2.2 : 3.2); halo.visible = false; t.root.add(halo); if (FIT[key]?.glow) halo.material.color.set(glowCol);
     if (headB) {
       // game-facing anchors now come from the model: head / mouth / seat positions, the tap target and the layout box
       procHead = t.head; const proxy = new THREE.Group(); proxy.scale.setScalar(0.3 * S); t.root.add(proxy); t.head = proxy;

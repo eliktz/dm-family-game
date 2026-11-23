@@ -39,7 +39,7 @@ const box = (w, h, d, x, y, z, ry = 0) => boxUV(new THREE.BoxGeometry(w, h, d), 
 export function buildOutdoor() {
   const group = new THREE.Group();
   // ---- terrain
-  const SIZE = 640, SEG = 116;
+  const SIZE = 640, SEG = 96;
   const tg = new THREE.PlaneGeometry(SIZE, SIZE, SEG, SEG).rotateX(-Math.PI / 2);
   const p = tg.attributes.position, cols = new Float32Array(p.count * 3), c = new THREE.Color();
   const g1 = new THREE.Color(0x6fae3f), g2 = new THREE.Color(0x9cc94e), g3 = new THREE.Color(0x4f8a34), dirt = new THREE.Color(0xc9a46a), rock = new THREE.Color(0x8d8a7a);
@@ -122,21 +122,26 @@ export function buildOutdoor() {
   const R = (() => { let s = 99; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); })();
   const foliageG = mergeGeometries([new THREE.IcosahedronGeometry(1.6, 1).translate(0, 3.2, 0), new THREE.IcosahedronGeometry(1.25, 0).translate(0.6, 4.3, 0.3), new THREE.IcosahedronGeometry(1.1, 0).translate(-0.6, 4.0, -0.4)]);
   const trunkG = new THREE.CylinderGeometry(0.25, 0.38, 2.8, 6).translate(0, 1.4, 0);
-  const NT = 240, trees = [];
+  const NT = 212, trees = [];
   for (let i = 0; i < 3000 && trees.length < NT; i++) {
     const a = R() * Math.PI * 2, d = 34 + Math.pow(R(), 0.8) * 190, x = Math.cos(a) * d, z = Math.sin(a) * d;
     if (Math.hypot(x - 70, z - 45) < 50) continue; if (z > 10 && Math.abs(x - pathX(z)) < 5) continue;
     if (Math.abs(z - riverZ(x)) < 13) continue;
     trees.push([x, heightAt(x, z) - 0.2, z, 0.8 + R() * 0.8, R()]);
   }
-  const foliage = new THREE.InstancedMesh(foliageG, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85 }), trees.length);
-  const trunks = new THREE.InstancedMesh(trunkG, new THREE.MeshStandardMaterial({ color: 0x7a5233, roughness: 0.9 }), trees.length);
+  // trees are split into four quadrant batches so the ones behind the camera are frustum-culled (ground-level scenes
+  // such as the garden only draw the half they can see)
+  const foliageM = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85 }), trunkM = new THREE.MeshStandardMaterial({ color: 0x7a5233, roughness: 0.9 });
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), v = new THREE.Vector3(), sc = new THREE.Vector3();
-  trees.forEach(([x, y, z, s, k], i) => {
-    q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), k * 6); m4.compose(v.set(x, y, z), q, sc.setScalar(s)); foliage.setMatrixAt(i, m4); trunks.setMatrixAt(i, m4);
-    foliage.setColorAt(i, new THREE.Color().setHSL(0.24 + k * 0.08, 0.55, 0.28 + k * 0.12));
-  });
-  for (const m of [foliage, trunks]) { m.castShadow = true; m.receiveShadow = true; group.add(m); }
+  for (let quad = 0; quad < 4; quad++) {
+    const part = trees.filter(([x, , z]) => (x >= 0 ? 1 : 0) + (z >= 0 ? 2 : 0) === quad); if (!part.length) continue;
+    const foliage = new THREE.InstancedMesh(foliageG, foliageM, part.length), trunks = new THREE.InstancedMesh(trunkG, trunkM, part.length);
+    part.forEach(([x, y, z, s, k], i) => {
+      q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), k * 6); m4.compose(v.set(x, y, z), q, sc.setScalar(s)); foliage.setMatrixAt(i, m4); trunks.setMatrixAt(i, m4);
+      foliage.setColorAt(i, new THREE.Color().setHSL(0.24 + k * 0.08, 0.55, 0.28 + k * 0.12));
+    });
+    for (const m of [foliage, trunks]) { m.computeBoundingSphere(); m.castShadow = true; m.receiveShadow = true; group.add(m); }
+  }
   // flower clusters: 3 little flowers on stems per instance, grouped into patches of one colour.
   // Two instanced draws: stems/leaves/centres (vertex colours) + petals (tinted per instance).
   const greens = [], petals = [];
@@ -154,7 +159,7 @@ export function buildOutdoor() {
     greens.push(paint(new THREE.OctahedronGeometry(0.05, 0).scale(1, 0.6, 1).translate(0, 0.02, 0).applyMatrix4(face).translate(top.x, top.y, top.z), 0xd9a520));
   }
   const greenG = mergeGeometries(greens), petalG = mergeGeometries(petals); greenG.computeVertexNormals(); petalG.computeVertexNormals();
-  const NF = 176, flowerGreen = new THREE.InstancedMesh(greenG, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, side: THREE.DoubleSide }), NF);
+  const NF = 124, flowerGreen = new THREE.InstancedMesh(greenG, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, side: THREE.DoubleSide }), NF);
   const flowers = new THREE.InstancedMesh(petalG, new THREE.MeshStandardMaterial({ roughness: 0.65, side: THREE.DoubleSide }), NF);
   const fc = [0xe8668f, 0xe6c63a, 0xd8d6cf, 0x9c7ae0, 0xe8862f], col = new THREE.Color(), yAxis = new THREE.Vector3(0, 1, 0);
   let nf = 0;
@@ -174,7 +179,7 @@ export function buildOutdoor() {
   const puffs = [];
   for (let i = 0; i < 18; i++) {
     const a = i / 18 * Math.PI * 2 + R(), d = 60 + R() * 120, cx = Math.cos(a) * d, cz = Math.sin(a) * d, cy = 42 + R() * 25;
-    const n = 6 + Math.floor(R() * 5);
+    const n = 5 + Math.floor(R() * 3);
     for (let j = 0; j < n; j++) { const r = 3 + R() * 4; puffs.push(new THREE.IcosahedronGeometry(r, 1).scale(1, 0.72, 1).translate(cx + (j - n / 2) * 3.6 + R() * 2, cy + R() * 2.5 + (j % 2) * 1.5, cz + (R() - .5) * 5)); }
   }
   const clouds = new THREE.Mesh(mergeGeometries(puffs), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, emissive: 0xb8c8e8, emissiveIntensity: 0.35 }));

@@ -8,8 +8,13 @@ export const ui = { fast: false, onSay: null };
 // A bubble that is abandoned (the chapter was left with 🏠 while it was open) must take its tap handlers with it: a stale
 // handler used to hide the NEXT bubble on the first quick tap without resolving it, which left the story stuck.
 let dropSay = null;
+// Only ONE speech bubble or banner is ever on screen. A new bubble takes over from a banner (toast): the banner is put
+// aside and comes back when the bubble closes, unless something newer replaced it. A banner asked for while a bubble is
+// open waits the same way. Leaving a chapter (hideOverlays) clears everything.
+let heldToast = null;
 export function say(who, text) {
   if (dropSay) dropSay();
+  { const t = $('#toast'); if (!t.hidden) { heldToast = lastToast; clearTimeout(toastT); t.hidden = true; } }
   const d = $('#dialog'); d.hidden = false; d.dataset.who = who;
   d.querySelector('.face').textContent = FACES[who]; d.querySelector('.name').textContent = NAMES[who];
   d.querySelector('.text').textContent = text; d.style.animation = 'none'; d.offsetWidth; d.style.animation = '';
@@ -21,7 +26,8 @@ export function say(who, text) {
   return new Promise(res => {
     let finished = false, armed = false, ta = null;
     const off = () => { finished = true; d.removeEventListener('pointerup', done); d.removeEventListener('click', done); clearTimeout(t); clearTimeout(tw); clearTimeout(ta); d.classList.remove('waiting'); if (dropSay === off) dropSay = null; };
-    const done = () => { if (finished || !armed) return; off(); sfx.tap(); d.hidden = true; ui.onSayEnd && ui.onSayEnd(who); res(); };
+    const done = () => { if (finished || !armed) return; off(); sfx.tap(); d.hidden = true; ui.onSayEnd && ui.onSayEnd(who); res();
+      setTimeout(() => { if (heldToast && $('#dialog').hidden) { const h = heldToast; heldToast = null; toast(...h); } }, 60); }; // a banner that was put aside returns if no new bubble opened
     dropSay = off;
     d.addEventListener('pointerup', done); d.addEventListener('click', done);
     const t = ui.fast ? setTimeout(() => { armed = true; done(); }, 40) : null;
@@ -29,13 +35,15 @@ export function say(who, text) {
     ta = setTimeout(() => { armed = true; }, ui.fast ? 0 : 350); // ignore the tap that was still on its way to the previous bubble
   });
 }
-let toastT = null;
+let toastT = null, lastToast = null;
 export function toast(who, text, ms = 2800) {
+  if (!$('#dialog').hidden) { heldToast = [who, text, ms]; return; }   // a bubble is open: wait for it
+  lastToast = [who, text, ms]; heldToast = null;
   const t = $('#toast'); t.hidden = false; t.querySelector('.face').textContent = FACES[who] || '✨'; t.querySelector('.text').textContent = text;
   t.style.animation = 'none'; t.offsetWidth; t.style.animation = '';
   clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), ms);
 }
-export function hideToast() { $('#toast').hidden = true; }
+export function hideToast() { $('#toast').hidden = true; heldToast = null; clearTimeout(toastT); }
 export function actions(list) {
   const a = $('#actions'); a.innerHTML = '';
   for (const it of list) { const b = document.createElement('button'); b.className = 'big ' + (it.cls || ''); b.id = it.id; b.textContent = it.label;
@@ -132,5 +140,5 @@ export function card({ kicker = '', title = '', text = '', buttons = [], cls = '
       el.addEventListener('pointerup', () => { sfx.tap(); c.hidden = true; res(b.value); }); box.appendChild(el); }
   });
 }
-export function hideOverlays() { for (const s of ['#math', '#card', '#dialog', '#toast']) $(s).hidden = true; currentRiddle = null; if (dropSay) dropSay(); clearActions(); }
+export function hideOverlays() { for (const s of ['#math', '#card', '#dialog', '#toast']) $(s).hidden = true; currentRiddle = null; heldToast = null; clearTimeout(toastT); if (dropSay) dropSay(); clearActions(); }
 export const fade = on => new Promise(r => { $('#fade').classList.toggle('on', on); setTimeout(r, ui.fast ? 30 : 650); });

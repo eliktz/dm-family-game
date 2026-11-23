@@ -41,5 +41,17 @@
     "scale": 1,
     "y": 0,
     "rotY": 0
+  },
+  "ana": {
+    "url": "assets/models/ana.glb",
+    "scale": 1,
+    "y": 0,
+    "rotY": 0
+  },
+  "sunDragon": {
+    "url": "assets/models/kepri.glb",
+    "scale": 1,
+    "y": 0,
+    "rotY": 0
   }
 }
