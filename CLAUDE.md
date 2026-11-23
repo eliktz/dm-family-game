@@ -26,7 +26,7 @@ A Hebrew, iPad-first, **plot-driven** three.js game for Elik's 7-year-old son, b
 - **Plot-driven chapters**, not free exploration. Each chapter is a short story card, then scenes with dialogue bubbles,
   then one clear activity (riddle, guided flight, …), then a celebration and a "המשך יבוא…" teaser.
   The story runner is in `src/main.js` (cancellable async script: `runner()`, `step()`, `waitFor()`); each chapter's script is
-  `src/chapters/chN.js` and receives the shared core as `G`. The arc is in `STORY.md`. Progress: localStorage `dm.progress`; `?all=1` unlocks all.
+  `src/chapters/chN.js` (chapters 1-3 are built) and receives the shared core as `G`. The arc is in `STORY.md`. Progress: localStorage `dm.progress`; `?all=1` unlocks all.
 - **Worm is the star** (the kid's favourite). He gets the most polished model and animation (breathing, happy wiggle, chomp,
   look-at, Dragon-Stone eye glow) and warm reactions everywhere. In the books Worm has no wings and moves with mind power,
   so in flight he *floats/glides* with a green aura.
@@ -61,6 +61,10 @@ A Hebrew, iPad-first, **plot-driven** three.js game for Elik's 7-year-old son, b
   a dialog advances on a tap anywhere on the bubble, accepts `pointerup` and `click` once, and pulses "המשך" after 12 s (never auto-advances);
   a story watchdog nudges a phase that sits 45 s while it is not the player's turn (`G.playerTurn`, `G.finishAnimations`; `__dm.watchdog` counts
   nudges and the smoke test expects 0). New scripted waits must go through `step()`, never a bare promise.
+- **Chapter 3 (garden):** `src/chapters/ch3.js` runs in mode `garden` with its own camera in `G.tick`. Debug: `__dm.go('ch3' | 'ch3-mirrors' | 'ch3-end')`,
+  `__dm.mirrorScreen()`, `__dm.ch3.debug()`. `node test/soak.mjs --chapter=3` presses 🏠 mid-dialog in every loop. Background characters use
+  `makeChibi({ lod })` / `createWorm({ lod })` to stay inside the triangle budget (garden main pass: 121 draw calls, 190k triangles).
+  Test output goes to the git-ignored `test-logs/`.
 - **Slow test machine:** run one test at a time; `smoke.mjs --dsf=1` renders the iPhone at 1x; phase waits are 240 s. The box is shared, so
   a single timeout is not proof of a bug: re-run, and use `soak.mjs` to tell a real stall from load.
 

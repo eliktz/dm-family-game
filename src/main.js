@@ -15,6 +15,7 @@ import { glowSprite } from './tex.js';
 import { loadModels, modelStatus } from './assets.js';
 import { chapter1 } from './chapters/ch1.js';
 import { chapter2 } from './chapters/ch2.js';
+import { chapter3 } from './chapters/ch3.js';
 
 const $ = s => document.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -54,7 +55,7 @@ const aura = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowSprite('rgba(1
 aura.scale.setScalar(9);
 
 let swapped = {};
-const MODEL_KEYS = ['worm', 'drake', 'griffith', 'king', 'castle', 'bo', 'waterDragon', 'babyDragon'];
+const MODEL_KEYS = ['worm', 'drake', 'griffith', 'king', 'castle', 'bo', 'waterDragon', 'babyDragon', 'ana', 'sunDragon'];
 async function loadEnv() {
   try {
     const { background, env } = await engine.loadHDR('assets/hdri/kloofendal_day_1k.hdr');
@@ -376,7 +377,7 @@ $('#c').addEventListener('pointerdown', e => {
 });
 
 // ---------------------------------------------------------------- chapters + buttons
-const ch1 = mods[1] = chapter1(G), ch2 = mods[2] = chapter2(G);
+const ch1 = mods[1] = chapter1(G), ch2 = mods[2] = chapter2(G), ch3 = mods[3] = chapter3(G);
 // while Griffith speaks in the cave the camera turns to a shot of him (with Drake's side of the cave), then goes back;
 // a chapter can set G.keepShot for a beat that must stay on Worm (the Dragon Stone moment)
 let griffShot = null, griffPrev = null;
@@ -489,6 +490,7 @@ const GO = {
   ch1: () => guard(() => ch1.start('intro')),
   ch2: () => guard(() => ch2.start('intro')), 'ch2-glide': () => guard(() => ch2.start('glide')), 'ch2-warm': () => guard(() => ch2.start('warm')),
   'ch2-hatch': () => guard(() => ch2.start('hatch')), 'ch2-end': () => guard(() => ch2.start('end')),
+  ch3: () => guard(() => ch3.start('intro')), 'ch3-mirrors': () => guard(() => ch3.start('mirrors')), 'ch3-end': () => guard(() => ch3.start('end')),
 };
 window.__dm = {
   ready: false,
@@ -507,6 +509,8 @@ window.__dm = {
   collectAll() { fl.items.forEach((s, i) => collect(i)); },
   // screen position (CSS px) of the next warm stone to tap in ch2, or null
   stoneScreen() { const p = ch2.nextStonePos(); if (!p) return null; const v = p.project(cam); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
+  // screen position (CSS px) of the mirror to tap in ch3, or null
+  mirrorScreen() { const p = ch3.nextMirrorPos(); if (!p) return null; const v = p.project(cam); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
   get progress() { return [...progress.done].sort(); }, get last() { return progress.last; },
   resetProgress() { progress.done.clear(); progress.last = null; progress.all = false; mathState = newAdaptive({}); try { localStorage.removeItem('dm.progress'); } catch { } refreshTitle(); },
   // screen-space boxes [x0, y0, x1, y1] (CSS px) of Drake and of Worm's head, for layout checks
@@ -521,17 +525,17 @@ window.__dm = {
   },
   stats: () => ({ ...engine.info(), mode: G.mode, phase: G.phase, stars: fl.got, models: modelStatus(MODEL_KEYS, swapped) }),
   setTier: t => { engine.noAuto = true; engine.setTier(t); },
-  worm, engine, G, ch2, frameStats, get watchdog() { return dog.nudges; },
+  worm, engine, G, ch2, ch3, frameStats, get watchdog() { return dog.nudges; },
 };
 
 (async () => {
   await loadEnv();
-  swapped = await loadModels({ worm, drake, griffith, king, castle: { root: world.castle }, ...ch2.modelTargets });
+  swapped = await loadModels({ worm, drake, griffith, king, castle: { root: world.castle }, ...ch2.modelTargets, ...ch3.modelTargets });
   enterTitle();
   if (params.has('tier')) window.__dm.setTier(params.get('tier'));
   // compile shaders for both scenes up-front (avoids hitches on iPad when the cave opens or chapter 2 actors appear)
-  try { ch2.showAll(true); engine.renderer.compile(caveScene, cam); engine.renderer.compile(outdoor, cam); } catch { }
-  ch2.showAll(false);
+  try { ch2.showAll(true); ch3.showAll(true); engine.renderer.compile(caveScene, cam); engine.renderer.compile(outdoor, cam); } catch { }
+  ch2.showAll(false); ch3.showAll(false);
   frame();
   setTimeout(() => { $('#loading').classList.add('done'); window.__dm.ready = true; }, 300);
 })();

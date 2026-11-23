@@ -1,6 +1,7 @@
 // Diagnostic soak test for the chapter 2 cave (no gameplay changes): plays the cave beats in a loop the way the smoke
 // test does and, when nothing changes for STALL_S seconds, records what the page is doing.
-// Usage: node soak.mjs [baseURL] [--loops=10] [--device=iphone|ipad] [--stall=40]
+// Usage: node soak.mjs [baseURL] [--loops=10] [--device=iphone|ipad] [--stall=40] [--chapter=2|3]
+// --chapter=3 plays the garden and presses 🏠 mid-dialog in every loop (a bubble must never be stranded).
 import { webkit, devices } from 'playwright'; import { startServer } from './serve.mjs';
 import { fileURLToPath } from 'node:url'; import { dirname, join } from 'node:path';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..'); const args = process.argv.slice(2);
@@ -34,7 +35,7 @@ async function diagnose(label) {
       pendingTimers: [...T.timers.values()].map(x => `${x.ms}ms@+${Math.round(now - x.at)}`).slice(0, 12), overdue: [...T.timers.values()].filter(x => now - x.at > x.ms + 1500).length,
       dialog: dlg.hidden ? null : { who: dlg.dataset.who, text: dlg.querySelector('.text').textContent }, math: __dm.math.current(), count: document.querySelector('#count').textContent,
       card: !document.querySelector('#card').hidden, actions: [...document.querySelector('#actions').children].map(x => x.id), fade: document.querySelector('#fade').classList.contains('on'),
-      ch2: __dm.ch2.debug(), ch2later: await new Promise(r => setTimeout(() => r(__dm.ch2.debug().tweens), 1000)), tickCalls1s: await new Promise(r => { const o = G.tick; let n = 0; if (!o) return r(-1); const w = (...a) => { n++; return o(...a); }; G.tick = w; setTimeout(() => { if (G.tick === w) G.tick = o; r(n); }, 1000); }),
+      ch2: __dm.ch2.debug(), ch3: __dm.ch3.debug(), ch2later: await new Promise(r => setTimeout(() => r(__dm.ch2.debug().tweens), 1000)), tickCalls1s: await new Promise(r => { const o = G.tick; let n = 0; if (!o) return r(-1); const w = (...a) => { n++; return o(...a); }; G.tick = w; setTimeout(() => { if (G.tick === w) G.tick = o; r(n); }, 1000); }),
       tick: !!G.tick, tap: !!G.tap, camGoal: !!G.camGoal, busy: G.busy, stone: __dm.stoneScreen(), lastPointer: T.ptr.slice(-4) };
   });
   console.log(`  STALL at ${label}: ` + JSON.stringify(d));
@@ -57,8 +58,26 @@ async function drive(label, until, act = async () => { }) {
     if (Date.now() - lastChange > STALL_S * 1000) { stalls++; await diagnose(`${label} (${ph})`); return false; }
   }
 }
-const t00 = Date.now();
-for (let i = 1; i <= LOOPS; i++) { try {
+const t00 = Date.now(), CH = +opt('chapter', 2);
+// chapter 3: every loop presses 🏠 in the middle of a line, continues, taps at once, then plays the garden through
+if (CH === 3) for (let i = 1; i <= LOOPS; i++) { try {
+  const t0 = Date.now(); let ok = true, taps = 0, lastTap = 0, note = '';
+  await page.evaluate(() => __dm.go('ch3'));
+  ok = await drive(`loop ${i} ch3 intro`, p => p === (i % 2 ? 'c3-cloud' : 'c3-intro'));
+  if (ok) { await page.waitForFunction(() => !document.querySelector('#dialog').hidden, null, { timeout: 60000 }).catch(() => { note += ' (no bubble before home)'; });
+    await page.locator('#btn-home').dispatchEvent('pointerup'); await page.waitForFunction(() => __dm.mode === 'title', null, { timeout: 60000 });
+    await page.locator('#btn-continue').dispatchEvent('pointerup');
+    await page.waitForFunction(() => !document.querySelector('#dialog').hidden && __dm.mode === 'garden', null, { timeout: 60000 });
+    await page.locator('#dialog').dispatchEvent('pointerup'); await page.waitForTimeout(700);                 // the early tap that used to hide the new bubble
+    if (!(await page.locator('#dialog:not([hidden])').count())) { note += ' BUBBLE HIDDEN AFTER HOME+CONTINUE'; stalls++; }
+    ok = await drive(`loop ${i} ch3 garden`, p => p === 'c3-celebrate', async ph => {
+      if (/^c3-math/.test(ph)) { const c = await page.evaluate(() => __dm.math.current()); if (c) { await page.waitForTimeout(300); await page.locator(`#math .m-answers button[data-v="${c.answer}"]`).dispatchEvent('pointerup').catch(() => { }); await page.waitForTimeout(400); } }
+      if (/^c3-mirror/.test(ph) && Date.now() - lastTap > 700) { const xy = await page.evaluate(() => __dm.mirrorScreen()); if (xy) { await page.mouse.click(xy[0], xy[1]); taps++; lastTap = Date.now(); } }
+    }); }
+  const fr = await page.evaluate(() => JSON.stringify({ ...__dm.frameStats, watchdog: __dm.watchdog })).catch(() => '');
+  console.log(`loop ${i}: ${ok ? 'ok' : 'STALLED'}${note} frames ${fr} in ${((Date.now() - t0) / 1000).toFixed(0)}s, mirror taps ${taps}${errors.length ? ', errors: ' + errors.splice(0).join(' | ') : ''}`);
+} catch (e) { console.log(`loop ${i}: EXCEPTION at ${stamp()}: ${e.message.split('\n')[0]}`); break; } }
+else for (let i = 1; i <= LOOPS; i++) { try {
   const t0 = Date.now(); let ok = true, taps = 0, lastTap = 0;
   await page.evaluate(() => __dm.go('ch2'));
   ok = await drive(`loop ${i} intro`, p => p === 'c2-ready');

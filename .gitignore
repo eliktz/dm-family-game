@@ -4,3 +4,4 @@ shots/fail*.png
 private-assets/
 .DS_Store
 *.log
+test-logs/

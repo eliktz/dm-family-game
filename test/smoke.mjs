@@ -87,7 +87,7 @@ async function run(dev) {
     let n = 0, lastKey = null;
     for (const t0 = Date.now(); Date.now() - t0 < 240000;) {
       if (await phase() !== ph) return n; const c = await cur();
-      if (!c || c.key === lastKey) { await page.waitForTimeout(250); continue; }
+      if (!c || c.key === lastKey) { if (!c && await page.locator('#dialog:not([hidden])').count()) await tap('#dialog'); await page.waitForTimeout(250); continue; } // lines spoken inside a riddle beat
       lastKey = c.key; n++; await page.waitForTimeout(600); await panelFits(`${ph} riddle ${n} (${c.kind}, level ${c.level})`); await eqLTR(`${ph} riddle ${n}`);
       if (firstWrong && n === 1) {
         await tapAns(c.options.find(o => o !== c.answer)); await page.waitForTimeout(700);
@@ -119,7 +119,7 @@ async function run(dev) {
     // ---- chapter map, locked chapters, hidden parent unlock
     check(await page.locator('#chapters .chap').count() === 8, 'chapter map shows 8 chapters');
     check(await page.locator('#ch-2.locked').count() === 1, 'chapter 2 is locked on a fresh start');
-    check(await page.locator('#ch-3 .soon').isVisible(), 'unbuilt chapters say בקרוב');
+    check(await page.locator('#ch-4 .soon').isVisible(), 'unbuilt chapters say בקרוב');
     await shot('01-title-map');
     await tap('#ch-2'); await tap('#ch-5'); await page.waitForTimeout(300);
     check(await page.evaluate(() => __dm.mode === 'title'), 'tapping a locked / unbuilt chapter only gives a friendly nudge');
@@ -294,6 +294,44 @@ async function run(dev) {
     check((await page.locator('#ch-2 .ic').innerText()).includes('💧'), 'chapter 2 keepsake badge shown');
     check(JSON.stringify(await page.evaluate(() => __dm.progress)) === '[1,2]', 'progress is [1,2]');
     await shot('ch2-15-title-badges');
+
+    // ---------------- chapter 3: השמש של אנה
+    check(await page.locator('#ch-3.locked').count() === 0 && (await page.locator('#btn-continue').innerText()).includes('פרק 3'), 'chapter 3 unlocked after chapter 2, continue points at it');
+    await tap('#btn-continue');
+    await advanceTo('c3-intro'); await page.waitForTimeout(1500);
+    check((await page.locator('#dialog .name').innerText()).includes('דרייק'), 'ch3 opens in the garden');
+    await clearOfActors('ch3 garden dialog');
+    await shot('ch3-01-garden');
+    // 🏠 in the middle of a line must never strand the story: go home, continue, tap at once
+    await tap('#btn-home'); await page.waitForFunction(() => window.__dm.mode === 'title', null, { timeout: 30000 }); await page.waitForTimeout(800);
+    await tap('#btn-continue'); await page.waitForFunction(() => __dm.phase === 'c3-intro' && !document.querySelector('#dialog').hidden, null, { timeout: 60000 });
+    await tap('#dialog'); await page.waitForTimeout(900);
+    check(await page.locator('#dialog').isVisible(), 'after 🏠 mid-dialog and continue, the bubble is still there');
+    for (const t0 = Date.now(); Date.now() - t0 < 240000;) { if ((await page.locator('#dialog .name').innerText().catch(() => '')).trim() === 'אנה') break; if (await page.locator('#dialog:not([hidden])').count()) await tap('#dialog'); await page.waitForTimeout(300); }
+    await page.waitForTimeout(900); await shot('ch3-02-ana-arrives');
+    await advanceTo('c3-cloud'); await page.waitForTimeout(5200); await shot('ch3-03-grumble-cloud');
+    for (let i = 1; i <= 3; i++) {
+      await advanceTo('c3-mirror' + i); await page.waitForTimeout(1500);
+      if (i === 1) await shot('ch3-04-mirrors');
+      let n = 0; while (await phase() === 'c3-mirror' + i && n < 12) { const xy = await page.evaluate(() => __dm.mirrorScreen()); if (!xy) break; await page.mouse.click(xy[0], xy[1]); n++; await page.waitForTimeout(700); if ((await page.evaluate(() => __dm.ch3.debug())).active < 0) break; }
+      check(n >= 1 && n <= 8, `mirror ${i} turned into place with ${n} taps`);
+      if (i === 1) { await page.waitForTimeout(1500); await shot('ch3-05-first-bed-blooms'); }
+      if (i < 3) { await advanceTo('c3-math' + i); for (const t0 = Date.now(); Date.now() - t0 < 240000 && !(await cur());) { if (await page.locator('#dialog:not([hidden])').count()) await tap('#dialog'); await page.waitForTimeout(300); } // the cloud and Ana speak before the riddle opens
+        check(await solveBeat('c3-math' + i, { firstWrong: i === 1, shotName: i === 1 ? 'ch3-06-cloud-riddle' : null }) === 1, `cloud riddle ${i} asked once`); }
+    }
+    await advanceTo('c3-bloom'); await page.waitForTimeout(1500); await shot('ch3-07-garden-blooms');
+    await advanceTo('c3-celebrate'); await page.locator('#card:not([hidden])').waitFor({ timeout: 30000 });
+    check((await page.locator('#card').innerText()).includes('☀️'), 'ch3 celebration card with the sun keepsake');
+    await shot('ch3-08-celebrate-card');
+    log('stats ch3', JSON.stringify(await page.evaluate(() => __dm.stats())));
+    await tap('#card button[data-v="end"]');
+    await page.waitForFunction(() => window.__dm.phase === 'c3-end'); await page.waitForTimeout(800);
+    check((await page.locator('#card').innerText()).includes('המשך יבוא'), 'ch3 teaser card');
+    await shot('ch3-09-teaser');
+    await tap('#card button[data-v="home"]');
+    await page.waitForFunction(() => window.__dm.mode === 'title', null, { timeout: 15000 }); await page.waitForTimeout(1200);
+    check((await page.locator('#ch-3 .ic').innerText()).includes('☀️') && JSON.stringify(await page.evaluate(() => __dm.progress)) === '[1,2,3]', 'chapter 3 keepsake badge shown, progress is [1,2,3]');
+    await shot('ch3-10-title-badges');
     // ---- no read-aloud anywhere
     check(await page.evaluate(() => window.__speech === 0), 'no speechSynthesis use');
     for (const f of ['src/audio.js', 'src/ui.js', 'src/main.js']) check(!/speechSynthesis|SpeechSynthesisUtterance/.test(await (await page.request.get(base + f)).text()), `${f} has no speech code`);

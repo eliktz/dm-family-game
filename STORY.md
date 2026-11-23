@@ -54,7 +54,7 @@ steps and removes one wrong answer, and on the third Worm shows the answer and t
    - The egg hatches into a tiny, giggly water-dragon baby, and **Bo arrives with his water dragon**, who has been looking for it. Worm and the baby become friends.
    - *Teaser:* the river suddenly fills with grey mist… "מישהו קטן ורטנן מסתתר בענן…" *Keepsake:* a blue water drop.
 
-3. **השמש של אנה**: **Ana and her sun dragon** come from the desert. The Grumble Cloud covers the sun over the castle gardens.
+3. **השמש של אנה** (done): **Ana and her sun dragon** come from the desert. The Grumble Cloud covers the sun over the castle gardens.
    - *Activity, mirror light:* Worm lifts 3 mirrors with mind power, and the player rotates them to bounce the sun dragon's beam onto the flower beds. Subtraction appears as clouds block beams: 8 − 3.
    - *Teaser:* Rori's fire dragon has a hiccup problem… *Keepsake:* a golden sun disc.
 

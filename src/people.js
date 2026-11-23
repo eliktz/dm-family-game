@@ -4,10 +4,12 @@
 import * as THREE from 'three';
 
 const std = (color, o = {}) => new THREE.MeshPhysicalMaterial({ color, roughness: 0.8, sheen: 0.35, sheenColor: new THREE.Color(0xffffff), sheenRoughness: 0.8, ...o });
-const sph = (r, w = 28, h = 18) => new THREE.SphereGeometry(r, w, h);
+let LOD = 1; // sphere detail for the character being built (makeChibi({ lod }) for background characters)
+const sph = (r, w = 28, h = 18) => new THREE.SphereGeometry(r, Math.max(8, Math.round(w * LOD)), Math.max(6, Math.round(h * LOD)));
 const cap = (r, l) => new THREE.CapsuleGeometry(r, l, 6, 16);
 
 export function makeChibi(o) {
+  LOD = o.lod ?? 1;
   const root = new THREE.Group(); const body = new THREE.Group(); root.add(body);
   const mesh = (g, m, p, parent = body, s) => { const x = new THREE.Mesh(g, m); x.position.set(...p); if (s) x.scale.set(...s); x.castShadow = true; parent.add(x); return x; };
   const skin = std(o.skin ?? 0xf1c39b, { roughness: 0.6, sheen: 0.2 });

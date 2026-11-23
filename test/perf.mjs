@@ -5,7 +5,7 @@ import { webkit, devices } from 'playwright'; import { startServer } from './ser
 import { fileURLToPath } from 'node:url'; import { dirname, join } from 'node:path';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..'); const dsf = +(process.argv.find(a => a.startsWith('--dsf='))?.split('=')[1] || 1);
 const { server, port } = await startServer(root); const b = await webkit.launch();
-const SCENES = [['title', 'title'], ['cave (feed)', 'bond'], ['flight', 'flight'], ['ch2 river', 'ch2-glide'], ['ch2 cave + Bo', 'ch2-hatch']];
+const SCENES = [['title', 'title'], ['cave (feed)', 'bond'], ['flight', 'flight'], ['ch2 river', 'ch2-glide'], ['ch2 cave + Bo', 'ch2-hatch'], ['ch3 garden', 'ch3-mirrors']];
 for (const tier of ['low', 'high']) {
   const ctx = await b.newContext({ ...devices['iPhone 13 landscape'], viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, deviceScaleFactor: dsf });
   const p = await ctx.newPage(); await p.goto(`http://127.0.0.1:${port}/index.html?tier=${tier}&all=1`); await p.waitForFunction(() => window.__dm?.ready, null, { timeout: 120000 });

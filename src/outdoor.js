@@ -120,7 +120,7 @@ export function buildOutdoor() {
   }
   // ---- trees, bushes, flowers (instanced)
   const R = (() => { let s = 99; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); })();
-  const foliageG = mergeGeometries([new THREE.IcosahedronGeometry(1.6, 1).translate(0, 3.2, 0), new THREE.IcosahedronGeometry(1.25, 1).translate(0.6, 4.3, 0.3), new THREE.IcosahedronGeometry(1.1, 0).translate(-0.6, 4.0, -0.4)]);
+  const foliageG = mergeGeometries([new THREE.IcosahedronGeometry(1.6, 1).translate(0, 3.2, 0), new THREE.IcosahedronGeometry(1.25, 0).translate(0.6, 4.3, 0.3), new THREE.IcosahedronGeometry(1.1, 0).translate(-0.6, 4.0, -0.4)]);
   const trunkG = new THREE.CylinderGeometry(0.25, 0.38, 2.8, 6).translate(0, 1.4, 0);
   const NT = 240, trees = [];
   for (let i = 0; i < 3000 && trees.length < NT; i++) {
