@@ -49,7 +49,22 @@ A Hebrew, iPad-first, **plot-driven** three.js game for Elik's 7-year-old son, b
 - Debug hook: `window.__dm` (`go('ch2' | 'ch2-glide' | 'ch2-warm' | 'ch2-hatch' | …)`, `walkToWorm()`, `collectNext()`, `collectAll()`, `stoneScreen()`,
   `progress`, `resetProgress()`, `stats()`, `setTier()`, `fast`).
 
+## Known issues / testing notes
+- **Soak findings (`node test/soak.mjs`, chapter 2 cave in a loop, headless WebKit).** Two separate things were found:
+  1. *Test environment:* the browser page sometimes freezes for tens of seconds (a tween caught 0.35 s into 0.8 s after a 25 s gap) and twice the
+     page / browser died outright. Animation frames were otherwise steady (about 520 per loop) and GPU geometries, textures, shader programs and
+     pending timers stayed flat across loops, so there is no leak and no general frame starvation. Not a game bug as far as we can tell.
+  2. *Real bug, fixed:* a speech bubble abandoned by leaving the chapter kept its tap handler; on the next chapter the first quick tap ran the
+     stale handler, which hid the new bubble without resolving it, and the story was stuck with nothing on screen. `say()` now drops the previous
+     bubble's handlers (also from `hideOverlays()`); the smoke test has a regression check.
+- **Safety net (keep it):** `main.js` runs the frame from a timer when no frame has run for 400 ms (`__dm.frameStats` counts both sources);
+  a dialog advances on a tap anywhere on the bubble, accepts `pointerup` and `click` once, and pulses "המשך" after 12 s (never auto-advances);
+  a story watchdog nudges a phase that sits 45 s while it is not the player's turn (`G.playerTurn`, `G.finishAnimations`; `__dm.watchdog` counts
+  nudges and the smoke test expects 0). New scripted waits must go through `step()`, never a bare promise.
+- **Slow test machine:** run one test at a time; `smoke.mjs --dsf=1` renders the iPhone at 1x; phase waits are 240 s. The box is shared, so
+  a single timeout is not proof of a bug: re-run, and use `soak.mjs` to tell a real stall from load.
+
 ## Layout
 `index.html` `style.css` | `src/` (main, chapters/chN, worm, people, cave, outdoor, engine, fx, tex, ui, audio, assets) | `lib/` vendored |
-`assets/` CC0 textures/HDRI/models | `test/` Playwright (`smoke.mjs`, `peek.mjs`, `serve.mjs`) | `shots/` screenshots.
+`assets/` CC0 textures/HDRI/models | `test/` Playwright (`smoke.mjs`, `flight.mjs`, `soak.mjs`, `models.mjs`, `perf.mjs`, `math.mjs`, `peek.mjs`, `serve.mjs`) | `shots/` screenshots.
 Serve locally with `python3 -m http.server 8765`, or use `test/serve.mjs`.

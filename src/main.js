@@ -72,7 +72,9 @@ function resetOutdoorLook() { outdoor.fog.color.set(FOG.color); outdoor.fog.near
 // ---------------------------------------------------------------- story runner (cancellable)
 let token = 0; const CANCEL = Symbol('cancel');
 const wait = ms => new Promise(r => setTimeout(r, ui.fast ? Math.min(ms, 60) : ms));
-function runner() { const my = ++token; return async p => { const r = await p; if (my !== token) throw CANCEL; return r; }; }
+// step(p) also resolves if the story watchdog nudges it (see below), so a scripted beat can never hang the story for good
+let nudgeStep = null;
+function runner() { const my = ++token; return async p => { const r = await Promise.race([p, new Promise(res => { nudgeStep = res; })]); if (my !== token) throw CANCEL; return r; }; }
 const guard = fn => fn().catch(e => { if (e !== CANCEL) console.error(e); });
 let until = null; // { test: () => bool, resolve }
 const waitFor = test => new Promise(res => { until = { test, resolve: res }; });
@@ -163,7 +165,7 @@ const fl = G.fl = { pos: new THREE.Vector3(), yaw: 0, vy: 0, yawRate: 0, got: 0,
   items: stars.list, onCollect: null, glanceT: 0, glanceAmt: 1, cam: { v: 0, vel: 0 },
   path: null, len: 1, u: 0, itemU: [], ox: 0, oy: 0, since: 0, helped: false, corridor: [5, 3.5] };
 
-function leaveChapter() { G.keepShot = false; griffShot = griffPrev = null; token++; until = null; const f = G.onLeave; G.onLeave = G.tap = G.tick = null; if (f) f(); G.busy = false; G.caveFree = false; G.walkTarget = null; G.camGoal = null; marker.visible = false; apple.visible = false; resetOutdoorLook(); }
+function leaveChapter() { G.keepShot = false; G.playerTurn = false; G.finishAnimations = null; nudgeStep = null; griffShot = griffPrev = null; token++; until = null; const f = G.onLeave; G.onLeave = G.tap = G.tick = null; if (f) f(); G.busy = false; G.caveFree = false; G.walkTarget = null; G.camGoal = null; marker.visible = false; apple.visible = false; resetOutdoorLook(); }
 
 // ---------------------------------------------------------------- TITLE
 const TITLE_POS = new THREE.Vector3(-6, 0, 44);
@@ -440,9 +442,15 @@ document.addEventListener('dblclick', e => e.preventDefault());
 let lastMode = '';
 // The loop must never die: one bad frame (an exception anywhere below) used to stop requestAnimationFrame for good,
 // which froze the game. Now the next frame is always scheduled first and an error is only logged (once per message).
-const frameErrors = new Set();
-function frame() {
-  requestAnimationFrame(frame);
+// Animation frames are not guaranteed: a browser may stop delivering them for a while even though the page is visible
+// (seen in headless WebKit as multi-second gaps). Tweens, cameras and the story all advance in the frame, so a timer
+// takes over whenever no frame has run for 400 ms.
+const frameErrors = new Set(), frameStats = { raf: 0, fallback: 0 };
+let lastFrameAt = 0;
+function frame() { requestAnimationFrame(frame); frameStats.raf++; runFrame(); }
+setInterval(() => { if (lastFrameAt && !document.hidden && performance.now() - lastFrameAt > 400) { frameStats.fallback++; runFrame(); } }, 130);
+function runFrame() {
+  lastFrameAt = performance.now();
   try { frameBody(); } catch (e) { const m = String(e && e.message); if (!frameErrors.has(m)) { frameErrors.add(m); console.error('frame error:', (e && e.stack) || e); } }
 }
 function frameBody() {
@@ -458,6 +466,21 @@ function frameBody() {
   fx.setScale(innerHeight * Math.min(devicePixelRatio, engine.maxDpr)); fx.update(dt);
   if (engine.scene) engine.render(dt);
 }
+
+// ---------------------------------------------------------------- story watchdog
+// If the story sits in one phase for 45 s while it is NOT the player's turn (no bubble, button, riddle, card, joystick
+// or tap task on screen), something scripted has hung: log it, let the chapter finish its animations, and resolve the
+// pending step so the story moves on. It never skips anything the player is meant to read or do.
+const dog = { sig: '', since: performance.now(), nudges: 0 };
+const playersTurn = () => G.mode === 'title' || G.mode === 'loading' || G.playerTurn || !$('#dialog').hidden || !$('#math').hidden || !$('#card').hidden || !$('#parent').hidden || $('#actions').children.length > 0 || !$('#joy').hidden;
+setInterval(() => {
+  const sig = `${G.mode}|${G.phase}|${token}`, now = performance.now();
+  if (sig !== dog.sig || playersTurn() || document.hidden) { dog.sig = sig; dog.since = now; return; }
+  if (now - dog.since < 45000) return;
+  dog.since = now; dog.nudges++; console.warn(`story watchdog: no progress in "${G.phase}" for 45 s, nudging`);
+  try { G.finishAnimations && G.finishAnimations(); } catch (e) { console.warn(e); }
+  const r = nudgeStep; nudgeStep = null; if (r) setTimeout(r, 300);
+}, 1000);
 
 // ---------------------------------------------------------------- test / debug hook
 const GO = {
@@ -498,7 +521,7 @@ window.__dm = {
   },
   stats: () => ({ ...engine.info(), mode: G.mode, phase: G.phase, stars: fl.got, models: modelStatus(MODEL_KEYS, swapped) }),
   setTier: t => { engine.noAuto = true; engine.setTier(t); },
-  worm, engine, G,
+  worm, engine, G, ch2, frameStats, get watchdog() { return dog.nudges; },
 };
 
 (async () => {

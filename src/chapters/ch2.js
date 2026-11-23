@@ -119,7 +119,8 @@ export function chapter2(G) {
     if (bg0) { outdoor.background = bg0; bg0 = null; }
     griffith.root.position.set(7.2, 0, -3.5);
   }
-  const begin = () => { G.tick = tick; G.onLeave = cleanup; G.tap = onTap; };
+  const finishAnimations = () => { for (const tw of tweens) { tw.fn(1); tw.done = true; tw.res(); } tweens = []; }; // story watchdog hook
+  const begin = () => { G.tick = tick; G.onLeave = cleanup; G.tap = onTap; G.finishAnimations = finishAnimations; };
 
   // ---------------------------------------------------------------- cave staging
   function stageCave(stage) { // 'intro' | 'warm' | 'hatch'
@@ -158,7 +159,7 @@ export function chapter2(G) {
       egg.rotation.set(0, 0, 0); fx.burst(EGG, 0x9fd8ff, 30, 2.5, 0.4, 1.2, 0.3); sfx.chime();
       await step(say('drake', 'וואו! ביצה כחולה! והיא זוהרת!'));
       worm.setPose('curl'); worm.lookAt(EGG); worm.wiggle(0.8); sfx.purr();
-      G.camGoal = { pos: V(-2.6, 3.8, 6.4), look: V(-1.4, 1.0, -3.2) };
+      G.camGoal = G.engine.viewShift ? { pos: V(-2.6, 3.8, 6.4), look: V(-1.4, 1.0, -3.2) } : { pos: V(-1.9, 4.2, 7.6), look: V(-0.5, 1.0, -3.0) }; // wider on tablets so Drake is fully in frame
       await step(wait(900));
       await step(say('worm', 'אל תדאגי, ביצה קטנה. אני שומר עלייך.'));
       await step(say('griffith', 'זאת ביצה של דרקון מים! זה סימן: מאסטר דרקונים חדש בדרך אלינו.'));
@@ -235,11 +236,11 @@ export function chapter2(G) {
     await step(G.math.ask({ kind: 'missing', title: '🔥 חידת האבנים החמות', ...react }));
     await step(wait(300));
     await step(G.math.ask({ kind: Math.random() < 0.5 ? 'sub' : 'mul', title: '🔥 ועוד חידה חמה!', ...react }));
-    G.phase = 'c2-place'; placing = true;
+    G.phase = 'c2-place'; placing = true; G.playerTurn = true;
     $('#counter').hidden = false; G.setCounter('2 / 5', '🔥');
     toast(null, 'גע באבנים החמות, ווורם יניח אותן ליד הביצה 👆', 5000);
     await step(waitFor(() => placed >= 5));
-    placing = false; marker.visible = false; hideToast();
+    placing = false; G.playerTurn = false; marker.visible = false; hideToast();
     await step(wait(500));
   }
 
@@ -333,5 +334,6 @@ export function chapter2(G) {
     update(dt, time, nextIdx) { if (bubbles.group.visible) bubbles.update(dt, time, nextIdx); },
     nextStonePos() { const s = placing && stones.find(x => !x.placed && !x.moving); return s ? s.m.position.clone() : null; },
     modelTargets: { bo, waterDragon: shu, babyDragon: baby },
+    debug: () => ({ tweens: tweens.map(t => [+t.t.toFixed(2), t.dur, !!t.done]), placed, placing, isTick: G.tick === tick }), // test diagnostics only
   };
 }

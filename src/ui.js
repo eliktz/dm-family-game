@@ -5,15 +5,28 @@ export const FACES = { griffith: '🧙‍♂️', worm: '🐉', drake: '👦', k
 export const NAMES = { griffith: "גריפית'", worm: 'וורם', drake: 'דרייק', king: 'המלך רולנד', bo: 'בו', baby: 'בועה' };
 export const ui = { fast: false, onSay: null };
 
+// A bubble that is abandoned (the chapter was left with 🏠 while it was open) must take its tap handlers with it: a stale
+// handler used to hide the NEXT bubble on the first quick tap without resolving it, which left the story stuck.
+let dropSay = null;
 export function say(who, text) {
+  if (dropSay) dropSay();
   const d = $('#dialog'); d.hidden = false; d.dataset.who = who;
   d.querySelector('.face').textContent = FACES[who]; d.querySelector('.name').textContent = NAMES[who];
   d.querySelector('.text').textContent = text; d.style.animation = 'none'; d.offsetWidth; d.style.animation = '';
   ui.onSay && ui.onSay(who, text);
+  // A tap anywhere on the bubble advances it. pointerup and click are both accepted (some browsers drop one of them after a
+  // scroll or a long press) and only the first one counts. After 12 s without a tap the "המשך" button pulses; it never
+  // advances by itself.
+  d.classList.remove('waiting');
   return new Promise(res => {
-    const done = () => { d.removeEventListener('pointerup', done); clearTimeout(t); sfx.tap(); d.hidden = true; ui.onSayEnd && ui.onSayEnd(who); res(); };
-    const t = ui.fast ? setTimeout(done, 40) : null;
-    setTimeout(() => d.addEventListener('pointerup', done), ui.fast ? 0 : 350);
+    let finished = false, armed = false, ta = null;
+    const off = () => { finished = true; d.removeEventListener('pointerup', done); d.removeEventListener('click', done); clearTimeout(t); clearTimeout(tw); clearTimeout(ta); d.classList.remove('waiting'); if (dropSay === off) dropSay = null; };
+    const done = () => { if (finished || !armed) return; off(); sfx.tap(); d.hidden = true; ui.onSayEnd && ui.onSayEnd(who); res(); };
+    dropSay = off;
+    d.addEventListener('pointerup', done); d.addEventListener('click', done);
+    const t = ui.fast ? setTimeout(() => { armed = true; done(); }, 40) : null;
+    const tw = setTimeout(() => { if (!finished) d.classList.add('waiting'); }, 12000);
+    ta = setTimeout(() => { armed = true; }, ui.fast ? 0 : 350); // ignore the tap that was still on its way to the previous bubble
   });
 }
 let toastT = null;
@@ -119,5 +132,5 @@ export function card({ kicker = '', title = '', text = '', buttons = [], cls = '
       el.addEventListener('pointerup', () => { sfx.tap(); c.hidden = true; res(b.value); }); box.appendChild(el); }
   });
 }
-export function hideOverlays() { for (const s of ['#math', '#card', '#dialog', '#toast']) $(s).hidden = true; currentRiddle = null; clearActions(); }
+export function hideOverlays() { for (const s of ['#math', '#card', '#dialog', '#toast']) $(s).hidden = true; currentRiddle = null; if (dropSay) dropSay(); clearActions(); }
 export const fade = on => new Promise(r => { $('#fade').classList.toggle('on', on); setTimeout(r, ui.fast ? 30 : 650); });

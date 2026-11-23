@@ -171,6 +171,14 @@ async function run(dev) {
     // tap Worm on the title (should wiggle, no error)
     const wb = (await page.evaluate(() => __dm.actorBoxes())).worm; if (wb) await page.mouse.click(Math.max(10, (wb[0] + wb[2]) / 2), (wb[1] + wb[3]) / 2);
     // ---------------- chapter 1: אבן הדרקון
+    // regression: leaving a chapter while a bubble is open must not leave a stale tap handler that hides the next bubble
+    await page.evaluate(() => __dm.go('cave')); await page.waitForFunction(() => !document.querySelector('#dialog').hidden && __dm.phase === 'cave-intro', null, { timeout: 60000 }); await page.waitForTimeout(600);
+    await page.evaluate(() => __dm.go('cave')); await page.waitForFunction(() => !document.querySelector('#dialog').hidden && __dm.phase === 'cave-intro', null, { timeout: 60000 });
+    await page.evaluate(() => document.querySelector('#dialog').dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))); await page.waitForTimeout(900);
+    check(await page.locator('#dialog').isVisible(), 'an early tap after restarting a chapter does not hide the new bubble');
+    await tap('#dialog'); await page.waitForTimeout(700);
+    check((await page.locator('#dialog .text').innerText()).includes("אני גריפית'"), 'and the next tap advances it normally');
+    await page.evaluate(() => __dm.go('title'));
     check((await page.locator('#btn-continue').innerText()).includes('פרק 1'), 'continue button starts chapter 1 on a fresh save');
     await tap('#btn-continue');
     await advanceTo('cave-intro'); await page.waitForTimeout(1600);
@@ -178,6 +186,12 @@ async function run(dev) {
     check((await page.locator('#dialog .name').innerText()).includes("גריפית'"), 'speaker is גריפית\'');
     await clearOfActors('cave dialog');
     await shot('02-cave-dialog');
+    // a tap anywhere on the bubble advances it; pointerup + click from the same tap count once
+    await page.evaluate(() => { const d = document.querySelector('#dialog .text'); d.dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); d.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    await page.waitForTimeout(700);
+    check((await page.locator('#dialog .text').innerText()).includes("אני גריפית'"), 'a tap on the bubble text advances exactly one line (pointerup + click de-duped)');
+    await page.evaluate(() => document.querySelector('#dialog').dispatchEvent(new MouseEvent('click', { bubbles: true }))); await page.waitForTimeout(700);
+    check((await page.locator('#dialog .name').innerText()).includes('דרייק'), 'a click alone also advances the bubble');
     await advanceTo('cave-walk'); await page.waitForTimeout(1200);
     check(await page.locator('#joy').isVisible(), 'joystick visible in cave');
     await shot('03-cave-walk');
@@ -283,6 +297,7 @@ async function run(dev) {
     // ---- no read-aloud anywhere
     check(await page.evaluate(() => window.__speech === 0), 'no speechSynthesis use');
     for (const f of ['src/audio.js', 'src/ui.js', 'src/main.js']) check(!/speechSynthesis|SpeechSynthesisUtterance/.test(await (await page.request.get(base + f)).text()), `${f} has no speech code`);
+    { const f = await page.evaluate(() => ({ ...__dm.frameStats, watchdog: __dm.watchdog })); log('frames', JSON.stringify(f)); check(f.watchdog === 0, 'the story watchdog never had to nudge'); }
     check(errors.length === 0, 'no console/page/network errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
     ok = true;
   } catch (e) {
