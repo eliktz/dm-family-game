@@ -17,6 +17,7 @@ import { chapter1 } from './chapters/ch1.js';
 import { chapter2 } from './chapters/ch2.js';
 import { chapter3 } from './chapters/ch3.js';
 import { chapter4 } from './chapters/ch4.js';
+import { chapter5 } from './chapters/ch5.js';
 
 const $ = s => document.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -56,7 +57,7 @@ const aura = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowSprite('rgba(1
 aura.scale.setScalar(9);
 
 let swapped = {};
-const MODEL_KEYS = ['worm', 'drake', 'griffith', 'king', 'castle', 'bo', 'waterDragon', 'babyDragon', 'ana', 'sunDragon', 'rori', 'fireDragon'];
+const MODEL_KEYS = ['worm', 'drake', 'griffith', 'king', 'castle', 'bo', 'waterDragon', 'babyDragon', 'ana', 'sunDragon', 'rori', 'fireDragon', 'petra', 'crystalDragon'];
 async function loadEnv() {
   try {
     const { background, env } = await engine.loadHDR('assets/hdri/kloofendal_day_1k.hdr');
@@ -391,12 +392,12 @@ $('#c').addEventListener('pointerdown', e => {
 });
 
 // ---------------------------------------------------------------- chapters + buttons
-const ch1 = mods[1] = chapter1(G), ch2 = mods[2] = chapter2(G), ch3 = mods[3] = chapter3(G), ch4 = mods[4] = chapter4(G);
+const ch1 = mods[1] = chapter1(G), ch2 = mods[2] = chapter2(G), ch3 = mods[3] = chapter3(G), ch4 = mods[4] = chapter4(G), ch5 = mods[5] = chapter5(G);
 // while Griffith speaks in the cave the camera turns to a shot of him (with Drake's side of the cave), then goes back;
 // a chapter can set G.keepShot for a beat that must stay on Worm (the Dragon Stone moment)
 let griffShot = null, griffPrev = null;
 ui.onSay = who => {
-  swapped[{ baby: 'babyDragon', kepri: 'sunDragon', vulcan: 'fireDragon' }[who] || who]?.once('talk'); // GLB characters with a Talk clip gesture while they speak
+  swapped[{ baby: 'babyDragon', kepri: 'sunDragon', vulcan: 'fireDragon', gem: 'crystalDragon' }[who] || who]?.once('talk'); // GLB characters with a Talk clip gesture while they speak
   if (who !== 'griffith' || G.mode !== 'cave' || G.keepShot) return;
   const g = griffith.root.position, d = drake.root.position.clone().sub(g).setY(0); if (d.lengthSq() < 0.01) d.set(0, 0, 1); d.normalize();
   const side = new THREE.Vector3(-d.z, 0, d.x); if (side.dot(worm.headWorld().sub(g)) > 0) side.negate(); // the side away from Worm, so his body never fills the foreground
@@ -505,6 +506,7 @@ const GO = {
   ch1: () => guard(() => ch1.start('intro')),
   ch2: () => guard(() => ch2.start('intro')), 'ch2-glide': () => guard(() => ch2.start('glide')), 'ch2-warm': () => guard(() => ch2.start('warm')),
   'ch2-hatch': () => guard(() => ch2.start('hatch')), 'ch2-end': () => guard(() => ch2.start('end')),
+  ch5: () => guard(() => ch5.start('intro')), 'ch5-patterns': () => guard(() => ch5.start('patterns')), 'ch5-end': () => guard(() => ch5.start('end')),
   ch4: () => guard(() => ch4.start('intro')), 'ch4-catch': () => guard(() => ch4.start('catch')), 'ch4-end': () => guard(() => ch4.start('end')),
   ch3: () => guard(() => ch3.start('intro')), 'ch3-mirrors': () => guard(() => ch3.start('mirrors')), 'ch3-end': () => guard(() => ch3.start('end')),
 };
@@ -531,6 +533,8 @@ window.__dm = {
   mirrorScreen() { const p = ch3.nextMirrorPos(); if (!p) return null; const v = p.project(cam); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
   // screen position (CSS px) of a fireball to tap in ch4, or null
   fireballScreen() { const p = ch4.nextBallPos(); if (!p) return null; const v = p.project(cam); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
+  // screen position (CSS px) of the crystal to tap in ch5 (or of a wrong one, for tests), or null
+  crystalScreen(wrong) { const p = ch5.nextCrystalPos(wrong); if (!p) return null; const v = p.project(cam); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
   get progress() { return [...progress.done].sort(); }, get last() { return progress.last; },
   resetProgress() { progress.done.clear(); progress.last = null; progress.all = false; mathState = newAdaptive({}); try { localStorage.removeItem('dm.progress'); } catch { } refreshTitle(); },
   // screen-space boxes [x0, y0, x1, y1] (CSS px) of Drake and of Worm's head, for layout checks
@@ -545,17 +549,17 @@ window.__dm = {
   },
   stats: () => ({ ...engine.info(), mode: G.mode, phase: G.phase, stars: fl.got, models: modelStatus(MODEL_KEYS, swapped) }),
   setTier: t => { engine.noAuto = true; engine.setTier(t); },
-  worm, engine, G, ch2, ch3, ch4, frameStats, get watchdog() { return dog.nudges; },
+  worm, engine, G, ch2, ch3, ch4, ch5, frameStats, get watchdog() { return dog.nudges; },
 };
 
 (async () => {
   await loadEnv();
-  swapped = await loadModels({ worm, drake, griffith, king, castle: { root: world.castle }, ...ch2.modelTargets, ...ch3.modelTargets, ...ch4.modelTargets });
+  swapped = await loadModels({ worm, drake, griffith, king, castle: { root: world.castle }, ...ch2.modelTargets, ...ch3.modelTargets, ...ch4.modelTargets, ...ch5.modelTargets });
   enterTitle();
   if (params.has('tier')) window.__dm.setTier(params.get('tier'));
   // compile shaders for both scenes up-front (avoids hitches on iPad when the cave opens or chapter 2 actors appear)
-  try { ch2.showAll(true); ch3.showAll(true); ch4.showAll(true); engine.renderer.compile(caveScene, cam); engine.renderer.compile(outdoor, cam); } catch { }
-  ch2.showAll(false); ch3.showAll(false); ch4.showAll(false);
+  try { ch2.showAll(true); ch3.showAll(true); ch4.showAll(true); ch5.showAll(true); engine.renderer.compile(caveScene, cam); engine.renderer.compile(outdoor, cam); } catch { }
+  ch2.showAll(false); ch3.showAll(false); ch4.showAll(false); ch5.showAll(false);
   frame();
   setTimeout(() => { $('#loading').classList.add('done'); window.__dm.ready = true; }, 300);
 })();

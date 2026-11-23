@@ -26,7 +26,7 @@ A Hebrew, iPad-first, **plot-driven** three.js game for Elik's 7-year-old son, b
 - **Plot-driven chapters**, not free exploration. Each chapter is a short story card, then scenes with dialogue bubbles,
   then one clear activity (riddle, guided flight, …), then a celebration and a "המשך יבוא…" teaser.
   The story runner is in `src/main.js` (cancellable async script: `runner()`, `step()`, `waitFor()`); each chapter's script is
-  `src/chapters/chN.js` (chapters 1-4 are built) and receives the shared core as `G`. The arc is in `STORY.md`. Progress: localStorage `dm.progress`; `?all=1` unlocks all.
+  `src/chapters/chN.js` (chapters 1-5 are built) and receives the shared core as `G`. The arc is in `STORY.md`. Progress: localStorage `dm.progress`; `?all=1` unlocks all.
 - **Worm is the star** (the kid's favourite). He gets the most polished model and animation (breathing, happy wiggle, chomp,
   look-at, Dragon-Stone eye glow) and warm reactions everywhere. In the books Worm has no wings and moves with mind power,
   so in flight he *floats/glides* with a green aura.
@@ -66,6 +66,8 @@ A Hebrew, iPad-first, **plot-driven** three.js game for Elik's 7-year-old son, b
   a dialog advances on a tap anywhere on the bubble, accepts `pointerup` and `click` once, and pulses "המשך" after 12 s (never auto-advances);
   a story watchdog nudges a phase that sits 45 s while it is not the player's turn (`G.playerTurn`; it finishes all tweens first; `__dm.watchdog` counts
   nudges and the smoke test expects 0). New scripted waits must go through `step()`, never a bare promise.
+- **Chapter 5 (crystals):** `src/chapters/ch5.js` in the cave scene (mode `cave`, cameras through `G.camGoal`). Petra's dragon's name lives only in
+  `src/names.js` (`PETRA_DRAGON_NAME`). Debug: `__dm.go('ch5' | 'ch5-patterns' | 'ch5-end')`, `__dm.crystalScreen(wrong?)`, `__dm.ch5.debug()`.
 - **Chapter 4 (bakery):** `src/chapters/ch4.js`, mode `bakery`. Debug: `__dm.go('ch4' | 'ch4-catch' | 'ch4-end')`, `__dm.fireballScreen()`,
   `__dm.ch4.debug()`; `soak.mjs --chapter=4` and `starve.mjs` cover it. Fireball timing uses the wall clock, not frames.
 - **Chapter 3 (garden):** `src/chapters/ch3.js` runs in mode `garden` with its own camera in `G.tick`. Debug: `__dm.go('ch3' | 'ch3-mirrors' | 'ch3-end')`,

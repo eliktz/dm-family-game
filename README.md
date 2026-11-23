@@ -78,4 +78,4 @@ Clips named `idle`, `fly`, `coil`, `wiggle`/`happy`, `chomp`, `walk`, `sit`, and
 A missing or empty manifest, or a GLB that fails to load, just leaves that character procedural. `__dm.stats().models` shows which is in use.
 
 ## Next steps
-See [STORY.md](STORY.md) for the 8-chapter arc. Chapters 1–4 are built; chapter 5 (Petra and the crystal caves) is next.
+See [STORY.md](STORY.md) for the 8-chapter arc. Chapters 1–5 are built; chapter 6 (the Grumble Cloud) is next.

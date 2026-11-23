@@ -35,7 +35,7 @@ Each chapter picks the *kinds* of riddle that fit its story; the level decides h
 | 2 | Missing number, then subtraction or multiplication | two riddles before the warm stones |
 | 3 | Subtraction, missing number | sunbeams and clouds |
 | 4 | Addition, then a missing number (ten loaves on a ten-frame) | the dragon bakery |
-| 5 | Missing number (patterns), multiplication by 2 | crystal patterns |
+| 5 | Missing number, then multiplication; colour patterns AB / AAB / ABC | crystal patterns |
 | 6 | Multiplication (equal groups), word problems | colour sparks, paint pots |
 | 7 | Multiplication, missing factor, two-step stories | lanterns, stepping stones, bridge planks |
 | 8 | Everything: "Worm's big quiz" of five riddles | the finale |
@@ -68,9 +68,13 @@ steps and removes one wrong answer, and on the third Worm shows the answer and t
      One last tiny hiccup leaves a small ember.
    - *Teaser:* a strange echo comes from the crystal caves… *Keepsake:* a warm ember (glows but doesn't burn).
 
-5. **מערת הקריסטלים של פטרה**: **Petra and her crystal/stone dragon** in the echo caves under the mountain.
-   - *Activity, crystal patterns:* complete sparkling patterns to light a path (AB, AAB, counting by 2s). Worm's mind power hums each crystal like a xylophone.
-   - Petra's dragon is shy. Worm teaches it that being quiet is okay. Gentle friendship moment.
+5. **מערת הקריסטלים של פטרה** (done): the strange echo in the Dragon Cave is **Petra's shy crystal dragon**, hiding in the dark. His name is a
+   placeholder, נצנץ ("sparkle"), kept in one constant (`src/names.js`, `PETRA_DRAGON_NAME`) until the kid picks one.
+   - *Activity, crystal patterns:* the crystals light the way when someone hums the right pattern. Worm hums each lit crystal with his mind power
+     (xylophone chimes) and the player taps which crystal comes next: AB, then AAB, then ABC. A wrong crystal only wobbles and Worm hums again;
+     after two misses or a quiet while the right one glows. After each pattern the shy dragon comes a little closer.
+   - *Riddles:* a missing number and a multiplication (counting in equal steps) from the adaptive engine, between the patterns.
+   - *Friendship moment:* Worm tells him that being quiet is okay, and that friends don't need many words.
    - *Teaser:* all the colours are vanishing from the kingdom! *Keepsake:* a rainbow crystal.
 
 6. **הענן הרטנן**: The Grumble Cloud steals the flowers' colours and hides them in little grey puffs.

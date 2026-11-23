@@ -19,6 +19,7 @@ export const sfx = {
   chime() { const t = now(); [784, 988, 1175, 1568].forEach((f, i) => tone(f, t + i * 0.08, 0.5, 'sine', 0.22)); },
   star(i = 0) { const t = now(), base = [523, 587, 659, 698, 784, 880, 988, 1047][i % 8]; tone(base, t, 0.25, 'triangle', 0.25); tone(base * 1.5, t + 0.07, 0.4, 'sine', 0.2); tone(base * 2, t + 0.14, 0.5, 'sine', 0.12); },
   squeak() { const t = now(); tone(1250, t, 0.09, 'sine', 0.2, 1.5); tone(1500, t + 0.13, 0.12, 'sine', 0.2, 1.35); },
+  note(freq) { const t = now(); tone(freq, t, 0.55, 'sine', 0.26); tone(freq * 2, t, 0.35, 'triangle', 0.09); tone(freq * 3, t, 0.18, 'sine', 0.04); }, // xylophone-like chime
   hic() { const t = now(); tone(520, t, 0.07, 'square', 0.1, 1.7); tone(880, t + 0.09, 0.09, 'sine', 0.16, 0.7); },
   happy() { const t = now(); tone(220, t, 0.18, 'sine', 0.25, 1.6); tone(330, t + 0.16, 0.22, 'sine', 0.22, 1.5); },
   purr() { const t = now(); for (let i = 0; i < 6; i++) tone(110 + (i % 2) * 18, t + i * 0.09, 0.12, 'triangle', 0.18); },

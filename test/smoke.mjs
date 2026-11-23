@@ -49,7 +49,9 @@ async function run(dev) {
     const t0 = Date.now();
     while (Date.now() - t0 < timeout) {
       const p = await phase(); await oneBubble(p); if (p === target) return;
-      if (await page.locator('#dialog:not([hidden])').count()) await tap('#dialog');
+      // tap an open bubble only if the phase is still not the target (checked in the same page call: on a slow machine the
+      // target's first bubble could otherwise open between the two calls and be skipped)
+      if (await page.evaluate(t => { const d = document.querySelector('#dialog'); if (window.__dm.phase === t) return true; if (!d.hidden) d.dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); return false; }, target)) return;
       await page.waitForTimeout(250);
     }
     throw new Error(`timeout waiting for phase ${target} (at ${await phase()})`);
@@ -123,7 +125,7 @@ async function run(dev) {
     // ---- chapter map, locked chapters, hidden parent unlock
     check(await page.locator('#chapters .chap').count() === 8, 'chapter map shows 8 chapters');
     check(await page.locator('#ch-2.locked').count() === 1, 'chapter 2 is locked on a fresh start');
-    check(await page.locator('#ch-5 .soon').isVisible(), 'unbuilt chapters say בקרוב');
+    check(await page.locator('#ch-6 .soon').isVisible(), 'unbuilt chapters say בקרוב');
     await shot('01-title-map');
     await tap('#ch-2'); await tap('#ch-5'); await page.waitForTimeout(300);
     check(await page.evaluate(() => __dm.mode === 'title'), 'tapping a locked / unbuilt chapter only gives a friendly nudge');
@@ -373,10 +375,47 @@ async function run(dev) {
     await page.waitForFunction(() => window.__dm.mode === 'title', null, { timeout: 15000 }); await page.waitForTimeout(1200);
     check((await page.locator('#ch-4 .ic').innerText()).includes('🔥') && JSON.stringify(await page.evaluate(() => __dm.progress)) === '[1,2,3,4]', 'chapter 4 keepsake badge shown, progress is [1,2,3,4]');
     await shot('ch4-10-title-badges');
+
+    // ---------------- chapter 5: מערת הקריסטלים של פטרה
+    check(await page.locator('#ch-5.locked').count() === 0 && (await page.locator('#btn-continue').innerText()).includes('פרק 5'), 'chapter 5 unlocked after chapter 4, continue points at it');
+    await tap('#btn-continue');
+    await advanceTo('c5-intro'); await page.waitForTimeout(1500);
+    await clearOfActors('ch5 dialog'); await shot('ch5-01-echo');
+    await tap('#btn-home'); await page.waitForFunction(() => window.__dm.mode === 'title', null, { timeout: 30000 }); await page.waitForTimeout(800);
+    await tap('#btn-continue'); await page.waitForFunction(() => __dm.phase === 'c5-intro' && !document.querySelector('#dialog').hidden, null, { timeout: 60000 });
+    await tap('#dialog'); await page.waitForTimeout(900);
+    check(await page.locator('#dialog').isVisible(), 'ch5: after 🏠 mid-dialog and continue, the bubble is still there');
+    for (const t0 = Date.now(); Date.now() - t0 < 240000;) { if ((await page.locator('#dialog .name').innerText().catch(() => '')).trim() === 'פטרה') break; if (await page.locator('#dialog:not([hidden])').count()) await tap('#dialog'); await page.waitForTimeout(300); }
+    await page.waitForTimeout(900); await shot('ch5-02-petra');
+    for (let n = 1; n <= 3; n++) {
+      await advanceTo('c5-pattern' + n); await page.waitForFunction(() => __dm.ch5.debug().active, null, { timeout: 240000 }); await page.waitForTimeout(600);
+      await shot('ch5-0' + (n + 2) + '-pattern' + n);
+      if (n === 1) { // a wrong crystal only wobbles and brings a hint
+        const w = await page.evaluate(() => __dm.crystalScreen(true)); await page.mouse.click(w[0], w[1]); await page.waitForTimeout(500);
+        check(await page.evaluate(() => { const d = __dm.ch5.debug(); return d.active && d.misses === 1 && d.next === 4; }) && await phase() === 'c5-pattern1', 'a wrong crystal does not punish or advance');
+      }
+      let taps = 0; for (const t0 = Date.now(); Date.now() - t0 < 240000 && await phase() === 'c5-pattern' + n;) { const xy = await page.evaluate(() => __dm.crystalScreen()); if (xy) { await page.mouse.click(xy[0], xy[1]); taps++; } await page.waitForTimeout(600); }
+      check(taps >= 2, `pattern ${n} completed by tapping crystals (${taps} taps)`);
+      if (n < 3) { await advanceTo('c5-math' + n); for (const t0 = Date.now(); Date.now() - t0 < 240000 && !(await cur());) { if (await page.locator('#dialog:not([hidden])').count()) await tap('#dialog'); await page.waitForTimeout(300); }
+        check(await solveBeat('c5-math' + n, { firstWrong: n === 1, shotName: n === 1 ? 'ch5-06-crystal-riddle' : null }) === 1, `crystal riddle ${n} asked once`); }
+    }
+    await advanceTo('c5-friend'); await page.waitForTimeout(2500); await shot('ch5-07-shy-dragon');
+    await advanceTo('c5-celebrate'); await page.locator('#card:not([hidden])').waitFor({ timeout: 60000 });
+    check((await page.locator('#card').innerText()).includes('קריסטל קשת'), 'ch5 celebration card with the rainbow crystal keepsake');
+    await shot('ch5-08-celebrate-card');
+    log('stats ch5', JSON.stringify(await page.evaluate(() => __dm.stats())));
+    await tap('#card button[data-v="end"]');
+    await page.waitForFunction(() => window.__dm.phase === 'c5-end'); await page.waitForTimeout(800);
+    check((await page.locator('#card').innerText()).includes('הצבעים נעלמים'), 'ch5 teaser about the vanishing colours');
+    await shot('ch5-09-teaser');
+    await tap('#card button[data-v="home"]');
+    await page.waitForFunction(() => window.__dm.mode === 'title', null, { timeout: 15000 }); await page.waitForTimeout(1200);
+    check((await page.locator('#ch-5 .ic').innerText()).includes('💎') && JSON.stringify(await page.evaluate(() => __dm.progress)) === '[1,2,3,4,5]', 'chapter 5 keepsake badge shown, progress is [1,2,3,4,5]');
+    await shot('ch5-10-title-badges');
     // ---- no read-aloud anywhere
     check(await page.evaluate(() => window.__speech === 0), 'no speechSynthesis use');
     for (const f of ['src/audio.js', 'src/ui.js', 'src/main.js']) check(!/speechSynthesis|SpeechSynthesisUtterance/.test(await (await page.request.get(base + f)).text()), `${f} has no speech code`);
-    check(bubbleChecks > 150, `never more than one bubble or banner on screen (${bubbleChecks} checks across chapters 1-4)`);
+    check(bubbleChecks > 150, `never more than one bubble or banner on screen (${bubbleChecks} checks across chapters 1-5)`);
     { const f = await page.evaluate(() => ({ ...__dm.frameStats, watchdog: __dm.watchdog })); log('frames', JSON.stringify(f)); check(f.watchdog === 0, 'the story watchdog never had to nudge'); }
     check(errors.length === 0, 'no console/page/network errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
     ok = true;
