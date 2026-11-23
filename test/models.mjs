@@ -14,7 +14,7 @@ const gltf = JSON.stringify({ asset: { version: '2.0' }, scene: 0, scenes: [{ no
   meshes: [{ primitives: [{ attributes: { POSITION: 0 }, material: 0 }] }], materials: [{ name: 'eye', emissiveFactor: [0, 1, 0] }],
   buffers: [{ byteLength: 36, uri: 'data:application/octet-stream;base64,' + buf.toString('base64') }],
   bufferViews: [{ buffer: 0, byteLength: 36 }], accessors: [{ bufferView: 0, componentType: 5126, count: 3, type: 'VEC3', min: [0, 0, 0], max: [1, 1, 0] }] });
-const ALL = { worm: 'procedural', drake: 'procedural', griffith: 'procedural', king: 'procedural', castle: 'procedural', bo: 'procedural', waterDragon: 'procedural', babyDragon: 'procedural', ana: 'procedural', sunDragon: 'procedural' };
+const ALL = { worm: 'procedural', drake: 'procedural', griffith: 'procedural', king: 'procedural', castle: 'procedural', bo: 'procedural', waterDragon: 'procedural', babyDragon: 'procedural', ana: 'procedural', sunDragon: 'procedural', rori: 'procedural', fireDragon: 'procedural' };
 const cases = [
   { name: 'manifest missing (404)', manifest: { status: 404, body: 'nf' }, expect: ALL, allow404: true },
   { name: 'manifest empty file', manifest: { status: 200, body: '' }, expect: ALL },

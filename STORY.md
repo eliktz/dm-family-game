@@ -34,7 +34,7 @@ Each chapter picks the *kinds* of riddle that fit its story; the level decides h
 | 1 | Addition, then a missing number | two riddles at the cave gate |
 | 2 | Missing number, then subtraction or multiplication | two riddles before the warm stones |
 | 3 | Subtraction, missing number | sunbeams and clouds |
-| 4 | Addition and subtraction (making tens), word problems | the dragon bakery |
+| 4 | Addition, then a missing number (ten loaves on a ten-frame) | the dragon bakery |
 | 5 | Missing number (patterns), multiplication by 2 | crystal patterns |
 | 6 | Multiplication (equal groups), word problems | colour sparks, paint pots |
 | 7 | Multiplication, missing factor, two-step stories | lanterns, stepping stones, bridge planks |
@@ -58,9 +58,14 @@ steps and removes one wrong answer, and on the third Worm shows the answer and t
    - *Activity, mirror light:* Worm lifts 3 mirrors with mind power, and the player rotates them to bounce the sun dragon's beam onto the flower beds. Subtraction appears as clouds block beams: 8 − 3.
    - *Teaser:* Rori's fire dragon has a hiccup problem… *Keepsake:* a golden sun disc.
 
-4. **הלהבה של רורי**: **Rori and her fire dragon**. The fire dragon has fiery hiccups and keeps toasting things by accident. It's funny, not dangerous.
-   - *Activity A, the dragon bakery:* bake bread with gentle fire for the castle feast, counting loaves by making 10 (7 + 3).
-   - *Activity B, hiccup cure:* a rhythm game. Tap with Worm's slow breathing to calm the fire dragon down.
+4. **הלהבה של רורי** (done): **Rori and Vulcan, her fire dragon**, arrive at the castle lawn. Vulcan has fiery hiccups: every "היק!" pops out a
+   small, warm fireball. It's funny, never dangerous: an untouched fireball just pops into steam.
+   - *Activity, the dragon bakery:* Worm's idea is to turn every hiccup into bread for tonight's feast. The player taps the floating fireballs and
+     Worm bakes each one into a warm loaf with his mind power. Ten loaves in two rounds of five fill a ten-frame on the feast table
+     (two rows of five). After a quiet while Worm bakes one himself, so nobody is ever stuck.
+   - *Riddles:* an addition after the first row and a missing number after the second, from the adaptive engine.
+   - *The cure:* Worm teaches Vulcan to breathe slowly with him (a calm, guided moment, no rhythm game) and the hiccups stop.
+     One last tiny hiccup leaves a small ember.
    - *Teaser:* a strange echo comes from the crystal caves… *Keepsake:* a warm ember (glows but doesn't burn).
 
 5. **מערת הקריסטלים של פטרה**: **Petra and her crystal/stone dragon** in the echo caves under the mountain.

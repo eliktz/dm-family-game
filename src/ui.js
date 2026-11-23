@@ -1,8 +1,8 @@
 // Hebrew RTL HUD: dialogue bubbles, toasts, action buttons, joystick, riddle panel, cards.
 import { sfx } from './audio.js';
 const $ = s => document.querySelector(s);
-export const FACES = { griffith: '🧙‍♂️', worm: '🐉', drake: '👦', king: '👑', bo: '🧒', baby: '💧', ana: '👧', kepri: '☀️', cloud: '☁️' };
-export const NAMES = { griffith: "גריפית'", worm: 'וורם', drake: 'דרייק', king: 'המלך רולנד', bo: 'בו', baby: 'בועה', ana: 'אנה', kepri: 'קפרי', cloud: 'הענן הרטנן' };
+export const FACES = { griffith: '🧙‍♂️', worm: '🐉', drake: '👦', king: '👑', bo: '🧒', baby: '💧', ana: '👧', kepri: '☀️', cloud: '☁️', rori: '👩‍🦰', vulcan: '🔥' };
+export const NAMES = { griffith: "גריפית'", worm: 'וורם', drake: 'דרייק', king: 'המלך רולנד', bo: 'בו', baby: 'בועה', ana: 'אנה', kepri: 'קפרי', cloud: 'הענן הרטנן', rori: 'רורי', vulcan: 'וולקן' };
 export const ui = { fast: false, onSay: null };
 
 // A bubble that is abandoned (the chapter was left with 🏠 while it was open) must take its tap handlers with it: a stale

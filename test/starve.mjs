@@ -17,6 +17,7 @@ async function drive(until, ms = 300000) {
     if (await page.locator('#dialog:not([hidden])').count()) await page.locator('#dialog').dispatchEvent('pointerup');
     if (/^c3-mirror/.test(ph)) { const xy = await page.evaluate(() => __dm.mirrorScreen()); if (xy) await page.mouse.click(xy[0], xy[1]); }
     if (/math/.test(ph)) { const c = await page.evaluate(() => __dm.math.current()); if (c) await page.locator(`#math .m-answers button[data-v="${c.answer}"]`).dispatchEvent('pointerup').catch(() => { }); }
+    if (/^c4-catch/.test(ph)) { const xy = await page.evaluate(() => __dm.fireballScreen()); if (xy) await page.mouse.click(xy[0], xy[1]); }
     if (ph === 'c2-place') { const xy = await page.evaluate(() => __dm.stoneScreen()); if (xy) await page.mouse.click(xy[0], xy[1]); }
     await page.waitForTimeout(350);
   }
@@ -37,6 +38,9 @@ await page.evaluate(() => { window.requestAnimationFrame = () => 0; __dm.go('ch2
 const t1 = Date.now(); check(await drive(p => p === 'c2-ready', 240000), `chapter 2 intro (egg rolls in, Worm curls) without animation frames (${((Date.now() - t1) / 1000).toFixed(0)} s)`);
 await page.evaluate(() => __dm.go('ch2-warm'));
 const t2 = Date.now(); check(await drive(p => p === 'c2-celebrate', 400000), `chapter 2 stones, hatch and Bo's arrival without animation frames (${((Date.now() - t2) / 1000).toFixed(0)} s)`);
+// 3b. chapter 4 without animation frames: arrival, fireballs, riddles, breathing, feast
+await page.evaluate(() => __dm.go('ch4'));
+const t3 = Date.now(); check(await drive(p => p === 'c4-celebrate', 400000), `chapter 4 from start to the celebration without animation frames (${((Date.now() - t3) / 1000).toFixed(0)} s)`);
 // 4. chapter 1 feeding (was a bare requestAnimationFrame loop) without animation frames
 await page.evaluate(() => __dm.go('bond')); await page.locator('#btn-feed').waitFor({ timeout: 120000 }); await page.waitForTimeout(800);
 await page.locator('#btn-feed').dispatchEvent('pointerup');

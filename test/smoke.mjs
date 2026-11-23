@@ -119,7 +119,7 @@ async function run(dev) {
     // ---- chapter map, locked chapters, hidden parent unlock
     check(await page.locator('#chapters .chap').count() === 8, 'chapter map shows 8 chapters');
     check(await page.locator('#ch-2.locked').count() === 1, 'chapter 2 is locked on a fresh start');
-    check(await page.locator('#ch-4 .soon').isVisible(), 'unbuilt chapters say בקרוב');
+    check(await page.locator('#ch-5 .soon').isVisible(), 'unbuilt chapters say בקרוב');
     await shot('01-title-map');
     await tap('#ch-2'); await tap('#ch-5'); await page.waitForTimeout(300);
     check(await page.evaluate(() => __dm.mode === 'title'), 'tapping a locked / unbuilt chapter only gives a friendly nudge');
@@ -332,6 +332,43 @@ async function run(dev) {
     await page.waitForFunction(() => window.__dm.mode === 'title', null, { timeout: 15000 }); await page.waitForTimeout(1200);
     check((await page.locator('#ch-3 .ic').innerText()).includes('☀️') && JSON.stringify(await page.evaluate(() => __dm.progress)) === '[1,2,3]', 'chapter 3 keepsake badge shown, progress is [1,2,3]');
     await shot('ch3-10-title-badges');
+
+    // ---------------- chapter 4: הלהבה של רורי
+    check(await page.locator('#ch-4.locked').count() === 0 && (await page.locator('#btn-continue').innerText()).includes('פרק 4'), 'chapter 4 unlocked after chapter 3, continue points at it');
+    await tap('#btn-continue');
+    await advanceTo('c4-intro'); await page.waitForTimeout(1500);
+    await clearOfActors('ch4 dialog'); await shot('ch4-01-lawn');
+    // 🏠 in the middle of a line, then continue and tap at once
+    await tap('#btn-home'); await page.waitForFunction(() => window.__dm.mode === 'title', null, { timeout: 30000 }); await page.waitForTimeout(800);
+    await tap('#btn-continue'); await page.waitForFunction(() => __dm.phase === 'c4-intro' && !document.querySelector('#dialog').hidden, null, { timeout: 60000 });
+    await tap('#dialog'); await page.waitForTimeout(900);
+    check(await page.locator('#dialog').isVisible(), 'ch4: after 🏠 mid-dialog and continue, the bubble is still there');
+    for (const t0 = Date.now(); Date.now() - t0 < 240000;) { if ((await page.locator('#dialog .name').innerText().catch(() => '')).trim() === 'וולקן') break; if (await page.locator('#dialog:not([hidden])').count()) await tap('#dialog'); await page.waitForTimeout(300); }
+    await page.waitForTimeout(900); await shot('ch4-02-vulcan-hiccups');
+    for (let r = 1; r <= 2; r++) {
+      await advanceTo('c4-catch' + r); await page.waitForTimeout(2500);
+      if (r === 1) { check(await page.locator('#counter').isVisible(), 'loaf counter visible'); await shot('ch4-03-fireballs'); }
+      let n = 0; for (const t0 = Date.now(); Date.now() - t0 < 240000 && await phase() === 'c4-catch' + r;) { const xy = await page.evaluate(() => __dm.fireballScreen()); if (xy) { await page.mouse.click(xy[0], xy[1]); n++; } await page.waitForTimeout(450); }
+      check(n >= 1, `round ${r}: fireballs baked by tapping (${n} taps)`);
+      if (r === 1) await shot('ch4-04-first-row');
+      await advanceTo('c4-math' + r); for (const t0 = Date.now(); Date.now() - t0 < 240000 && !(await cur());) { if (await page.locator('#dialog:not([hidden])').count()) await tap('#dialog'); await page.waitForTimeout(300); }
+      check(await solveBeat('c4-math' + r, { firstWrong: r === 1, shotName: r === 1 ? 'ch4-05-loaf-riddle' : null }) === 1, `loaf riddle ${r} asked once`);
+    }
+    check((await page.locator('#count').innerText()).trim() === '10 / 10', 'ten loaves on the table');
+    await advanceTo('c4-breathe'); await page.waitForTimeout(2500); await shot('ch4-06-breathing');
+    await advanceTo('c4-feast'); await page.waitForTimeout(1200); await shot('ch4-07-feast');
+    await advanceTo('c4-celebrate'); await page.locator('#card:not([hidden])').waitFor({ timeout: 30000 });
+    check((await page.locator('#card').innerText()).includes('גחלת'), 'ch4 celebration card with the ember keepsake');
+    await shot('ch4-08-celebrate-card');
+    log('stats ch4', JSON.stringify(await page.evaluate(() => __dm.stats())));
+    await tap('#card button[data-v="end"]');
+    await page.waitForFunction(() => window.__dm.phase === 'c4-end'); await page.waitForTimeout(800);
+    check((await page.locator('#card').innerText()).includes('קריסטלים'), 'ch4 teaser about the crystal caves');
+    await shot('ch4-09-teaser');
+    await tap('#card button[data-v="home"]');
+    await page.waitForFunction(() => window.__dm.mode === 'title', null, { timeout: 15000 }); await page.waitForTimeout(1200);
+    check((await page.locator('#ch-4 .ic').innerText()).includes('🔥') && JSON.stringify(await page.evaluate(() => __dm.progress)) === '[1,2,3,4]', 'chapter 4 keepsake badge shown, progress is [1,2,3,4]');
+    await shot('ch4-10-title-badges');
     // ---- no read-aloud anywhere
     check(await page.evaluate(() => window.__speech === 0), 'no speechSynthesis use');
     for (const f of ['src/audio.js', 'src/ui.js', 'src/main.js']) check(!/speechSynthesis|SpeechSynthesisUtterance/.test(await (await page.request.get(base + f)).text()), `${f} has no speech code`);

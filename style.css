@@ -48,7 +48,7 @@ h2 { margin: 6px 0 14px; font-size: clamp(22px, 2.8vw, 32px); color: #2f8a4a; fo
 #dialog .who { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 22px; margin-bottom: 4px; }
 #dialog .face, #toast .face { width: 46px; height: 46px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 28px; background: #f6e3bf; flex: none; }
 #dialog[data-who=worm] .who { color: #7a4a1c; } #dialog[data-who=worm] { box-shadow: 0 12px 30px rgba(0,0,0,.3), inset 0 0 0 3px #b8e8a8; background: #f7fff0; }
-#dialog[data-who=griffith] .who { color: #4a3c8f; } #dialog[data-who=drake] .who { color: #3f7a2a; } #dialog[data-who=king] .who { color: #a8262e; } #dialog[data-who=bo] .who { color: #2a5fa8; } #dialog[data-who=ana] .who, #dialog[data-who=kepri] .who { color: #b06a10; } #dialog[data-who=cloud] .who { color: #5a6573; } #dialog[data-who=baby] .who { color: #1f8a9a; }
+#dialog[data-who=griffith] .who { color: #4a3c8f; } #dialog[data-who=drake] .who { color: #3f7a2a; } #dialog[data-who=king] .who { color: #a8262e; } #dialog[data-who=bo] .who { color: #2a5fa8; } #dialog[data-who=ana] .who, #dialog[data-who=kepri] .who { color: #b06a10; } #dialog[data-who=cloud] .who { color: #5a6573; } #dialog[data-who=rori] .who, #dialog[data-who=vulcan] .who { color: #b5302a; } #dialog[data-who=baby] .who { color: #1f8a9a; }
 #dialog .text { font-size: clamp(22px, 2.6vw, 30px); line-height: 1.35; font-weight: 500; }
 #dialog .next { position: absolute; left: 16px; bottom: -22px; font-size: 22px; font-weight: 800; padding: 10px 22px; border-radius: 999px; background: linear-gradient(#ffe27a, #ffb52e); box-shadow: 0 4px 0 #c77a12; animation: nudge 1.2s infinite; }
 @keyframes nudge { 50% { transform: translateX(-6px); } }
