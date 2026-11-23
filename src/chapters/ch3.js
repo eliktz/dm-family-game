@@ -81,16 +81,13 @@ export function chapter3(G) {
   showAll(false);
 
   // ---------------------------------------------------------------- state + helpers
-  let tweens = [], camGoal = CAM_WIDE, camSnap = true, active = -1, tapWait = null, taps = 0, dim = 0, dimTo = 0, blocked = false, sunBase = null, bgBase = null;
+  let camGoal = CAM_WIDE, camSnap = true, active = -1, tapWait = null, taps = 0, dim = 0, dimTo = 0, blocked = false, sunBase = null, bgBase = null;
   const camLook = V(0, 0, 0);
-  const tween = (dur, fn) => new Promise(res => { fn(0); tweens.push({ t: 0, dur: ui.fast ? 0.05 : dur, fn, res }); });
-  const finishAnimations = () => { for (const tw of tweens) { tw.fn(1); tw.done = true; tw.res(); } tweens = []; };
+  const tween = G.tween; // wall-clock story animations with a deadline (see main.js)
   const setBeam = (b, from, to) => { b.position.copy(from); b.lookAt(to); b.scale.set(1, 1, from.distanceTo(to)); };
   const _a = V(0, 0, 0), _b = V(0, 0, 0);
 
   function tick(dt, time) {
-    for (const tw of tweens) { tw.t += dt; const k = Math.min(1, tw.t / tw.dur); tw.fn(k); if (k >= 1) { tw.done = true; tw.res(); } }
-    tweens = tweens.filter(tw => !tw.done);
     if (G.mode !== 'garden') return;
     kepri.update(dt, time); ana.update(dt, time);
     // the cloud over the sun dims the garden (animating intensities only: nothing is added or removed)
@@ -119,10 +116,10 @@ export function chapter3(G) {
     sun.position.copy(WORM_AT).addScaledVector(world.sunDir, 120); sun.target.position.copy(WORM_AT);
   }
   function cleanup() {
-    tweens = []; active = -1; tapWait = null; blocked = false; dim = dimTo = 0; showAll(false);
+    active = -1; tapWait = null; blocked = false; dim = dimTo = 0; showAll(false);
     if (sunBase != null) { sun.intensity = sunBase; outdoor.backgroundIntensity = bgBase; }
   }
-  const begin = () => { G.tick = tick; G.onLeave = cleanup; G.tap = onTap; G.finishAnimations = finishAnimations; };
+  const begin = () => { G.tick = tick; G.onLeave = cleanup; G.tap = onTap; };
 
   // a tap near the glowing mirror turns it one step (generous target: the whole mirror and its glow)
   function onTap(ray) {
@@ -149,8 +146,8 @@ export function chapter3(G) {
     for (const [who, text] of lines) await step(say(who, text));
     const react = { right: () => { worm.wiggle(1.4); kepri.wiggle(1.4); sfx.happy(); }, wrong: w => toast('worm', w >= 3 ? 'אני איתך, דרייק! 💚' : 'אתה יכול! אני מאמין בך 💚', 2500) };
     await step(G.math.ask({ kind, title: '☁️ חידת קרני השמש', ...react }));
-    kepri.setGlow(true); sfx.magic(); fx.burst(kepri.headWorld(), 0xffe27a, 50, 5, 0.5, 1.2, 0);
-    await step(tween(0.9, k => { const e = ease(k); puffs.forEach(p => { p.position.y += 0.12; p.scale.setScalar(1.9 * (1 - e) + 0.01); }); }));
+    kepri.setGlow(true); sfx.magic(); fx.burst(kepri.headWorld(), 0xffe27a, 50, 5, 0.5, 1.2, 0); const puffY = puffs.map(p => p.position.y);
+    await step(tween(0.9, k => { const e = ease(k); puffs.forEach((p, j) => { p.position.y = puffY[j] + 4 * e; p.scale.setScalar(1.9 * (1 - e) + 0.01); }); }));
     puffs.forEach(p => { p.visible = false; }); blocked = false; kepri.setGlow(false);
   }
 
@@ -165,7 +162,7 @@ export function chapter3(G) {
     kepri.lookAt(here ? mirrors[1].pos : null);
     cloud.position.copy(here ? CLOUD_UP : CLOUD_FAR); dim = dimTo = here ? 1 : 0;
     for (const m of mirrors) { m.step = m.start; m.yaw = m.start * STEP; m.lit = false; m.bloom = 0; m.up = here ? 1 : 0; }
-    active = -1; tapWait = null; blocked = false; G.playerTurn = false; camGoal = here ? CAM_WIDE : CAM_MEET; camSnap = true; tweens = [];
+    active = -1; tapWait = null; blocked = false; G.playerTurn = false; camGoal = here ? CAM_WIDE : CAM_MEET; camSnap = true;
     G.king.root.position.set(0, G.PLATEAU + 7.0, 15.6); G.king.root.scale.setScalar(1.7); // back on the gate, normal size (the title makes him big)
   }
 
@@ -203,6 +200,7 @@ export function chapter3(G) {
       worm.setGlow(false); mirrors.forEach(m => { m.up = 1; });
       await step(say('ana', 'דרייק, גע במראה כדי לסובב אותה, עד שהקרן תגיע אל ערוגת הפרחים.'));
     }
+    else await step(fade(false)); // starting at the mirrors (saved checkpoint, or "עוד פעם?"): fade back in too
     G.checkpoint(3, 'mirrors');
     await lightMirror(step, 0, 'יש! הערוגה הראשונה פורחת!');
     await cloudRiddle(step, 1, 'sub', [['cloud', 'הממפ! העננים הקטנים שלי חוסמים את הקרניים.'], ['ana', 'פתור את החידה, דרייק, וקפרי תאיר חזק יותר!']]);
@@ -239,7 +237,7 @@ export function chapter3(G) {
   return {
     start: story, showAll,
     nextMirrorPos() { return active >= 0 ? mirrors[active].g.position.clone() : null; },
-    debug: () => ({ tweens: tweens.length, active, taps, lit: mirrors.map(m => m.lit), blocked }),
+    debug: () => ({ tweens: G.tweenCount(), active, taps, lit: mirrors.map(m => m.lit), blocked }),
     modelTargets: { ana, sunDragon: kepri },
   };
 }

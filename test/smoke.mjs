@@ -340,6 +340,10 @@ async function run(dev) {
     ok = true;
   } catch (e) {
     console.error(`[${engineName} ${dev.name}] FAIL`, e.message); if (errors.length) console.error(errors.join('\n'));
+    // what the page was doing when it failed (to tell a starved browser from a real hang)
+    try { console.error(`[${engineName} ${dev.name}] state`, JSON.stringify(await page.evaluate(async () => { const G = __dm.G, t0 = G.time, f0 = { ...__dm.frameStats }; let iv = 0; const h = setInterval(() => iv++, 100); await new Promise(r => setTimeout(r, 3000)); clearInterval(h);
+      const d = document.querySelector('#dialog'); return { phase: __dm.phase, mode: G.mode, gameClock3s: +(G.time - t0).toFixed(2), raf3s: __dm.frameStats.raf - f0.raf, fallback3s: __dm.frameStats.fallback - f0.fallback, timers3s: iv, frames: __dm.frameStats, watchdog: __dm.watchdog,
+        dialog: d.hidden ? null : d.querySelector('.text').textContent, playerTurn: !!G.playerTurn, ch2: __dm.ch2.debug(), ch3: __dm.ch3.debug(), hidden: document.hidden }; }))); } catch (e2) { console.error('state unavailable:', e2.message.split('\n')[0]); }
     try { await page.screenshot({ path: join(shotDir, `fail-${dev.name}.png`) }); } catch { }
   }
   await ctx.close();

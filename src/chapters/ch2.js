@@ -88,15 +88,11 @@ export function chapter2(G) {
   for (const o of [bo.root, shu.root, shells, ...stones.map(s => s.m)]) o.traverse(m => { m.castShadow = false; });
   showAll(false);
 
-  // ---------------------------------------------------------------- tiny tweens (driven by the frame tick, so they pause with the tab)
-  let tweens = [];
-  const tween = (dur, fn) => new Promise(res => { fn(0); tweens.push({ t: 0, dur: ui.fast ? 0.05 : dur, fn, res }); });
+  const tween = G.tween; // wall-clock story animations with a deadline (see main.js)
   const ease = k => k * k * (3 - 2 * k);
   let placed = 0, placing = false, warm = 0, eggShake = 0, mist = false, bg0 = null;
 
   function tick(dt, time) {
-    for (const tw of tweens) { tw.t += dt; const k = Math.min(1, tw.t / tw.dur); tw.fn(k); if (k >= 1) { tw.done = true; tw.res(); } }
-    tweens = tweens.filter(tw => !tw.done);
     if (G.mode === 'cave') {
       if (baby.root.visible) baby.update(dt, time);
       if (shu.root.visible) shu.update(dt, time);
@@ -115,12 +111,11 @@ export function chapter2(G) {
     }
   }
   function cleanup() {  // leaving the chapter (home, another chapter): put the shared world back
-    tweens = []; placing = false; mist = false; warm = 0; eggShake = 0; showAll(false); stars.group.visible = false;
+    placing = false; mist = false; warm = 0; eggShake = 0; showAll(false); stars.group.visible = false;
     if (bg0) { outdoor.background = bg0; bg0 = null; }
     griffith.root.position.set(7.2, 0, -3.5);
   }
-  const finishAnimations = () => { for (const tw of tweens) { tw.fn(1); tw.done = true; tw.res(); } tweens = []; }; // story watchdog hook
-  const begin = () => { G.tick = tick; G.onLeave = cleanup; G.tap = onTap; G.finishAnimations = finishAnimations; };
+  const begin = () => { G.tick = tick; G.onLeave = cleanup; G.tap = onTap; };
 
   // ---------------------------------------------------------------- cave staging
   function stageCave(stage) { // 'intro' | 'warm' | 'hatch'
@@ -336,6 +331,6 @@ export function chapter2(G) {
     update(dt, time, nextIdx) { if (bubbles.group.visible) bubbles.update(dt, time, nextIdx); },
     nextStonePos() { const s = placing && stones.find(x => !x.placed && !x.moving); return s ? s.m.position.clone() : null; },
     modelTargets: { bo, waterDragon: shu, babyDragon: baby },
-    debug: () => ({ tweens: tweens.map(t => [+t.t.toFixed(2), t.dur, !!t.done]), placed, placing, isTick: G.tick === tick }), // test diagnostics only
+    debug: () => ({ tweens: G.tweenCount(), placed, placing, isTick: G.tick === tick }), // test diagnostics only
   };
 }

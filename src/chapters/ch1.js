@@ -90,8 +90,7 @@ export function chapter1(G) {
   async function feed() {
     G.busy = true; const from = drake.root.position.clone().add(V(0, 1.1, 0)), to = worm.mouthWorld();
     apple.visible = true; worm.openMouth(1); drake.wave(0.6);
-    const T = ui.fast ? 0.1 : 0.9, t0 = performance.now();
-    await new Promise(r => { const tick = () => { const k = Math.min(1, (performance.now() - t0) / 1000 / T); apple.position.lerpVectors(from, to, k).y += Math.sin(k * Math.PI) * 1.6; apple.rotation.y += 0.2; if (k < 1) requestAnimationFrame(tick); else r(); }; tick(); });
+    await G.tween(0.9, k => { apple.position.lerpVectors(from, to, k).y += Math.sin(k * Math.PI) * 1.6; apple.rotation.y = k * 9; });
     apple.visible = false; worm.openMouth(0); worm.chomp(); sfx.munch(); fx.burst(to, 0xffe07a, 18, 2, 0.3, 0.8);
     await wait(700); worm.wiggle(1.4); sfx.happy(); fx.hearts3(worm.headWorld().add(V(0, 0.5, 0)).lerp(cam.position, 0.15), 5);
     toast('worm', 'מממ! תפוח מתוק! תודה, דרייק!', 2600); await wait(1600); G.busy = false;

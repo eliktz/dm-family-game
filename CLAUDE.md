@@ -57,9 +57,14 @@ A Hebrew, iPad-first, **plot-driven** three.js game for Elik's 7-year-old son, b
   2. *Real bug, fixed:* a speech bubble abandoned by leaving the chapter kept its tap handler; on the next chapter the first quick tap ran the
      stale handler, which hid the new bubble without resolving it, and the story was stuck with nothing on screen. `say()` now drops the previous
      bubble's handlers (also from `hideOverlays()`); the smoke test has a regression check.
+- **Slow-motion stalls, fixed.** Story animations used to advance by a per-frame step capped at 0.05 s, so at 1-4 frames per second a 3 s move
+  took minutes; the chapter 3 bloom (the heaviest moment) stalled the live iPhone smoke twice. All story animations now go through `G.tween(dur, fn)`
+  in `main.js`: wall-clock based, with a deadline timer that resolves the promise even if no frame arrives. Never write a bare
+  `requestAnimationFrame` loop or a frame-counted animation in a chapter. `node test/starve.mjs` stops animation frames and checks the story still
+  advances (and that the watchdog rescues a hung step).
 - **Safety net (keep it):** `main.js` runs the frame from a timer when no frame has run for 400 ms (`__dm.frameStats` counts both sources);
   a dialog advances on a tap anywhere on the bubble, accepts `pointerup` and `click` once, and pulses "המשך" after 12 s (never auto-advances);
-  a story watchdog nudges a phase that sits 45 s while it is not the player's turn (`G.playerTurn`, `G.finishAnimations`; `__dm.watchdog` counts
+  a story watchdog nudges a phase that sits 45 s while it is not the player's turn (`G.playerTurn`; it finishes all tweens first; `__dm.watchdog` counts
   nudges and the smoke test expects 0). New scripted waits must go through `step()`, never a bare promise.
 - **Chapter 3 (garden):** `src/chapters/ch3.js` runs in mode `garden` with its own camera in `G.tick`. Debug: `__dm.go('ch3' | 'ch3-mirrors' | 'ch3-end')`,
   `__dm.mirrorScreen()`, `__dm.ch3.debug()`. `node test/soak.mjs --chapter=3` presses 🏠 mid-dialog in every loop. Background characters use
@@ -70,5 +75,5 @@ A Hebrew, iPad-first, **plot-driven** three.js game for Elik's 7-year-old son, b
 
 ## Layout
 `index.html` `style.css` | `src/` (main, chapters/chN, worm, people, cave, outdoor, engine, fx, tex, ui, audio, assets) | `lib/` vendored |
-`assets/` CC0 textures/HDRI/models | `test/` Playwright (`smoke.mjs`, `flight.mjs`, `soak.mjs`, `models.mjs`, `perf.mjs`, `math.mjs`, `peek.mjs`, `serve.mjs`) | `shots/` screenshots.
+`assets/` CC0 textures/HDRI/models | `test/` Playwright (`smoke.mjs`, `flight.mjs`, `soak.mjs`, `starve.mjs`, `models.mjs`, `perf.mjs`, `math.mjs`, `peek.mjs`, `serve.mjs`) | `shots/` screenshots.
 Serve locally with `python3 -m http.server 8765`, or use `test/serve.mjs`.

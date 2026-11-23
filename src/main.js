@@ -79,6 +79,18 @@ function runner() { const my = ++token; return async p => { const r = await Prom
 const guard = fn => fn().catch(e => { if (e !== CANCEL) console.error(e); });
 let until = null; // { test: () => bool, resolve }
 const waitFor = test => new Promise(res => { until = { test, resolve: res }; });
+// Story animations ("tweens"). They run on the wall clock, not on a per-frame step: at 2 frames per second a 3 s
+// move still takes 3 s (it used to take as many frames as at 60 fps, i.e. minutes, which stalled the story on a
+// starved browser). Each one also has a deadline timer, so its promise resolves even if no frame arrives at all.
+let tweens = [];
+function finishTween(tw) { if (tw.done) return; tw.done = true; clearTimeout(tw.deadline); try { tw.fn(1); } catch (e) { console.warn(e); } tw.res(); }
+function tween(dur, fn) {
+  return new Promise(res => { fn(0); const tw = { t0: performance.now(), dur: (ui.fast ? 0.05 : dur) * 1000, fn, res, done: false };
+    tw.deadline = setTimeout(() => finishTween(tw), tw.dur + 1500); tweens.push(tw); });
+}
+function updateTweens() { const now = performance.now(); for (const tw of tweens) { if (tw.done) continue; const k = Math.min(1, (now - tw.t0) / tw.dur); if (k >= 1) finishTween(tw); else tw.fn(k); } tweens = tweens.filter(tw => !tw.done); }
+function finishTweens() { for (const tw of [...tweens]) finishTween(tw); tweens = []; }
+function clearTweens() { for (const tw of tweens) { tw.done = true; clearTimeout(tw.deadline); } tweens = []; }
 const checkUntil = () => { if (until && until.test()) { const u = until; until = null; u.resolve(); } };
 
 // ---------------------------------------------------------------- progress + chapter map
@@ -149,7 +161,7 @@ const G = {
   THREE, engine, cam, fx, params, outdoor, caveScene, world, stars, cave, GATE_POS, heightAt, PLATEAU,
   worm, drake, griffith, king, marker, apple, aura, sun,
   say, toast, hideToast, actions, clearActions, showJoy, card, fade, hideOverlays, sfx, ui,
-  runner, wait, waitFor, guard,
+  runner, wait, waitFor, guard, tween, tweenCount: () => tweens.length,
   mode: 'loading', phase: 'loading',
   camGoal: null,      // { pos, look } cinematic override in the cave
   caveFree: false,    // the kid walks Drake around the cave
@@ -167,7 +179,7 @@ const fl = G.fl = { pos: new THREE.Vector3(), yaw: 0, vy: 0, yawRate: 0, got: 0,
   items: stars.list, onCollect: null, glanceT: 0, glanceAmt: 1, cam: { v: 0, vel: 0 },
   path: null, len: 1, u: 0, itemU: [], ox: 0, oy: 0, since: 0, helped: false, corridor: [5, 3.5] };
 
-function leaveChapter() { G.keepShot = false; G.playerTurn = false; G.finishAnimations = null; nudgeStep = null; griffShot = griffPrev = null; token++; until = null; const f = G.onLeave; G.onLeave = G.tap = G.tick = null; if (f) f(); G.busy = false; G.caveFree = false; G.walkTarget = null; G.camGoal = null; marker.visible = false; apple.visible = false; resetOutdoorLook(); }
+function leaveChapter() { clearTweens(); G.keepShot = false; G.playerTurn = false; nudgeStep = null; griffShot = griffPrev = null; token++; until = null; const f = G.onLeave; G.onLeave = G.tap = G.tick = null; if (f) f(); G.busy = false; G.caveFree = false; G.walkTarget = null; G.camGoal = null; marker.visible = false; apple.visible = false; resetOutdoorLook(); }
 
 // ---------------------------------------------------------------- TITLE
 const TITLE_POS = new THREE.Vector3(-6, 0, 44);
@@ -459,6 +471,7 @@ function frameBody() {
   timer.update(); const dt = Math.min(0.05, timer.getDelta()); time += dt;
   if (G.mode !== lastMode) { camSnap = true; lastMode = G.mode; }
   if (G.mode === 'title') updateTitle(dt); else if (G.mode === 'cave') updateCave(dt); else if (G.mode === 'flight') updateFlight(dt);
+  updateTweens();
   if (G.tick) G.tick(dt, time);
   worm.update(dt, time); drake.update(dt, time); griffith.update(dt, time); king.update(dt, time);
   world.update(dt, time); cave.update(dt, time);
@@ -480,7 +493,7 @@ setInterval(() => {
   if (sig !== dog.sig || playersTurn() || document.hidden) { dog.sig = sig; dog.since = now; return; }
   if (now - dog.since < 45000) return;
   dog.since = now; dog.nudges++; console.warn(`story watchdog: no progress in "${G.phase}" for 45 s, nudging`);
-  try { G.finishAnimations && G.finishAnimations(); } catch (e) { console.warn(e); }
+  finishTweens();
   const r = nudgeStep; nudgeStep = null; if (r) setTimeout(r, 300);
 }, 1000);
 
@@ -505,6 +518,8 @@ window.__dm = {
     setLevel(n) { mathState.level = clampLevel(n); mathState.ceiling = Math.max(mathState.ceiling, mathState.level); mathState.streak = mathState.misses = 0; saveProgress(); return mathState.level; },
     open(kind) { hideOverlays(); return mathApi.ask({ kind }); },
   },
+  // test hook: a scripted step that never resolves, to prove the watchdog rescues the story
+  hang() { hideOverlays(); leaveChapter(); guard(async () => { const step = runner(); G.mode = 'test'; G.phase = 'test-hang'; await step(new Promise(() => { })); G.phase = 'test-recovered'; }); },
   clips: () => Object.fromEntries(Object.entries(swapped).map(([k, v]) => [k, v.current])),
   collectNext() { const i = nextItem(); if (i >= 0) collect(i); },
   collectAll() { fl.items.forEach((s, i) => collect(i)); },
