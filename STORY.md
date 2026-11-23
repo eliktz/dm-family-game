@@ -15,18 +15,32 @@ Each chapter follows the same pattern: a story card → 3–6 short dialogue bea
 Each chapter ends with Worm receiving a small **keepsake** (a badge on the title screen), so the kid sees the adventure building up.
 
 ## Math progression (gentle, hint-only, no fail states)
-| Ch | Math focus | Example |
-|---|---|---|
-| 1 | Addition ≤ 5 | 3 + 2 |
-| 2 | Addition ≤ 10, missing addend | 2 + ? = 5 warm stones |
-| 3 | Subtraction ≤ 10 | 8 sunbeams − 3 clouds |
-| 4 | Add/subtract ≤ 20, making 10 | 7 + 3, 15 − 5 |
-| 5 | Patterns and counting by 2s | crystal pattern 🔷🔶🔷🔶… |
-| 6 | Equal groups (pre-multiplication), counting by 5s | 3 baskets × 2 apples |
-| 7 | Multiplication ×2, ×5, ×10 as arrays | 4 rows of 2 lanterns |
-| 8 | Celebration review (mixed, the kid's choice of difficulty) | "Worm's big quiz" |
+Riddles come from one engine (`src/math.js`) with five levels. The level adapts while playing (three clean answers in a row → harder,
+two riddles with a miss → easier) up to a ceiling a parent sets in the hidden parent panel (hold the title for 3 s). Default level: 2.
 
-Visual aids (apples, stones, drops, stars) are always on screen. A wrong answer only gets a hint and a counting animation.
+| Level | Content | Example |
+|---|---|---|
+| 1 | Add / subtract within 10, missing number | 4 + 5, 7 + ? = 10 |
+| 2 | Add / subtract within 20 crossing ten; ×2, ×5, ×10 | 8 + 7, 15 − 6, 5 × 4 |
+| 3 | Two-digit ± one-digit and tens; tables 2-5; missing number on either side; first word problems | 34 + 5, 63 − 20, ? × 3 = 12 |
+| 4 | Two-digit ± two-digit with carrying / borrowing up to 100; tables 2-10; word problems | 38 + 27, 71 − 34, 7 × 8 |
+| 5 | Everything mixed, plus an occasional two-step story | 3 × 4 + 5 |
+
+Each chapter picks the *kinds* of riddle that fit its story; the level decides how big the numbers are.
+
+| Ch | Riddle kinds | Where |
+|---|---|---|
+| 1 | Addition, then a missing number | two riddles at the cave gate |
+| 2 | Missing number, then subtraction or multiplication | two riddles before the warm stones |
+| 3 | Subtraction, missing number | sunbeams and clouds |
+| 4 | Addition and subtraction (making tens), word problems | the dragon bakery |
+| 5 | Missing number (patterns), multiplication by 2 | crystal patterns |
+| 6 | Multiplication (equal groups), word problems | colour sparks, paint pots |
+| 7 | Multiplication, missing factor, two-step stories | lanterns, stepping stones, bridge planks |
+| 8 | Everything: "Worm's big quiz" of five riddles | the finale |
+
+A wrong answer never ends anything: the first miss shows a picture of dragon stones (tens as bars, rows for ×), the second shows the worked
+steps and removes one wrong answer, and on the third Worm shows the answer and the right button glows.
 
 ## Chapters
 1. **אבן הדרקון** (done): Drake meets Worm in the Dragon Cave, the Dragon Stone glows, he feeds and pets Worm, solves the gate riddle and takes his first flight around King Roland's castle, collecting 8 stars.

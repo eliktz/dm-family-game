@@ -8,7 +8,8 @@ import { makeDrake, makeGriffith, makeKing } from './people.js';
 import { buildOutdoor, buildStars, heightAt, PLATEAU } from './outdoor.js';
 import { buildCave, GATE_POS } from './cave.js';
 import { FX } from './fx.js';
-import { ui, say, toast, hideToast, actions, clearActions, showJoy, input, riddle, riddleMissing, card, hideOverlays, fade } from './ui.js';
+import { ui, say, toast, hideToast, actions, clearActions, showJoy, input, askRiddle, currentRiddle, card, hideOverlays, fade } from './ui.js';
+import { makeRiddle, newAdaptive, recordResult, clampLevel, EXAMPLES } from './math.js';
 import { sfx, unlock, settings, save, music } from './audio.js';
 import { glowSprite } from './tex.js';
 import { loadModels, modelStatus } from './assets.js';
@@ -78,23 +79,36 @@ const waitFor = test => new Promise(res => { until = { test, resolve: res }; });
 const checkUntil = () => { if (until && until.test()) { const u = until; until = null; u.resolve(); } };
 
 // ---------------------------------------------------------------- progress + chapter map
-// localStorage 'dm.progress' = { done: [1, 2], last: { ch: 2, beat: 'warm' }, all: false }  (older saves only had `done`)
+// localStorage 'dm.progress' = { done: [1, 2], last: { ch: 2, beat: 'warm' }, all: false, math: { level, auto, ceiling } }
+// (older saves only had `done`, or no `math`: both load fine)
 const CHAPTERS = [
   { n: 1, name: 'אבן הדרקון', badge: '💚' }, { n: 2, name: 'הביצה המסתורית', badge: '💧' }, { n: 3, name: 'השמש של אנה', badge: '☀️' }, { n: 4, name: 'הלהבה של רורי', badge: '🔥' },
   { n: 5, name: 'מערת הקריסטלים של פטרה', badge: '💎' }, { n: 6, name: 'הענן הרטנן', badge: '🖌️' }, { n: 7, name: 'המסע אל הר הקשת', badge: '🗺️' }, { n: 8, name: 'קשת של חברים', badge: '🏅' },
 ];
 const mods = {};                                    // built chapters: n → { start(beat) }
 const progress = { done: new Set(), last: null, all: false };
+let mathState = newAdaptive({}), lastRiddleKey = null;   // riddle difficulty: default start and ceiling = level 2
 try {
   const p = JSON.parse(localStorage.getItem('dm.progress') || '{}') || {};
   for (const n of p.done || []) if (CHAPTERS.some(c => c.n === n)) progress.done.add(n);
   if (p.last && Number.isInteger(p.last.ch) && typeof p.last.beat === 'string') progress.last = { ch: p.last.ch, beat: p.last.beat };
   progress.all = p.all === true;
+  if (p.math && typeof p.math === 'object') mathState = newAdaptive({ level: p.math.level, ceiling: p.math.ceiling ?? p.math.level, auto: p.math.auto });
 } catch { /* fresh start */ }
 const isUnlocked = n => n === 1 || params.get('all') === '1' || progress.all || progress.done.has(n - 1);
 function saveProgress() {
-  try { localStorage.setItem('dm.progress', JSON.stringify({ done: [...progress.done].sort(), last: progress.last, all: progress.all })); } catch { /* private mode: progress just isn't kept */ }
+  try { localStorage.setItem('dm.progress', JSON.stringify({ done: [...progress.done].sort(), last: progress.last, all: progress.all, math: { level: mathState.level, auto: mathState.auto, ceiling: mathState.ceiling } })); } catch { /* private mode: progress just isn't kept */ }
 }
+if (params.has('lvl')) { const l = clampLevel(params.get('lvl')); mathState.level = l; mathState.ceiling = Math.max(mathState.ceiling, l); } // debugging, not saved until a riddle is answered
+// G.math.ask({ kind, title, fixed?, right?, wrong? }): one riddle at the current level; adapts the level afterwards
+const mathApi = {
+  get level() { return mathState.level; },
+  async ask({ kind, title, fixed = null, wordOps = null, right = null, wrong = null } = {}) {
+    const r = fixed || makeRiddle(mathState.level, kind, Math.random, { avoid: lastRiddleKey, wordOps }); lastRiddleKey = r.key;
+    const res = await askRiddle(r, { title, cb: { right, wrong } });
+    recordResult(mathState, res.wrong); saveProgress(); return res;
+  },
+};
 function checkpoint(ch, beat) { progress.last = { ch, beat }; saveProgress(); }
 function markDone(n) { progress.done.add(n); progress.last = { ch: mods[n + 1] ? n + 1 : n, beat: 'intro' }; saveProgress(); refreshTitle(); }
 const resumePoint = () => { const l = progress.last; return l && mods[l.ch] && isUnlocked(l.ch) ? l : null; };
@@ -131,7 +145,7 @@ function refreshTitle() {
 const G = {
   THREE, engine, cam, fx, params, outdoor, caveScene, world, stars, cave, GATE_POS, heightAt, PLATEAU,
   worm, drake, griffith, king, marker, apple, aura, sun,
-  say, toast, hideToast, actions, clearActions, showJoy, riddle, riddleMissing, card, fade, hideOverlays, sfx, ui,
+  say, toast, hideToast, actions, clearActions, showJoy, card, fade, hideOverlays, sfx, ui,
   runner, wait, waitFor, guard,
   mode: 'loading', phase: 'loading',
   camGoal: null,      // { pos, look } cinematic override in the cave
@@ -142,6 +156,7 @@ const G = {
   onLeave: null,      // chapter hook: called once when the chapter is left (home button, another chapter)
   get time() { return time; },
   get hd() { return !!swapped.worm; }, // the HD Worm model is in use (more compact than the procedural one: some shots are framed differently)
+  math: mathApi, makeRiddle,
   useScene, setupCave, faceEachOther, wormTapped, startFlight, glance, setCounter, markDone, checkpoint, enterTitle, resetOutdoorLook,
 };
 const fl = G.fl = { pos: new THREE.Vector3(), yaw: 0, vy: 0, yawRate: 0, got: 0, done: false, kingSaid: false, speed: 8.5, minClear: 3,
@@ -365,8 +380,27 @@ $('#btn-sound').addEventListener('pointerup', () => { settings.sound = !settings
 syncToggles();
 // hidden parent unlock: hold the title text for 3 seconds
 { const h1 = $('#title-h1'); let t = null; const stop = () => { clearTimeout(t); t = null; };
-  h1.addEventListener('pointerdown', () => { stop(); t = setTimeout(() => { progress.all = true; saveProgress(); refreshTitle(); sfx.chime(); titleToast('🔓 כל הפרקים נפתחו (מצב הורים)'); }, 3000); });
+  h1.addEventListener('pointerdown', () => { stop(); t = setTimeout(() => { progress.all = true; saveProgress(); refreshTitle(); sfx.chime(); titleToast('🔓 כל הפרקים נפתחו (מצב הורים)'); openParent(); }, 3000); });
   for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) h1.addEventListener(ev, stop); }
+// parent panel (only reachable through the 3-second hold above): riddle level, auto-adapt, unlock all, reset
+function drawParent() {
+  const box = $('#p-levels'); box.innerHTML = '';
+  for (let l = 1; l <= 5; l++) { const b = document.createElement('button'); b.textContent = l; b.dataset.l = l; b.classList.toggle('on', l === mathState.ceiling);
+    b.addEventListener('pointerup', () => { sfx.tap(); mathState = newAdaptive({ level: l, ceiling: l, auto: mathState.auto }); saveProgress(); drawParent(); }); box.appendChild(b); }
+  $('#p-example').innerHTML = `רמה <bdi dir="ltr">${mathState.ceiling}</bdi>: <bdi dir="ltr" class="eq">${EXAMPLES[mathState.ceiling]}</bdi>`;
+  $('#p-auto').textContent = `התאמה אוטומטית: ${mathState.auto ? 'פועלת' : 'כבויה'}`; $('#p-auto').classList.toggle('on', mathState.auto);
+  $('#p-all').textContent = `כל הפרקים פתוחים: ${progress.all ? 'כן' : 'לא'}`; $('#p-all').classList.toggle('on', progress.all);
+  $('#p-reset').textContent = '🗑 איפוס התקדמות'; $('#p-reset').classList.remove('armed'); resetArmed = false;
+}
+let resetArmed = false, resetT = null;
+function openParent() { drawParent(); $('#parent').hidden = false; }
+$('#p-auto').addEventListener('pointerup', () => { sfx.tap(); mathState.auto = !mathState.auto; saveProgress(); drawParent(); });
+$('#p-all').addEventListener('pointerup', () => { sfx.tap(); progress.all = !progress.all; saveProgress(); refreshTitle(); drawParent(); });
+$('#p-close').addEventListener('pointerup', () => { sfx.tap(); $('#parent').hidden = true; });
+// reset needs two deliberate steps: a tap to arm it, then a 2-second hold
+$('#p-reset').addEventListener('pointerdown', () => { clearTimeout(resetT); if (!resetArmed) return;
+  resetT = setTimeout(() => { window.__dm.resetProgress(); drawParent(); titleToast('ההתקדמות אופסה'); }, 2000); });
+for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) $('#p-reset').addEventListener(ev, () => { clearTimeout(resetT); if (ev === 'pointerup' && !resetArmed) { resetArmed = true; $('#p-reset').classList.add('armed'); $('#p-reset').textContent = 'בטוחים? החזיקו לחוץ 2 שניות לאישור'; } });
 // full screen: where the browser has an API (iPad, Android), ask on the first tap; iPhone Safari has none, so there the
 // home-screen web app (manifest.json) is the way and a one-time, dismissable hint explains it
 const standalone = () => navigator.standalone === true || matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches;
@@ -421,13 +455,19 @@ window.__dm = {
   set fast(v) { ui.fast = !!v; }, get fast() { return ui.fast; },
   go(name) { hideOverlays(); $('#fade').classList.remove('on'); leaveChapter(); GO[name] && GO[name](); return name; },
   walkToWorm() { drake.root.position.copy(worm.headWorld().setY(0)).add(new THREE.Vector3(2.2, 0, 2.2)); },
+  math: {
+    current: () => currentRiddle ? { answer: currentRiddle.answer, kind: currentRiddle.kind, level: currentRiddle.level, key: currentRiddle.key, options: currentRiddle.options } : null,
+    state: () => ({ level: mathState.level, ceiling: mathState.ceiling, auto: mathState.auto }),
+    setLevel(n) { mathState.level = clampLevel(n); mathState.ceiling = Math.max(mathState.ceiling, mathState.level); mathState.streak = mathState.misses = 0; saveProgress(); return mathState.level; },
+    open(kind) { hideOverlays(); return mathApi.ask({ kind }); },
+  },
   clips: () => Object.fromEntries(Object.entries(swapped).map(([k, v]) => [k, v.current])),
   collectNext() { const i = nextItem(); if (i >= 0) collect(i); },
   collectAll() { fl.items.forEach((s, i) => collect(i)); },
   // screen position (CSS px) of the next warm stone to tap in ch2, or null
   stoneScreen() { const p = ch2.nextStonePos(); if (!p) return null; const v = p.project(cam); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
   get progress() { return [...progress.done].sort(); }, get last() { return progress.last; },
-  resetProgress() { progress.done.clear(); progress.last = null; progress.all = false; try { localStorage.removeItem('dm.progress'); } catch { } refreshTitle(); },
+  resetProgress() { progress.done.clear(); progress.last = null; progress.all = false; mathState = newAdaptive({}); try { localStorage.removeItem('dm.progress'); } catch { } refreshTitle(); },
   // screen-space boxes [x0, y0, x1, y1] (CSS px) of Drake and of Worm's head, for layout checks
   actorBoxes() {
     const px = v => { v.project(cam); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; };

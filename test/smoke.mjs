@@ -71,6 +71,34 @@ async function run(dev) {
     });
     check(r.hits.length === 0, `${label}: UI does not cover Drake/Worm` + (r.hits.length ? ' → ' + r.hits.join(' | ') : ''));
   }
+  // ---- riddle helpers (answers come from the __dm.math test hook, never from parsing the text)
+  const cur = () => page.evaluate(() => __dm.math.current());
+  const tapAns = v => page.locator(`#math .m-answers button[data-v="${v}"]`).dispatchEvent('pointerup');
+  const panelFits = async label => check(await page.evaluate(() => { const r = document.querySelector('#math .panel').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth; }), `${label}: riddle panel fits the screen`);
+  // every .eq is an isolated LTR run whose first character is drawn left of its last one
+  const eqLTR = async label => check(await page.evaluate(() => [...document.querySelectorAll('#math .eq')].filter(e => e.offsetParent).every(e => {
+    const cs = getComputedStyle(e); if (cs.direction !== 'ltr' || cs.unicodeBidi !== 'isolate') return false;
+    const w = document.createTreeWalker(e, NodeFilter.SHOW_TEXT), ns = []; while (w.nextNode()) if (w.currentNode.data.trim()) ns.push(w.currentNode);
+    const box = (n, i) => { const r = document.createRange(); r.setStart(n, i); r.setEnd(n, i + 1); return r.getBoundingClientRect(); };
+    const first = ns[0], last = ns[ns.length - 1]; return box(first, first.data.search(/\S/)).left < box(last, last.data.trimEnd().length - 1).left;
+  })), `${label}: equations are LTR isolates`);
+  // answer the riddles of a story beat correctly until the phase moves on; returns how many were asked
+  async function solveBeat(ph, { firstWrong = false, shotName = null } = {}) {
+    let n = 0, lastKey = null;
+    for (const t0 = Date.now(); Date.now() - t0 < 240000;) {
+      if (await phase() !== ph) return n; const c = await cur();
+      if (!c || c.key === lastKey) { await page.waitForTimeout(250); continue; }
+      lastKey = c.key; n++; await page.waitForTimeout(600); await panelFits(`${ph} riddle ${n} (${c.kind}, level ${c.level})`); await eqLTR(`${ph} riddle ${n}`);
+      if (firstWrong && n === 1) {
+        await tapAns(c.options.find(o => o !== c.answer)); await page.waitForTimeout(700);
+        check((await page.locator('#math .m-hint').innerText()).includes('כמעט'), 'wrong answer gives a friendly hint');
+        check(await phase() === ph && (await cur())?.key === c.key, 'wrong answer does not punish/advance');
+        if (shotName) await shot(shotName);
+      }
+      await tapAns(c.answer);
+    }
+    throw new Error('timeout solving riddles at ' + ph);
+  }
   let ok = false;
   try {
     await load();
@@ -96,13 +124,46 @@ async function run(dev) {
     await tap('#ch-2'); await tap('#ch-5'); await page.waitForTimeout(300);
     check(await page.evaluate(() => __dm.mode === 'title'), 'tapping a locked / unbuilt chapter only gives a friendly nudge');
     await page.locator('#title-h1').dispatchEvent('pointerdown'); await page.waitForTimeout(1500);
-    check(await page.locator('#ch-2.locked').count() === 1, 'a short press on the title does nothing');
-    await page.waitForFunction(() => !document.querySelector('#ch-2.locked'), null, { timeout: 15000 }); await page.locator('#title-h1').dispatchEvent('pointerup');
-    log('ok', 'long-press on the title unlocks all chapters');
-    check(await page.locator('#title-toast').isVisible(), 'unlock shows a small confirm toast');
+    check(await page.locator('#ch-2.locked').count() === 1 && !(await page.locator('#parent').isVisible()), 'a short press on the title does nothing');
+    await page.waitForFunction(() => !document.querySelector('#parent').hidden, null, { timeout: 15000 }); await page.locator('#title-h1').dispatchEvent('pointerup');
+    log('ok', 'a 3 s hold on the title opens the parent panel');
+    check(await page.locator('#ch-2.locked').count() === 0, 'the hold also unlocks all chapters');
     check(await page.evaluate(() => JSON.parse(localStorage.getItem('dm.progress')).all === true), 'unlock is saved');
-    await page.evaluate(() => __dm.resetProgress());
-    check(await page.locator('#ch-2.locked').count() === 1, 'progress reset locks chapter 2 again');
+    check(await page.evaluate(() => { const r = document.querySelector('#parent .panel').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }), 'parent panel fits the screen');
+    check(JSON.stringify(await page.evaluate(() => __dm.math.state())) === '{"level":2,"ceiling":2,"auto":true}', 'default riddle level is 2 with auto-adapt on');
+    await page.locator('#p-levels button[data-l="4"]').dispatchEvent('pointerup'); await page.waitForTimeout(200);
+    await shot('00-parent-panel');
+    await tap('#p-close'); check(!(await page.locator('#parent').isVisible()), 'parent panel closes');
+    await load();
+    check(JSON.stringify(await page.evaluate(() => JSON.parse(localStorage.getItem('dm.progress')).math)) === '{"level":4,"auto":true,"ceiling":4}', 'level 4 survives a reload in dm.progress');
+    await page.evaluate(() => __dm.go('math')); await page.waitForFunction(() => __dm.math.current(), null, { timeout: 60000 });
+    { const c = await cur(); check(c.level === 4 && c.kind === 'add' && c.answer >= 27 && c.answer <= 100, `gate riddle is level-4 sized after the reload (answer ${c.answer})`); }
+    // ---- every level: fits, hints escalate, the third miss guides to the answer, nothing ever blocks
+    await page.evaluate(() => { __dm.go('title'); __dm.fast = true; });
+    const KIND = { 1: 'sub', 2: 'mul', 3: 'missing', 4: 'word', 5: 'twoStep' };
+    for (let L = 1; L <= 5; L++) {
+      await page.evaluate(([l, k]) => { __dm.math.setLevel(l); __dm.math.open(k); }, [L, KIND[L]]); await page.waitForFunction(() => __dm.math.current());
+      const c = await cur(); check(c.level === L && c.options.length === (L <= 2 ? 3 : 4), `level ${L}: ${c.kind} riddle with ${c.options.length} answers`);
+      await panelFits(`level ${L}`); await eqLTR(`level ${L} ${c.kind}`);
+      const wrongs = c.options.filter(o => o !== c.answer);
+      await tapAns(wrongs[0]); await page.waitForTimeout(150);
+      check((await page.locator('#math .m-hint').innerText()).includes('כמעט') && await page.locator('#math .m-visual').isVisible() && (await cur())?.key === c.key, `level ${L}: first miss shows the picture, riddle stays open`);
+      await page.evaluate(() => { const b = [...document.querySelectorAll('#math .m-answers button:not(.wrong)')].find(x => +x.dataset.v !== __dm.math.current().answer); b && b.dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); });
+      await page.waitForTimeout(250); check(await page.locator('#math .m-steps .step').count() >= 1, `level ${L}: second miss shows the worked steps`);
+      await panelFits(`level ${L} with steps`); await eqLTR(`level ${L} steps`);
+      if (L >= 2) await shot(`math-L${L}-${c.kind}`);
+      const left = await page.evaluate(() => [...document.querySelectorAll('#math .m-answers button:not(.wrong)')].map(b => +b.dataset.v));
+      if (left.length > 1) { await tapAns(left.find(o => o !== c.answer)); await page.waitForTimeout(150); }
+      else await page.evaluate(() => 0);
+      check(left.length === 1 || await page.locator(`#math .m-answers button.glow[data-v="${c.answer}"]`).count() === 1, `level ${L}: third miss makes the right button glow`);
+      await tapAns(c.answer); await page.waitForFunction(() => document.querySelector('#math').hidden, null, { timeout: 15000 }); log('ok', `level ${L}: tapping the answer closes the riddle`);
+    }
+    // ---- adaptive: three clean answers raise the level (up to the parent's ceiling)
+    await page.evaluate(() => __dm.math.setLevel(1));
+    for (let i = 0; i < 3; i++) { await page.evaluate(() => { __dm.math.open('add'); }); await page.waitForFunction(() => __dm.math.current()); await tapAns((await cur()).answer); await page.waitForFunction(() => document.querySelector('#math').hidden); }
+    check((await page.evaluate(() => __dm.math.state())).level === 2, 'three clean answers raise the level from 1 to 2');
+    await page.evaluate(() => { __dm.fast = false; __dm.resetProgress(); });
+    check(await page.locator('#ch-2.locked').count() === 1 && (await page.evaluate(() => __dm.math.state())).level === 2, 'progress reset locks chapter 2 again and resets the riddle level');
     // tap Worm on the title (should wiggle, no error)
     const wb = (await page.evaluate(() => __dm.actorBoxes())).worm; if (wb) await page.mouse.click(Math.max(10, (wb[0] + wb[2]) / 2), (wb[1] + wb[3]) / 2);
     // ---------------- chapter 1: אבן הדרקון
@@ -134,14 +195,7 @@ async function run(dev) {
     await tap('#btn-pet'); await page.waitForTimeout(900); await shot('06-pet-worm');
     await advanceTo('math'); await page.waitForTimeout(800);
     check(await page.locator('#math .eq').isVisible(), 'riddle visible');
-    const eq = await page.locator('#math .eq').innerText(); const [a, b] = eq.split('+').map(s => +s.trim());
-    const wrong = page.locator(`#math .m-answers button:not([data-v="${a + b}"])`).first();
-    await wrong.dispatchEvent('pointerup'); await page.waitForTimeout(700);
-    check((await page.locator('#math .m-hint').innerText()).includes('כמעט'), 'wrong answer gives a friendly hint');
-    check(await page.evaluate(() => __dm.phase === 'math'), 'wrong answer does not punish/advance');
-    check(await page.evaluate(() => { const r = document.querySelector('#math .panel').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }), 'riddle panel fits the screen');
-    await shot('07-riddle');
-    await tap(`#math .m-answers button[data-v="${a + b}"]`);
+    check(await solveBeat('math', { firstWrong: true, shotName: '07-riddle' }) === 2, 'the gate asks two riddles');
     await advanceTo('ready-fly'); await page.waitForTimeout(800); await shot('08-gate-open');
     await tap('#btn-fly');
     await advanceTo('fly'); await page.waitForTimeout(4500);
@@ -192,12 +246,7 @@ async function run(dev) {
     await page.evaluate(() => __dm.collectAll());
     await advanceTo('c2-warm'); await page.waitForTimeout(1500); await shot('ch2-07-warm-egg');
     await advanceTo('c2-math'); await page.waitForTimeout(800);
-    const eq2 = (await page.locator('#math .eq').innerText()).replace(/\s+/g, ' ').trim(); check(eq2 === '2 + ? = 5', `missing-addend riddle (${eq2})`);
-    await page.locator('#math .m-answers button:not([data-v="3"])').first().dispatchEvent('pointerup'); await page.waitForTimeout(700);
-    check((await page.locator('#math .m-hint').innerText()).includes('כמעט'), 'ch2 wrong answer gives a friendly hint');
-    check(await page.evaluate(() => __dm.phase === 'c2-math'), 'ch2 wrong answer does not punish/advance');
-    await shot('ch2-08-riddle');
-    await tap('#math .m-answers button[data-v="3"]');
+    check(await solveBeat('c2-math', { firstWrong: true, shotName: 'ch2-08-riddle' }) === 2, 'the warm stones ask two riddles');
     await advanceTo('c2-place'); await page.waitForTimeout(1300); await shot('ch2-09-stones');
     for (let i = 0; i < 3; i++) { // real taps on the 3D stones
       const xy = await page.evaluate(() => __dm.stoneScreen()); check(!!xy, `stone ${i + 1} is on screen`);

@@ -66,7 +66,29 @@ h2 { margin: 6px 0 14px; font-size: clamp(22px, 2.8vw, 32px); color: #2f8a4a; fo
 @keyframes popc { from { transform: scale(.85); opacity: 0; } }
 .m-title { font-size: 26px; font-weight: 800; color: #4a3c8f; }
 .m-q { font-size: clamp(40px, 5.4vw, 60px); font-weight: 800; margin: 6px 0; }
-.m-q .eq { color: #c0601a; }
+.eq, .num { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+.m-q .eq, .m-q .num { color: #c0601a; }
+.m-q.word { font-size: clamp(22px, 2.9vw, 32px); line-height: 1.3; font-weight: 700; }
+.m-visual .bar { display: inline-grid; place-items: center; width: 28px; height: 46px; margin: 0 3px; vertical-align: middle; border-radius: 9px; font-size: 15px; font-weight: 800; letter-spacing: 0; color: #fff3df; background: linear-gradient(#ffb877, #cf5f2c 55%, #7d3c22); box-shadow: 0 0 10px rgba(255,140,60,.6); transition: transform .2s; }
+.m-visual .arr { display: inline-flex; flex-direction: column; gap: 3px; vertical-align: middle; margin: 0 10px; letter-spacing: 0; }
+.m-visual .arr .row { display: flex; gap: 3px; transition: transform .2s; } .m-visual .row i { display: block; width: 13px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffb877, #cf5f2c 60%, #7d3c22); }
+.m-visual .row.count { transform: scale(1.12); filter: brightness(1.35); }
+.m-visual .tot { font-size: .6em; letter-spacing: 0; }
+.m-steps { display: flex; justify-content: center; gap: 22px; flex-wrap: wrap; margin-top: 6px; font-size: clamp(22px, 2.8vw, 30px); font-weight: 800; color: #4a3c8f; }
+.m-steps .step { opacity: 0; transform: translateY(6px); transition: opacity .35s, transform .35s; } .m-steps .step.on { opacity: 1; transform: none; }
+.m-answers.four { gap: 18px; } .m-answers.four button { width: 116px; height: 112px; font-size: 54px; }
+.m-answers button.glow { animation: glow 1s ease-in-out infinite; background: linear-gradient(#fff6c8, #ffd95a); }
+@keyframes glow { 50% { box-shadow: 0 7px 0 #d9a24a, 0 0 0 8px rgba(255,214,90,.55), 0 0 34px 10px rgba(255,200,60,.9); transform: scale(1.06); } }
+#parent { justify-content: center; background: rgba(30,15,5,.55); z-index: 12; }
+#parent .panel { width: min(640px, 92vw); padding: 18px 24px 20px; }
+.p-title { font-size: 26px; font-weight: 800; color: #4a3c8f; margin-bottom: 8px; }
+.p-row { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 10px; flex-wrap: wrap; }
+.p-label { font-size: 20px; font-weight: 700; }
+.p-levels { display: flex; gap: 8px; } .p-levels button { width: 58px; height: 58px; border-radius: 16px; font-size: 26px; font-weight: 800; background: linear-gradient(#fff, #ffe9b8); box-shadow: 0 4px 0 #d9a24a; color: #5a2e0e; }
+.p-levels button.on { background: linear-gradient(#b8ffb0, #4cd06a); box-shadow: 0 4px 0 #23863a; }
+.p-example { min-height: 26px; font-size: 18px; color: #7a5a2a; margin-top: 6px; }
+.p-toggle { min-height: 56px; padding: 8px 18px; border-radius: 999px; font-size: 19px; font-weight: 700; background: #f1e3c4; color: #4a2a14; box-shadow: 0 4px 0 #cdb486; }
+.p-toggle.on { background: linear-gradient(#b8ffb0, #6ed884); box-shadow: 0 4px 0 #23863a; } .p-toggle.danger { background: #f6d5cf; box-shadow: 0 4px 0 #d39a90; } .p-toggle.armed { background: #ffb3a4; }
 .m-visual { font-size: clamp(34px, 4.4vw, 50px); min-height: 64px; letter-spacing: 4px; }
 .m-visual .plus { color: #4a3c8f; font-weight: 800; margin: 0 12px; }
 .m-visual .ap { display: inline-block; transition: transform .2s; }
@@ -118,6 +140,11 @@ h2 { margin: 6px 0 14px; font-size: clamp(22px, 2.8vw, 32px); color: #2f8a4a; fo
   .panel { padding: 8px 18px 12px; border-radius: 24px; width: min(620px, 78vw); }
   .m-title { font-size: 16px; } .m-q { font-size: 30px; margin: 0 0 4px; } .m-visual { font-size: 26px; min-height: 36px; } .m-visual .ap.count { transform: scale(1.2); }
   .m-visual .st { width: 30px; height: 26px; margin: 0 3px; } .m-visual .st.slot { font-size: 14px; line-height: 21px; border-width: 2px; }
+  .m-q.word { font-size: 17px; line-height: 1.25; } .m-steps { font-size: 17px; gap: 14px; margin-top: 2px; }
+  .m-visual .bar { width: 17px; height: 28px; font-size: 10px; border-radius: 6px; margin: 0 2px; } .m-visual .arr { gap: 2px; } .m-visual .arr .row { gap: 2px; } .m-visual .row i { width: 8px; height: 7px; }
+  .m-answers.four { gap: 12px; } .m-answers.four button { width: 70px; height: 62px; font-size: 32px; }
+  #parent .panel { padding: 8px 16px 10px; } .p-title { font-size: 17px; margin-bottom: 0; } .p-row { margin-top: 5px; gap: 10px; } .p-label { font-size: 15px; } .p-levels button { width: 56px; height: 44px; font-size: 20px; }
+  .p-example { font-size: 13px; min-height: 18px; margin-top: 2px; } .p-toggle { min-height: 44px; padding: 4px 14px; font-size: 15px; }
   .m-answers { gap: 16px; margin-top: 4px; } .m-answers button { width: 74px; height: 70px; border-radius: 20px; font-size: 38px; box-shadow: 0 5px 0 #d9a24a, 0 8px 14px rgba(0,0,0,.2); }
   .m-hint { min-height: 22px; margin-top: 8px; font-size: 16px; }
   .c-kicker { font-size: 15px; } .c-title { font-size: 32px; margin: 0; } .c-text { font-size: 16px; line-height: 1.3; margin: 2px 0 10px; }

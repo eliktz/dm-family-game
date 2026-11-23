@@ -30,6 +30,8 @@ A Hebrew, iPad-first, **plot-driven** three.js game for Elik's 7-year-old son, b
 - **Worm is the star** (the kid's favourite). He gets the most polished model and animation (breathing, happy wiggle, chomp,
   look-at, Dragon-Stone eye glow) and warm reactions everywhere. In the books Worm has no wings and moves with mind power,
   so in flight he *floats/glides* with a green aura.
+- **Riddles** come from `src/math.js` (pure, 5 levels, adaptive; unit test `node test/math.mjs`). Chapters call `G.math.ask({ kind, title })`;
+  the level and the parent's ceiling live in `dm.progress.math`. Wrap every equation and number in `<bdi dir="ltr" class="eq|num">`, use − and ×.
 - **Never scary, no fail states.** Wrong answers only give a friendly hint. The first win should come within about 30 s.
   Big touch targets (≥ 72 px on iPad), a virtual joystick at the bottom-left, landscape orientation, and safe areas.
   It must also work on iPhone landscape (844×390): the `max-height: 500px` CSS block scales the UI down and `engine.js` frames the scene lower;

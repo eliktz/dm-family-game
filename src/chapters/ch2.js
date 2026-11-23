@@ -13,7 +13,7 @@ const BABY = { back: 0x3fa9cf, side: 0x5cc3dc, belly: 0xd6eef0, tail: 0x5cc3dc, 
 
 export function chapter2(G) {
   const { THREE, cam, fx, worm, drake, griffith, cave, stars, marker, outdoor, caveScene, GATE_POS, heightAt, sun, world, ui,
-    say, toast, hideToast, actions, clearActions, showJoy, riddleMissing, card, fade, sfx, runner, wait, waitFor, fl } = G;
+    say, toast, hideToast, actions, clearActions, showJoy, card, fade, sfx, runner, wait, waitFor, fl } = G;
   const V = (x, y, z) => new THREE.Vector3(x, y, z);
   const $ = s => document.querySelector(s);
   const ss = THREE.MathUtils.smoothstep;
@@ -227,10 +227,14 @@ export function chapter2(G) {
     await step(say('griffith', 'הביצה שתתה את כל הטיפות! עכשיו היא צריכה חום.'));
     await step(say('griffith', 'צריך 5 אבנים חמות מסביב לביצה.'));
     worm.setGlow(true); worm.wiggle(0.8);
-    await step(say('worm', 'כבר הנחתי 2 אבנים בכוח המחשבה שלי!'));
+    await step(say('worm', 'כבר הנחתי 2 אבנים בכוח המחשבה שלי! פתרו את החידות, ונניח את השאר.'));
     worm.setGlow(false);
     G.phase = 'c2-math';
-    await step(riddleMissing(2, 5, { right: () => { worm.wiggle(1.4); sfx.happy(); }, wrong: () => toast('worm', 'אתה יכול! אני מאמין בך 💚', 2500) }));
+    // two warm-stone riddles: a missing number, then a subtraction or a multiplication (sizes follow the riddle level)
+    const react = { right: () => { worm.wiggle(1.4); sfx.happy(); }, wrong: n => toast('worm', n >= 3 ? 'אני איתך, דרייק! 💚' : 'אתה יכול! אני מאמין בך 💚', 2500) };
+    await step(G.math.ask({ kind: 'missing', title: '🔥 חידת האבנים החמות', ...react }));
+    await step(wait(300));
+    await step(G.math.ask({ kind: Math.random() < 0.5 ? 'sub' : 'mul', title: '🔥 ועוד חידה חמה!', ...react }));
     G.phase = 'c2-place'; placing = true;
     $('#counter').hidden = false; G.setCounter('2 / 5', '🔥');
     toast(null, 'גע באבנים החמות, ווורם יניח אותן ליד הביצה 👆', 5000);

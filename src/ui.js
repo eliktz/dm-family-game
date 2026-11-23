@@ -61,46 +61,53 @@ export function input() {
   return { x: Math.max(-1, Math.min(1, x)), y: Math.max(-1, Math.min(1, y)) };
 }
 
-// gentle riddles: wrong answers only give a hint + a counting animation; resolves when the right one is tapped
-function quiz({ title, qHTML, visHTML, ans, right, wrong1, wrong2, countSel }, cb = {}) {
-  const m = $('#math'); m.hidden = false;
-  m.querySelector('.m-title').textContent = title; m.querySelector('.m-q').innerHTML = qHTML;
-  const vis = m.querySelector('.m-visual'); vis.innerHTML = visHTML;
+// ---- riddles (numbers come from src/math.js). Never a fail state: a wrong tap only greys that button and brings more help.
+//   1st miss: a warm line + the stones picture (tens as bars, arrays for ×, empty places for a missing number)
+//   2nd miss: the worked steps appear one by one and one wrong answer is taken away
+//   3rd miss: Worm shows the answer; the right button glows and the kid taps it
+const stones = n => n === '?' ? '<span class="st slot ap">?</span>' : '<span class="bar ap">10</span>'.repeat(Math.floor(n / 10)) + '<span class="st ap"></span>'.repeat(n % 10);
+function visualHTML(r) {
+  const v = r.visual;
+  if (v.type === 'array') return `<span class="arr">${(`<span class="row ap">${'<i></i>'.repeat(v.cols)}</span>`).repeat(v.rows)}</span><span class="tot" dir="rtl"><bdi dir="ltr">${v.rows}</bdi> שורות של <bdi dir="ltr">${v.cols}</bdi></span>` + (v.plus ? `<span class="plus">+</span><span class="grp">${stones(v.plus)}</span>` : '');
+  return `<span class="grp">${stones(v.parts[0])}</span><span class="plus">${v.sym}</span><span class="grp">${stones(v.parts[1])}</span>` + (v.total != null ? `<span class="plus">=</span><span class="tot">${v.total}</span>` : '');
+}
+export let currentRiddle = null;
+export function askRiddle(r, { title = '🔮 חידה קסומה', cb = {} } = {}) {
+  const m = $('#math'); m.hidden = false; currentRiddle = r;
+  m.querySelector('.m-title').textContent = title;
+  const q = m.querySelector('.m-q'); q.innerHTML = r.qHTML; q.classList.toggle('word', !!r.text);
+  const vis = m.querySelector('.m-visual'); vis.innerHTML = visualHTML(r); vis.hidden = r.level > 2;   // harder levels: the picture is help, not a giveaway
+  const steps = m.querySelector('.m-steps'); steps.innerHTML = ''; steps.hidden = true;
   const hint = m.querySelector('.m-hint'); hint.textContent = 'בחר את התשובה הנכונה 👇';
-  const opts = [...new Set([ans, ans + 1, Math.max(1, ans - 1) === ans ? ans + 2 : ans - 1])].sort(() => Math.random() - 0.5);
-  const box = m.querySelector('.m-answers'); box.innerHTML = '';
+  const box = m.querySelector('.m-answers'); box.innerHTML = ''; box.classList.toggle('four', r.options.length > 3);
   return new Promise(res => {
-    let tries = 0;
-    for (const o of opts) {
-      const btn = document.createElement('button'); btn.textContent = o; btn.dataset.v = o; box.appendChild(btn);
-      btn.addEventListener('pointerup', async () => {
-        if (btn.classList.contains('wrong')) return;
-        if (o === ans) {
-          btn.classList.add('right'); sfx.chime(); hint.textContent = right;
-          cb.right && cb.right(); setTimeout(() => { m.hidden = true; res(); }, ui.fast ? 50 : 1400);
+    let wrong = 0, done = false; const btns = [];
+    const pulse = () => { const aps = [...vis.querySelectorAll('.ap')].slice(0, 24); aps.forEach((ap, i) => setTimeout(() => { ap.classList.add('count'); setTimeout(() => ap.classList.remove('count'), 300); }, 220 * i)); };
+    for (const o of r.options) {
+      const btn = document.createElement('button'); btn.textContent = o; btn.dataset.v = o; box.appendChild(btn); btns.push(btn);
+      btn.addEventListener('pointerup', () => {
+        if (done || btn.classList.contains('wrong')) return;
+        if (o === r.answer) {
+          done = true; btn.classList.remove('glow'); btn.classList.add('right'); sfx.chime();
+          hint.textContent = wrong >= 3 ? 'לא נורא, ככה לומדים! 💚' : 'נכון מאוד! 🎉'; steps.hidden = false; steps.innerHTML = `<bdi dir="ltr" class="eq">${r.eq.includes('?') ? r.eq.replace('?', r.answer) : `${r.eq} = ${r.answer}`}</bdi>`;
+          cb.right && cb.right(wrong);
+          setTimeout(() => { m.hidden = true; if (currentRiddle === r) currentRiddle = null; res({ wrong }); }, ui.fast ? 50 : 1400);
+          return;
+        }
+        wrong++; btn.classList.add('wrong'); sfx.oops(); cb.wrong && cb.wrong(wrong);
+        if (wrong === 1) { hint.textContent = 'כמעט! בוא נסתכל יחד על האבנים 💚'; vis.hidden = false; pulse(); }
+        else if (wrong === 2) {
+          hint.textContent = 'בוא נפתור יחד, צעד אחר צעד ✨'; vis.hidden = false;
+          steps.hidden = false; steps.innerHTML = r.steps.map(t => `<bdi dir="ltr" class="eq step">${t}</bdi>`).join('');
+          [...steps.children].forEach((el, i) => setTimeout(() => el.classList.add('on'), ui.fast ? 0 : 500 * i));
+          const extra = btns.find(x => +x.dataset.v !== r.answer && !x.classList.contains('wrong')); if (extra && btns.filter(x => !x.classList.contains('wrong')).length > 2) extra.classList.add('wrong'); // 50:50
         } else {
-          tries++; btn.classList.add('wrong'); sfx.oops(); cb.wrong && cb.wrong();
-          hint.textContent = tries === 1 ? wrong1 : wrong2;
-          const aps = [...vis.querySelectorAll(countSel)];
-          aps.forEach((ap, i) => setTimeout(() => { ap.classList.add('count'); sfx.tap(); setTimeout(() => ap.classList.remove('count'), 300); }, 350 * i));
+          hint.textContent = 'לא נורא, ככה לומדים! גע בתשובה הזוהרת ✨';
+          for (const x of btns) if (+x.dataset.v === r.answer) x.classList.add('glow'); else x.classList.add('wrong');
         }
       });
     }
   });
-}
-const rep = (html, n) => html.repeat(n);
-// "3 + 2 = ?" with apples
-export function riddle(a, b, cb = {}) {
-  return quiz({ title: '🔮 חידת השער', qHTML: `כמה זה <span dir="ltr" class="eq">${a} + ${b}</span>?`,
-    visHTML: `<span class="grp">${rep('<span class="ap">🍎</span>', a)}</span><span class="plus">+</span><span class="grp">${rep('<span class="ap">🍎</span>', b)}</span>`,
-    ans: a + b, right: `נכון מאוד! ${a} ועוד ${b} זה ${a + b}! 🎉`, wrong1: 'כמעט! בוא נספור יחד את התפוחים 🍎', wrong2: 'אתה ממש קרוב! נסה עוד פעם 💚', countSel: '.ap' }, cb);
-}
-// missing addend "2 + ? = 5" with warm stones and empty places
-export function riddleMissing(a, total, cb = {}) {
-  const miss = total - a;
-  return quiz({ title: '🔥 חידת האבנים החמות', qHTML: `כמה חסר? <span dir="ltr" class="eq">${a} + <span class="miss">?</span> = ${total}</span>`,
-    visHTML: `<span class="grp">${rep('<span class="st ap"></span>', a)}</span><span class="plus">+</span><span class="grp">${rep('<span class="st slot ap">?</span>', miss)}</span><span class="plus">=</span><span class="tot">${total}</span>`,
-    ans: miss, right: `נכון מאוד! ${a} ועוד ${miss} זה ${total}! 🎉`, wrong1: 'כמעט! בוא נספור יחד את המקומות הריקים', wrong2: 'אתה ממש קרוב! נסה עוד פעם 💚', countSel: '.slot' }, cb);
 }
 export function card({ kicker = '', title = '', text = '', buttons = [], cls = '' }) {
   const c = $('#card'); c.hidden = false; c.className = 'screen ' + cls;
@@ -112,5 +119,5 @@ export function card({ kicker = '', title = '', text = '', buttons = [], cls = '
       el.addEventListener('pointerup', () => { sfx.tap(); c.hidden = true; res(b.value); }); box.appendChild(el); }
   });
 }
-export function hideOverlays() { for (const s of ['#math', '#card', '#dialog', '#toast']) $(s).hidden = true; clearActions(); }
+export function hideOverlays() { for (const s of ['#math', '#card', '#dialog', '#toast']) $(s).hidden = true; currentRiddle = null; clearActions(); }
 export const fade = on => new Promise(r => { $('#fade').classList.toggle('on', on); setTimeout(r, ui.fast ? 30 : 650); });

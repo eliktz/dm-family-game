@@ -2,7 +2,7 @@
 // (8 stars around the castle) → celebration → "to be continued". Keepsake: the green Dragon Stone.
 export function chapter1(G) {
   const { THREE, cam, fx, worm, drake, cave, stars, marker, apple, GATE_POS, PLATEAU, params, ui,
-    say, toast, hideToast, actions, clearActions, showJoy, riddle, card, fade, sfx, runner, wait, waitFor, fl } = G;
+    say, toast, hideToast, actions, clearActions, showJoy, card, fade, sfx, runner, wait, waitFor, fl } = G;
   const V = (x, y, z) => new THREE.Vector3(x, y, z);
   // HD models: a two-shot from the side of the Drake→Worm line (whichever side the camera is already on), so Drake never hides Worm's face
   function sideCam(dist, h, lookY) {
@@ -65,8 +65,13 @@ export function chapter1(G) {
     // ---- riddle at the gate
     G.phase = 'math'; G.checkpoint(1, 'math');
     G.camGoal = { pos: V(-1.5, 4.5, 5), look: GATE_POS.clone().setY(2.5) };
-    const [a, b] = params.has('a') ? [+params.get('a'), +params.get('b')] : [3, 2];
-    await step(riddle(a, b, { right: () => { worm.wiggle(1.4); sfx.happy(); }, wrong: () => toast('worm', 'אתה יכול! אני מאמין בך 💚', 2500) }));
+    // two riddles open the gate: an addition, then a missing number (sizes follow the riddle level; ?a=&b= fixes the first one)
+    const react = { right: () => { worm.wiggle(1.4); sfx.happy(); }, wrong: n => toast('worm', n >= 3 ? 'אני איתך, דרייק! 💚' : 'אתה יכול! אני מאמין בך 💚', 2500) };
+    const fixed = params.has('a') ? (() => { const a = +params.get('a'), b = +params.get('b'), r = G.makeRiddle(1, 'add'); const eq = `${a} + ${b}`;
+      return { ...r, a, b, answer: a + b, eq, key: 'add:' + eq, steps: [`${eq} = ${a + b}`], options: [a + b, a + b + 1, Math.max(1, a + b - 1)], visual: { type: 'groups', parts: [a, b], sym: '+' }, qHTML: `כמה זה <bdi dir="ltr" class="eq">${eq}</bdi>?` }; })() : null;
+    await step(G.math.ask({ kind: 'add', title: '🔮 חידת השער', fixed, ...react }));
+    await step(wait(300));
+    await step(G.math.ask({ kind: 'missing', title: '🔮 חידת השער – ועוד אחת!', ...react }));
     G.phase = 'gate'; cave.openGate(); sfx.whoosh(); fx.burst(GATE_POS.clone().setY(3), 0xfff2b0, 60, 5, 0.5, 1.6, -0.5);
     await step(wait(1200));
     await step(say('griffith', 'השער פתוח! כל הכבוד, דרייק!'));

@@ -40,3 +40,6 @@ Hebrew narration uses the device's own speech-synthesis voice (Web Speech API). 
 ## Update: read-aloud removed; app icons
 The game no longer uses the device's speech-synthesis voice (the "Read-aloud" section above is historical). Professional voice-over may come later.
 App icons (`assets/icons/*.png`) are renders of this repo's own procedural Worm (`test/make-icons.mjs`). No third-party art.
+
+## Riddles
+The math riddles and their Hebrew word problems (`src/math.js`) are original text written for this project.
