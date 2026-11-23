@@ -43,3 +43,7 @@ App icons (`assets/icons/*.png`) are renders of this repo's own procedural Worm 
 
 ## Riddles
 The math riddles and their Hebrew word problems (`src/math.js`) are original text written for this project.
+
+## Bo, Shu and the baby water dragon
+`assets/models/bo.glb`, `shu.glb` (key `waterDragon`) and `baby_water.glb` (key `babyDragon`) are original procedural models made for this
+project in Blender: vertex colours only, no third-party meshes, textures, rigs or animation. No attribution required.

@@ -158,7 +158,8 @@ const G = {
   tick: null,         // chapter hook: (dt, time) every frame
   onLeave: null,      // chapter hook: called once when the chapter is left (home button, another chapter)
   get time() { return time; },
-  get hd() { return !!swapped.worm; }, // the HD Worm model is in use (more compact than the procedural one: some shots are framed differently)
+  get hd() { return !!swapped.worm; },
+  get hdBaby() { return !!swapped.babyDragon; }, // the HD baby water dragon is in use (much smaller than the code-built one) // the HD Worm model is in use (more compact than the procedural one: some shots are framed differently)
   math: mathApi, makeRiddle,
   useScene, setupCave, faceEachOther, wormTapped, startFlight, glance, setCounter, markDone, checkpoint, enterTitle, resetOutdoorLook,
 };
@@ -382,7 +383,7 @@ const ch1 = mods[1] = chapter1(G), ch2 = mods[2] = chapter2(G), ch3 = mods[3] = 
 // a chapter can set G.keepShot for a beat that must stay on Worm (the Dragon Stone moment)
 let griffShot = null, griffPrev = null;
 ui.onSay = who => {
-  swapped[who]?.once('talk'); // GLB characters with a Talk clip gesture while they speak
+  swapped[{ baby: 'babyDragon', kepri: 'sunDragon', king: 'king' }[who] || who]?.once('talk'); // GLB characters with a Talk clip gesture while they speak
   if (who !== 'griffith' || G.mode !== 'cave' || G.keepShot) return;
   const g = griffith.root.position, d = drake.root.position.clone().sub(g).setY(0); if (d.lengthSq() < 0.01) d.set(0, 0, 1); d.normalize();
   const side = new THREE.Vector3(-d.z, 0, d.x); if (side.dot(worm.headWorld().sub(g)) > 0) side.negate(); // the side away from Worm, so his body never fills the foreground

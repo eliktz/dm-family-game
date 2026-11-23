@@ -33,7 +33,10 @@ const ss = THREE.MathUtils.smoothstep, clamp = THREE.MathUtils.clamp;
 // Code-side fit for the delivered HD models (HANDOFF.md: facing +Z, feet at the origin, Worm ~3.2 m long, Drake 1.35 m).
 // The game world was built around a much bigger procedural Worm and ~1.85 m chibi people, so the models are scaled up here
 // (the manifest belongs to the asset pipeline and stays untouched; its own `scale` multiplies these).
-const FIT = { worm: { scale: 2.8 }, drake: { scale: 1.3 }, griffith: { scale: 1.3 }, king: { scale: 1.3 } };
+// The water dragons' rig roots are themselves scaled by the chapter (Shu 0.8, the baby 0.48), so their fit compensates:
+// Shu ends up about 9.5 m long (Worm's size), the baby about 1.25 m long and 0.65 m tall (tiny next to Bo, big enough to read on a phone).
+// `coil`: offset (rig units) while the rig is in its coiled pose, whose centre is 2.9 units beside the head (the baby inside her shell).
+const FIT = { worm: { scale: 2.8 }, drake: { scale: 1.3 }, griffith: { scale: 1.3 }, king: { scale: 1.3 }, bo: { scale: 1.3 }, waterDragon: { scale: 3.1 }, babyDragon: { scale: 2.7, coil: [-2.9, 0, 0.5] } };
 const CURL_SPINE = 0.28, CURL_TAIL = 0.2; // radians per joint: about 210° in all, a C that stays open toward the camera
 const CURL_AT = new THREE.Vector3(-3.6, 0, 0), CURL_HEAD_ANG = 0.3; // rig-local: what he curls around, and where his head sits on that circle
 const wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
@@ -114,7 +117,8 @@ function makeSwap(key, t, gltf, e) {
   const emi = re => { const out = []; obj.traverse(o => { for (const m of [].concat(o.material || [])) if (re.test(m.name || '') && m.emissive && !out.includes(m)) { m.userData.base = m.emissiveIntensity; out.push(m); } }); return out; };
   const isDragon = !!(t.state && 'pose' in t.state); // Worm and every dragon built on his rig
   const S = obj.scale.y;
-  let halo = null, eyeMats = [], stoneMats = [], headB = null, jawB = null, neck = [], seatB = null, procHead = null, legs = null, yawOff = 0, flyDrop = 0, curlK = 0, spineB = [], tailB = [];
+  let halo = null, eyeMats = [], stoneMats = [], headB = null, jawB = null, neck = [], seatB = null, procHead = null, legs = null, yawOff = 0, flyDrop = 0, curlK = 0, coilK = 0, spineB = [], tailB = [];
+  const coilAt = FIT[key]?.coil || null;
   if (isDragon) {
     // the invisible procedural rig keeps running for game logic; its head sits at the rig origin, so the model's head goes there too
     headB = B('head'); jawB = B('jaw'); neck = posed(B('neck1', 'neck_01', 'neck'), B('neck2', 'neck_02'), headB).filter(Boolean); posed(jawB); seatB = B('spine4', 'chest', 'spine3', 'spine_03');
@@ -170,6 +174,7 @@ function makeSwap(key, t, gltf, e) {
       for (const m of stoneMats) m.emissiveIntensity = (m.userData.base ?? 1) * (1 + (s.stone || 0) * 3) * (m.name.toLowerCase().includes('gem') ? 1 + 0.25 * Math.sin(time * 3) : 1);
     }
     obj.position.x = base.pos.x; obj.position.z = base.pos.z;
+    if (coilAt) { coilK += ((s.pose === 'coil' ? 1 : 0) - coilK) * Math.min(1, dt * 4); obj.position.x += coilAt[0] * coilK; obj.position.z += coilAt[2] * coilK; }
     obj.position.y = base.pos.y + bob - drop; obj.rotation.z = base.rz + sway; obj.rotation.y = base.ry + yawOff;
     obj.scale.set(base.scale.x * (1 - squash * 0.5), base.scale.y * (1 + squash), base.scale.z * (1 - squash * 0.5));
     mixer?.update(dt);

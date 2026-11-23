@@ -261,20 +261,22 @@ export function chapter2(G) {
     await step(tween(0.9, k => { const e = ease(k), sc = BABY_S * (0.35 + 0.65 * e); setShells(e); baby.root.scale.setScalar(sc); baby.root.position.set(EGG.x + 2.9 * sc, 0.05, EGG.z); }));
     // she hops out in front of her shells and the camera comes close so the kid sees her face
     const h0 = baby.root.position.clone();
-    G.camGoal = { pos: V(0.9, 2.0, 4.4), look: V(-0.1, 1.0, -0.8) };
-    await step(tween(0.8, k => { const e = ease(k); baby.root.position.lerpVectors(h0, BABY_FRONT, e); baby.root.position.y += Math.sin(e * Math.PI) * 1.0; }));
+    const front = G.hdBaby ? V(0.5, 0, 0.5) : BABY_FRONT;
+    if (G.hdBaby) G.camGoal = { pos: V(-0.5, 1.0, 3.3), look: V(0.45, 0.45, 0.4) }; // the HD baby is tiny: she hops further out and the camera gets down to her level
+    else G.camGoal = { pos: V(0.9, 2.0, 4.4), look: V(-0.1, 1.0, -0.8) };
+    await step(tween(0.8, k => { const e = ease(k); baby.root.position.lerpVectors(h0, front, e); baby.root.position.y += Math.sin(e * Math.PI) * 1.0; }));
     G.phase = 'c2-baby';
-    baby.wiggle(1.6); baby.state.blink = 1; sfx.squeak(); fx.hearts3(baby.headWorld().add(V(0, 0.7, 0)), 5);
+    baby.wiggle(1.6); baby.state.blink = 1; sfx.squeak(); fx.hearts3(baby.headWorld().add(V(0, G.hdBaby ? 0.35 : 0.7, 0)), 5);
     await step(wait(900)); baby.state.blink = 1; sfx.squeak();
     await step(say('baby', 'פיפ! פיפ! הי הי הי!'));
-    G.camGoal = { pos: V(-1.0, 3.2, 5.8), look: V(-1.0, 1.0, -2.0) };
+    G.camGoal = G.hdBaby ? { pos: V(0.9, 2.2, 4.9), look: V(-0.2, 0.8, -0.9) } : { pos: V(-1.0, 3.2, 5.8), look: V(-1.0, 1.0, -2.0) };
     await step(say('drake', 'וואו! דרקונית מים קטנטונת!'));
     baby.lookAt(worm.headWorld()); baby.wiggle(1.5); worm.wiggle(1.2); sfx.purr();
     await step(say('worm', 'שלום, קטנטונת! אני וורם. אל תפחדי, אני כאן.'));
     await step(say('drake', 'היא מבעבעת כמו בועה… נקרא לה בועה!'));
     // ---- Bo and Shu come in through the gate
     G.phase = 'c2-bo';
-    G.camGoal = { pos: V(-5.2, 4.2, 7.6), look: V(2.2, 1.1, -3.2) };
+    G.camGoal = G.hdBaby ? { pos: V(2.4, 2.9, 7.0), look: V(3.1, 1.2, -1.6) } : { pos: V(-5.2, 4.2, 7.6), look: V(2.2, 1.1, -3.2) };
     const gate = V(GATE_POS.x - 0.4, 0, GATE_POS.z + 1.2);
     bo.root.visible = shu.root.visible = true; shu.setPose('rest'); shu.state.blend = 1; bo.setWalk(1);
     const faceTo = (o, p, t) => { o.rotation.y = Math.atan2(t.x - p.x, t.z - p.z); };
