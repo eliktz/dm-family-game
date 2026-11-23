@@ -87,13 +87,13 @@ const CHAPTERS = [
 ];
 const mods = {};                                    // built chapters: n → { start(beat) }
 const progress = { done: new Set(), last: null, all: false };
-let mathState = newAdaptive({}), lastRiddleKey = null;   // riddle difficulty: default start and ceiling = level 2
+let mathState = newAdaptive({}), lastRiddleKey = null;   // riddle difficulty: starts at level 2 and can climb to the ceiling (default 5)
 try {
   const p = JSON.parse(localStorage.getItem('dm.progress') || '{}') || {};
   for (const n of p.done || []) if (CHAPTERS.some(c => c.n === n)) progress.done.add(n);
   if (p.last && Number.isInteger(p.last.ch) && typeof p.last.beat === 'string') progress.last = { ch: p.last.ch, beat: p.last.beat };
   progress.all = p.all === true;
-  if (p.math && typeof p.math === 'object') mathState = newAdaptive({ level: p.math.level, ceiling: p.math.ceiling ?? p.math.level, auto: p.math.auto });
+  if (p.math && typeof p.math === 'object') mathState = newAdaptive({ level: p.math.level, ceiling: p.math.ceiling, auto: p.math.auto }); // no saved ceiling → 5
 } catch { /* fresh start */ }
 const isUnlocked = n => n === 1 || params.get('all') === '1' || progress.all || progress.done.has(n - 1);
 function saveProgress() {
@@ -398,10 +398,14 @@ syncToggles();
   for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) h1.addEventListener(ev, stop); }
 // parent panel (only reachable through the 3-second hold above): riddle level, auto-adapt, unlock all, reset
 function drawParent() {
-  const box = $('#p-levels'); box.innerHTML = '';
-  for (let l = 1; l <= 5; l++) { const b = document.createElement('button'); b.textContent = l; b.dataset.l = l; b.classList.toggle('on', l === mathState.ceiling);
-    b.addEventListener('pointerup', () => { sfx.tap(); mathState = newAdaptive({ level: l, ceiling: l, auto: mathState.auto }); saveProgress(); drawParent(); }); box.appendChild(b); }
-  $('#p-example').innerHTML = `רמה <bdi dir="ltr">${mathState.ceiling}</bdi>: <bdi dir="ltr" class="eq">${EXAMPLES[mathState.ceiling]}</bdi>`;
+  // two separate choices: the level he plays at now (start), and the highest level auto-adapt may reach (ceiling)
+  const row = (sel, cur, pick) => { const box = $(sel); box.innerHTML = '';
+    for (let l = 1; l <= 5; l++) { const b = document.createElement('button'); b.textContent = l; b.dataset.l = l; b.classList.toggle('on', l === cur);
+      b.addEventListener('pointerup', () => { sfx.tap(); pick(l); saveProgress(); drawParent(); }); box.appendChild(b); } };
+  row('#p-levels', mathState.level, l => { mathState = newAdaptive({ level: l, ceiling: Math.max(l, mathState.ceiling), auto: mathState.auto }); });
+  row('#p-ceil', mathState.ceiling, l => { mathState = newAdaptive({ level: Math.min(l, mathState.level), ceiling: l, auto: mathState.auto }); });
+  const ex = l => `<bdi dir="ltr">${l}</bdi>: <bdi dir="ltr" class="eq">${EXAMPLES[l]}</bdi>`;
+  $('#p-example').innerHTML = mathState.level === mathState.ceiling ? `רמה ${ex(mathState.level)}` : `מתחילים ברמה ${ex(mathState.level)} · עד רמה ${ex(mathState.ceiling)}`;
   $('#p-auto').textContent = `התאמה אוטומטית: ${mathState.auto ? 'פועלת' : 'כבויה'}`; $('#p-auto').classList.toggle('on', mathState.auto);
   $('#p-all').textContent = `כל הפרקים פתוחים: ${progress.all ? 'כן' : 'לא'}`; $('#p-all').classList.toggle('on', progress.all);
   $('#p-reset').textContent = '🗑 איפוס התקדמות'; $('#p-reset').classList.remove('armed'); resetArmed = false;

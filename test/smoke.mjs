@@ -130,12 +130,16 @@ async function run(dev) {
     check(await page.locator('#ch-2.locked').count() === 0, 'the hold also unlocks all chapters');
     check(await page.evaluate(() => JSON.parse(localStorage.getItem('dm.progress')).all === true), 'unlock is saved');
     check(await page.evaluate(() => { const r = document.querySelector('#parent .panel').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }), 'parent panel fits the screen');
-    check(JSON.stringify(await page.evaluate(() => __dm.math.state())) === '{"level":2,"ceiling":2,"auto":true}', 'default riddle level is 2 with auto-adapt on');
+    check(JSON.stringify(await page.evaluate(() => __dm.math.state())) === '{"level":2,"ceiling":5,"auto":true}', 'default riddle level is 2, ceiling 5, auto-adapt on');
     await page.locator('#p-levels button[data-l="4"]').dispatchEvent('pointerup'); await page.waitForTimeout(200);
+    await page.locator('#p-ceil button[data-l="3"]').dispatchEvent('pointerup'); await page.waitForTimeout(150);
+    check(JSON.stringify(await page.evaluate(() => __dm.math.state())) === '{"level":3,"ceiling":3,"auto":true}', 'a lower ceiling pulls the start level down with it');
+    await page.locator('#p-ceil button[data-l="5"]').dispatchEvent('pointerup'); await page.locator('#p-levels button[data-l="4"]').dispatchEvent('pointerup'); await page.waitForTimeout(150);
+    check(await page.evaluate(() => { const r = document.querySelector('#parent .panel').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }), 'parent panel with both rows fits the screen');
     await shot('00-parent-panel');
     await tap('#p-close'); check(!(await page.locator('#parent').isVisible()), 'parent panel closes');
     await load();
-    check(JSON.stringify(await page.evaluate(() => JSON.parse(localStorage.getItem('dm.progress')).math)) === '{"level":4,"auto":true,"ceiling":4}', 'level 4 survives a reload in dm.progress');
+    check(JSON.stringify(await page.evaluate(() => JSON.parse(localStorage.getItem('dm.progress')).math)) === '{"level":4,"auto":true,"ceiling":5}', 'start level 4 (ceiling 5) survives a reload in dm.progress');
     await page.evaluate(() => __dm.go('math')); await page.waitForFunction(() => __dm.math.current(), null, { timeout: 60000 });
     { const c = await cur(); check(c.level === 4 && c.kind === 'add' && c.answer >= 27 && c.answer <= 100, `gate riddle is level-4 sized after the reload (answer ${c.answer})`); }
     // ---- every level: fits, hints escalate, the third miss guides to the answer, nothing ever blocks

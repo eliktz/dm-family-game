@@ -16,7 +16,8 @@ Each chapter ends with Worm receiving a small **keepsake** (a badge on the title
 
 ## Math progression (gentle, hint-only, no fail states)
 Riddles come from one engine (`src/math.js`) with five levels. The level adapts while playing (three clean answers in a row → harder,
-two riddles with a miss → easier) up to a ceiling a parent sets in the hidden parent panel (hold the title for 3 s). Default level: 2.
+two riddles with a miss → easier) between level 1 and a ceiling. Defaults: start at level 2, ceiling 5, so the kid climbs on his own.
+A parent can set the start level and the ceiling separately in the hidden parent panel (hold the title for 3 s).
 
 | Level | Content | Example |
 |---|---|---|

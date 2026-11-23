@@ -55,5 +55,6 @@ eq(run({ level: 1, ceiling: 5 }, [2, 2, 2]), 1, 'clamped at 1');
 eq(run({ level: 3, ceiling: 3 }, [0, 0, 0, 0, 0, 0]), 3, 'clamped at the ceiling');
 eq(run({ level: 2, ceiling: 5 }, [0, 0, 0, 0, 0, 0]), 4, 'six clean → + 2');
 eq(run({ level: 3, ceiling: 5, auto: false }, [0, 0, 0, 2, 2]), 3, 'auto off → fixed');
-eq(newAdaptive({ level: 9, ceiling: 'x' }).level, 1, 'bad saved values are clamped'); eq(newAdaptive({}).level, 2, 'default level 2');
+eq(newAdaptive({ level: 9, ceiling: 'x' }).level, 1, 'bad saved values are clamped'); eq(newAdaptive({ level: 9 }).level, 5, 'level clamped to 5'); eq(newAdaptive({}).level, 2, 'default level 2'); eq(newAdaptive({}).ceiling, 5, 'default ceiling 5'); eq(newAdaptive({ level: 3 }).ceiling, 5, 'a save without a ceiling gets 5');
+eq(newAdaptive({ level: 4, ceiling: 2 }).level, 2, 'level never above the ceiling'); eq(run({}, [0, 0, 0, 0, 0, 0, 0, 0, 0]), 5, 'by default he can climb from 2 to 5');
 console.log(fails ? `MATH FAIL (${fails})` : 'MATH PASS'); process.exit(fails ? 1 : 0);

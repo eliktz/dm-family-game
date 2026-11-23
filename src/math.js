@@ -145,11 +145,12 @@ export function makeRiddle(level, kind, rng = Math.random, opts = {}) {
 }
 
 // ---------------------------------------------------------------- adaptive difficulty
-// state = { level, ceiling, auto, streak, misses }. After each riddle call recordResult(state, wrongTaps):
+// state = { level, ceiling, auto, streak, misses }. Defaults: start at level 2, ceiling 5 (he climbs on his own).
+// After each riddle call recordResult(state, wrongTaps):
 //   0 wrong taps = clean: three clean in a row → level + 1 (never above the parent's ceiling)
 //   1 wrong tap  = solved with a hint: no level change by itself, but two such riddles → level − 1
 //   2+ wrong taps on one riddle → level − 1 for the next riddle
-export function newAdaptive(s = {}) { const ceiling = clampLevel(s.ceiling ?? s.level ?? 2); return { level: Math.min(clampLevel(s.level ?? 2), ceiling), ceiling, auto: s.auto !== false, streak: 0, misses: 0 }; }
+export function newAdaptive(s = {}) { const ceiling = clampLevel(s.ceiling ?? 5); return { level: Math.min(clampLevel(s.level ?? 2), ceiling), ceiling, auto: s.auto !== false, streak: 0, misses: 0 }; }
 export function recordResult(st, wrongTaps) {
   if (!st.auto) return st.level;
   if (wrongTaps === 0) { if (++st.streak >= 3) { st.level = Math.min(st.ceiling, st.level + 1); st.streak = 0; st.misses = 0; } }
