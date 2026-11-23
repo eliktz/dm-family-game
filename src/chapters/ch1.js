@@ -32,7 +32,7 @@ export function chapter1(G) {
       await step(waitFor(() => drake.root.position.distanceTo(worm.headWorld().setY(0)) < 3.6));
       G.caveFree = false; G.walkTarget = null; showJoy(false); marker.visible = false; hideToast();
       // ---- Dragon Stone moment
-      G.phase = 'stone';
+      G.phase = 'stone'; G.keepShot = true;   // stay on Worm and Drake while the stone glows
       G.faceEachOther();
       G.camGoal = G.hd ? sideCam(5.6, 2.3, 1.3) : { pos: drake.root.position.clone().lerp(worm.headWorld(), 0.5).add(V(3.5, 1.2, 4.2)), look: drake.root.position.clone().lerp(worm.headWorld(), 0.5).setY(1.6) };
       await step(wait(500));
@@ -43,6 +43,7 @@ export function chapter1(G) {
       await step(say('worm', 'שלום, דרייק. אני וורם. אנחנו יכולים לדבר בלי מילים!'));
       await step(say('drake', 'אני שומע אותך בתוך הראש! איזה כיף!'));
       G.stoneGlow = 0.25; worm.setGlow(false);
+      G.keepShot = false;
       await step(say('griffith', 'וורם קצת רעב. בוא תאכיל אותו ותלטף אותו.'));
     }
     if (from === 'intro' || from === 'bond') {

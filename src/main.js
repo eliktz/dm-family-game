@@ -163,7 +163,7 @@ const fl = G.fl = { pos: new THREE.Vector3(), yaw: 0, vy: 0, yawRate: 0, got: 0,
   items: stars.list, onCollect: null, glanceT: 0, glanceAmt: 1, cam: { v: 0, vel: 0 },
   path: null, len: 1, u: 0, itemU: [], ox: 0, oy: 0, since: 0, helped: false, corridor: [5, 3.5] };
 
-function leaveChapter() { token++; until = null; const f = G.onLeave; G.onLeave = G.tap = G.tick = null; if (f) f(); G.busy = false; G.caveFree = false; G.walkTarget = null; G.camGoal = null; marker.visible = false; apple.visible = false; resetOutdoorLook(); }
+function leaveChapter() { G.keepShot = false; griffShot = griffPrev = null; token++; until = null; const f = G.onLeave; G.onLeave = G.tap = G.tick = null; if (f) f(); G.busy = false; G.caveFree = false; G.walkTarget = null; G.camGoal = null; marker.visible = false; apple.visible = false; resetOutdoorLook(); }
 
 // ---------------------------------------------------------------- TITLE
 const TITLE_POS = new THREE.Vector3(-6, 0, 44);
@@ -175,6 +175,8 @@ function enterTitle() {
   drake.root.position.set(TITLE_POS.x + 1.3, heightAt(TITLE_POS.x + 1.3, TITLE_POS.z + 3.4), TITLE_POS.z + 3.4); drake.root.rotation.set(0, -0.1, 0); // left of the title card drake.setSit(0); drake.setWalk(0);
   if (swapped.worm) { const ph = !!engine.viewShift, dx = TITLE_POS.x + (ph ? 2.5 : 1.9), dz = TITLE_POS.z + (ph ? 0.4 : 1.2); drake.root.position.set(dx, heightAt(dx, dz), dz); drake.root.rotation.set(0, -0.2, 0); }
   drake.root.scale.setScalar(1);
+  // King Roland stands big on the front wall next to the gate, where the title camera can read him, and waves
+  king.root.position.set(engine.viewShift ? -9.5 : -6.5, PLATEAU + 7.0, 16.2); king.root.scale.setScalar((swapped.king ? 3.4 : 3.0) * (engine.viewShift ? 1 : 0.72));
   refreshTitle();
   $('#title').hidden = false; $('#hud').hidden = true; arrowEl.hidden = true; showJoy(false); $('#joy').classList.remove('flight'); $('#counter').hidden = true; aura.material.opacity = 0;
 }
@@ -221,6 +223,7 @@ function smoothDamp(o, target, smoothTime, dt) {
 //        before / after the items), startU, speed?, corridor? [side, up], onCollect(i, item) }
 function startFlight(cfg) {
   useScene(outdoor); G.mode = 'flight';
+  king.root.position.set(0, PLATEAU + 7.0, 15.6); king.root.scale.setScalar(1.7);
   const pts = [...(cfg.lead || []), ...cfg.items.map(it => it.base.clone()), ...(cfg.exit || [])];
   const path = new THREE.CatmullRomCurve3(pts, !!cfg.loop, 'centripetal'); path.arcLengthDivisions = 400; path.updateArcLengths();
   // arc-length position of every item on the path
@@ -321,6 +324,7 @@ function updateTitle(dt) {
   }
   worm.lookAt(cam.position);
   if (Math.sin(time * 0.6) > 0.995) drake.wave(1.5);
+  if (Math.sin(time * 0.45 + 1) > 0.99) king.wave(2.6); king.root.lookAt(cam.position.x, king.root.position.y, cam.position.z);
   sun.position.copy(TITLE_POS).addScaledVector(world.sunDir, 120); sun.target.position.copy(TITLE_POS);
 }
 function updateCave(dt) {
@@ -371,7 +375,17 @@ $('#c').addEventListener('pointerdown', e => {
 
 // ---------------------------------------------------------------- chapters + buttons
 const ch1 = mods[1] = chapter1(G), ch2 = mods[2] = chapter2(G);
-ui.onSay = who => { swapped[who]?.once('talk'); }; // GLB characters with a Talk clip gesture while they speak
+// while Griffith speaks in the cave the camera turns to a shot of him (with Drake's side of the cave), then goes back;
+// a chapter can set G.keepShot for a beat that must stay on Worm (the Dragon Stone moment)
+let griffShot = null, griffPrev = null;
+ui.onSay = who => {
+  swapped[who]?.once('talk'); // GLB characters with a Talk clip gesture while they speak
+  if (who !== 'griffith' || G.mode !== 'cave' || G.keepShot) return;
+  const g = griffith.root.position, d = drake.root.position.clone().sub(g).setY(0); if (d.lengthSq() < 0.01) d.set(0, 0, 1); d.normalize();
+  const side = new THREE.Vector3(-d.z, 0, d.x); if (side.dot(worm.headWorld().sub(g)) > 0) side.negate(); // the side away from Worm, so his body never fills the foreground
+  griffPrev = G.camGoal; griffShot = G.camGoal = { pos: g.clone().addScaledVector(d, 3.4).addScaledVector(side, 2.8).setY(2.0), look: g.clone().addScaledVector(d, 0.6).setY(1.35) };
+};
+ui.onSayEnd = () => { if (griffShot && G.camGoal === griffShot) G.camGoal = griffPrev; griffShot = griffPrev = null; };
 buildChapterMap();
 $('#btn-continue').addEventListener('pointerup', () => { sfx.tap(); const r = resumePoint(); startChapter(r ? r.ch : 1, r ? r.beat : 'intro'); });
 $('#btn-home').addEventListener('pointerup', () => { sfx.tap(); guard(async () => { token++; await fade(true); enterTitle(); await fade(false); }); });
@@ -470,12 +484,13 @@ window.__dm = {
   resetProgress() { progress.done.clear(); progress.last = null; progress.all = false; mathState = newAdaptive({}); try { localStorage.removeItem('dm.progress'); } catch { } refreshTitle(); },
   // screen-space boxes [x0, y0, x1, y1] (CSS px) of Drake and of Worm's head, for layout checks
   actorBoxes() {
-    const px = v => { v.project(cam); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; };
+    let behind = false; const px = v => { v.project(cam); if (v.z > 1) behind = true; return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; };
     const box = pts => { const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]); return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)].map(Math.round); };
     const corners = (obj, x, y0, y1, z) => { const out = []; for (const a of [-x, x]) for (const b of [y0, y1]) for (const c of [-z, z]) out.push(px(obj.localToWorld(new THREE.Vector3(a, b, c)))); return out; };
     drake.root.updateMatrixWorld(true); worm.root.updateMatrixWorld(true);
-    const front = o => o.getWorldPosition(new THREE.Vector3()).project(cam).z < 1; // null when behind the camera
-    return { drake: front(drake.root) ? box(corners(drake.root, 0.4, 0, 1.85, 0.3)) : null, worm: front(worm.head) ? box(corners(worm.head, 1.15, -0.75, 1.2, 1.45)) : null };
+    // null when any part of the actor is behind the camera (it is then not a meaningful on-screen box)
+    const actor = (o, ...dims) => { behind = false; const b = box(corners(o, ...dims)); return behind ? null : b; };
+    return { drake: actor(drake.root, 0.4, 0, 1.85, 0.3), worm: actor(worm.head, 1.15, -0.75, 1.2, 1.45) };
   },
   stats: () => ({ ...engine.info(), mode: G.mode, phase: G.phase, stars: fl.got, models: modelStatus(MODEL_KEYS, swapped) }),
   setTier: t => { engine.noAuto = true; engine.setTier(t); },

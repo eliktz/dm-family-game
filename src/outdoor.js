@@ -39,7 +39,7 @@ const box = (w, h, d, x, y, z, ry = 0) => boxUV(new THREE.BoxGeometry(w, h, d), 
 export function buildOutdoor() {
   const group = new THREE.Group();
   // ---- terrain
-  const SIZE = 640, SEG = 150;
+  const SIZE = 640, SEG = 116;
   const tg = new THREE.PlaneGeometry(SIZE, SIZE, SEG, SEG).rotateX(-Math.PI / 2);
   const p = tg.attributes.position, cols = new Float32Array(p.count * 3), c = new THREE.Color();
   const g1 = new THREE.Color(0x6fae3f), g2 = new THREE.Color(0x9cc94e), g3 = new THREE.Color(0x4f8a34), dirt = new THREE.Color(0xc9a46a), rock = new THREE.Color(0x8d8a7a);
@@ -120,8 +120,8 @@ export function buildOutdoor() {
   }
   // ---- trees, bushes, flowers (instanced)
   const R = (() => { let s = 99; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); })();
-  const foliageG = mergeGeometries([new THREE.IcosahedronGeometry(1.6, 1).translate(0, 3.2, 0), new THREE.IcosahedronGeometry(1.25, 1).translate(0.6, 4.3, 0.3), new THREE.IcosahedronGeometry(1.1, 1).translate(-0.6, 4.0, -0.4)]);
-  const trunkG = new THREE.CylinderGeometry(0.25, 0.38, 2.8, 8).translate(0, 1.4, 0);
+  const foliageG = mergeGeometries([new THREE.IcosahedronGeometry(1.6, 1).translate(0, 3.2, 0), new THREE.IcosahedronGeometry(1.25, 1).translate(0.6, 4.3, 0.3), new THREE.IcosahedronGeometry(1.1, 0).translate(-0.6, 4.0, -0.4)]);
+  const trunkG = new THREE.CylinderGeometry(0.25, 0.38, 2.8, 6).translate(0, 1.4, 0);
   const NT = 240, trees = [];
   for (let i = 0; i < 3000 && trees.length < NT; i++) {
     const a = R() * Math.PI * 2, d = 34 + Math.pow(R(), 0.8) * 190, x = Math.cos(a) * d, z = Math.sin(a) * d;
@@ -148,10 +148,10 @@ export function buildOutdoor() {
     greens.push(paint(new THREE.PlaneGeometry(0.2, 0.08).rotateX(-0.9).translate(0.1, h * 0.4, 0).applyMatrix4(lean).translate(ox, 0, oz), 0x4c9a35));
     // flower head faces up and outward so it reads both from the ground and from the air
     const face = new THREE.Matrix4().makeRotationY(yaw).multiply(new THREE.Matrix4().makeRotationX(tilt));
-    const pg = new THREE.CircleGeometry(1, 20), pp = pg.attributes.position;
+    const pg = new THREE.CircleGeometry(1, 12), pp = pg.attributes.position;
     for (let i = 1; i < pp.count; i++) { const a = Math.atan2(pp.getY(i), pp.getX(i)), r = 0.17 * (0.42 + 0.58 * Math.pow(Math.abs(Math.cos(a * 2.5)), 0.6)); pp.setXYZ(i, Math.cos(a) * r, Math.sin(a) * r, 0.045); }
     pg.rotateX(-Math.PI / 2).applyMatrix4(face).translate(top.x, top.y, top.z); pg.deleteAttribute('uv'); petals.push(pg.toNonIndexed());
-    greens.push(paint(new THREE.IcosahedronGeometry(0.05, 0).scale(1, 0.6, 1).translate(0, 0.02, 0).applyMatrix4(face).translate(top.x, top.y, top.z), 0xd9a520));
+    greens.push(paint(new THREE.OctahedronGeometry(0.05, 0).scale(1, 0.6, 1).translate(0, 0.02, 0).applyMatrix4(face).translate(top.x, top.y, top.z), 0xd9a520));
   }
   const greenG = mergeGeometries(greens), petalG = mergeGeometries(petals); greenG.computeVertexNormals(); petalG.computeVertexNormals();
   const NF = 176, flowerGreen = new THREE.InstancedMesh(greenG, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, side: THREE.DoubleSide }), NF);
@@ -175,7 +175,7 @@ export function buildOutdoor() {
   for (let i = 0; i < 18; i++) {
     const a = i / 18 * Math.PI * 2 + R(), d = 60 + R() * 120, cx = Math.cos(a) * d, cz = Math.sin(a) * d, cy = 42 + R() * 25;
     const n = 6 + Math.floor(R() * 5);
-    for (let j = 0; j < n; j++) { const r = 3 + R() * 4; puffs.push(new THREE.IcosahedronGeometry(r, 2).scale(1, 0.72, 1).translate(cx + (j - n / 2) * 3.6 + R() * 2, cy + R() * 2.5 + (j % 2) * 1.5, cz + (R() - .5) * 5)); }
+    for (let j = 0; j < n; j++) { const r = 3 + R() * 4; puffs.push(new THREE.IcosahedronGeometry(r, 1).scale(1, 0.72, 1).translate(cx + (j - n / 2) * 3.6 + R() * 2, cy + R() * 2.5 + (j % 2) * 1.5, cz + (R() - .5) * 5)); }
   }
   const clouds = new THREE.Mesh(mergeGeometries(puffs), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, emissive: 0xb8c8e8, emissiveIntensity: 0.35 }));
   group.add(clouds);

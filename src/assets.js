@@ -34,7 +34,9 @@ const ss = THREE.MathUtils.smoothstep, clamp = THREE.MathUtils.clamp;
 // The game world was built around a much bigger procedural Worm and ~1.85 m chibi people, so the models are scaled up here
 // (the manifest belongs to the asset pipeline and stays untouched; its own `scale` multiplies these).
 const FIT = { worm: { scale: 2.8 }, drake: { scale: 1.3 }, griffith: { scale: 1.3 }, king: { scale: 1.3 } };
-const CURL_SPINE = 0.3, CURL_TAIL = 0.2; // radians per joint
+const CURL_SPINE = 0.28, CURL_TAIL = 0.2; // radians per joint: about 210° in all, a C that stays open toward the camera
+const CURL_AT = new THREE.Vector3(-3.6, 0, 0), CURL_HEAD_ANG = 0.3; // rig-local: what he curls around, and where his head sits on that circle
+const wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
 const X = new THREE.Vector3(1, 0, 0), Y = new THREE.Vector3(0, 1, 0), Z = new THREE.Vector3(0, 0, 1);
 const _q = new THREE.Quaternion(), _pq = new THREE.Quaternion(), _rq = new THREE.Quaternion(), _v = new THREE.Vector3();
 // rotate a bone by `ang` around an axis given in the model root's space, whatever the bone's own axes are
@@ -156,7 +158,7 @@ function makeSwap(key, t, gltf, e) {
       if (!has('idle')) squash += Math.sin(time * 1.7) * 0.012; // breathing
       // pose offsets: curled beside the egg he lies at an angle; in flight the rig origin is his body centre, not his feet
       const k = Math.min(1, dt * 3);
-      curlK += ((s.pose === 'curl' && spineB.length ? 1 : 0) - curlK) * Math.min(1, dt * 1.6); yawOff = CURL_SPINE * spineB.length * curlK; flyDrop += ((s.pose === 'fly' && seatB ? 0.34 * S : 0) - flyDrop) * k; drop = flyDrop;
+      curlK += ((s.pose === 'curl' && spineB.length ? 1 : 0) - curlK) * Math.min(1, dt * 1.6); yawOff = 0; flyDrop += ((s.pose === 'fly' && seatB ? 0.34 * S : 0) - flyDrop) * k; drop = flyDrop;
     } else if (key !== 'castle') {
       const walk = Math.min(1, s.walk || 0), sit = s.sit || 0, wave = s.wave || 0;
       loop(sit > 0.5 ? ['sit', 'idle'] : walk > 0.1 ? ['walk', 'idle'] : ['idle']);
@@ -176,12 +178,20 @@ function makeSwap(key, t, gltf, e) {
       if (curlK > 0.002) { // bend spine and tail into a C, then put the head back at the rig origin (it faces the same way as before)
         for (const b of spineB) turnBone(b, obj, Y, -CURL_SPINE * curlK);
         for (const b of tailB) turnBone(b, obj, Y, CURL_TAIL * curlK);
-        t.root.updateMatrixWorld(true); obj.updateMatrixWorld(true);
-        t.root.worldToLocal((jawB || headB).getWorldPosition(_v)); obj.position.x -= _v.x; obj.position.z -= _v.z; obj.updateMatrixWorld(true);
+        // put the circle through head, hips and tail tip around CURL_AT, head on the near side, tail wrapping the far side
+        const tip = tailB[tailB.length - 1], hips = spineB[0].parent, loc = b => t.root.worldToLocal(b.getWorldPosition(new THREE.Vector3()));
+        const centre = () => { t.root.updateMatrixWorld(true); obj.updateMatrixWorld(true); const A = loc(jawB || headB), Bp = loc(hips), C = loc(tip);
+          const d = 2 * (A.x * (Bp.z - C.z) + Bp.x * (C.z - A.z) + C.x * (A.z - Bp.z)) || 1e-6, a2 = A.x * A.x + A.z * A.z, b2 = Bp.x * Bp.x + Bp.z * Bp.z, c2 = C.x * C.x + C.z * C.z;
+          return { c: new THREE.Vector3((a2 * (Bp.z - C.z) + b2 * (C.z - A.z) + c2 * (A.z - Bp.z)) / d, 0, (a2 * (C.x - Bp.x) + b2 * (A.x - C.x) + c2 * (Bp.x - A.x)) / d), A }; };
+        let f = centre(); const ang = Math.atan2(f.A.z - f.c.z, f.A.x - f.c.x) - CURL_HEAD_ANG;
+        obj.rotation.y += ang * curlK; f = centre();
+        obj.position.x += (CURL_AT.x - f.c.x) * curlK; obj.position.z += (CURL_AT.z - f.c.z) * curlK; obj.updateMatrixWorld(true);
+        if (curlK < 0.999) { t.root.worldToLocal((jawB || headB).getWorldPosition(_v)); obj.position.x -= _v.x * (1 - curlK); obj.position.z -= _v.z * (1 - curlK); obj.updateMatrixWorld(true); }
       }
       // look-at: follow the procedural rig's smoothed look direction (rig-local), spread over the neck bones
       const d = procHead?.userData.dir;
-      if (d && neck.length) { const yaw = clamp(Math.atan2(d.x, d.z), -1.5, 1.5), pitch = clamp(Math.asin(clamp(d.y, -1, 1)), -0.5, 0.5);
+      const hd = t.root.worldToLocal((jawB || headB).getWorldPosition(new THREE.Vector3())).sub(t.root.worldToLocal(neck[0].getWorldPosition(_v))), headYaw = Math.atan2(hd.x, hd.z); // which way the head points now
+      if (d && neck.length) { const yaw = clamp(wrap(Math.atan2(d.x, d.z) - headYaw), -1.3, 1.3), pitch = clamp(Math.asin(clamp(d.y, -1, 1)), -0.5, 0.5);
         for (const b of neck) { turnBone(b, obj, Y, yaw / neck.length); turnBone(b, obj, X, -pitch / neck.length); } }
       if (jawB && !has('chomp')) turnBone(jawB, obj, X, (s.jaw || 0) * 0.45);
       const g = s.glow || 0; halo.visible = g > 0.01; halo.material.opacity = g * (eyeMats.length ? 0.35 : 0.6);

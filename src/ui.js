@@ -11,7 +11,7 @@ export function say(who, text) {
   d.querySelector('.text').textContent = text; d.style.animation = 'none'; d.offsetWidth; d.style.animation = '';
   ui.onSay && ui.onSay(who, text);
   return new Promise(res => {
-    const done = () => { d.removeEventListener('pointerup', done); clearTimeout(t); sfx.tap(); d.hidden = true; res(); };
+    const done = () => { d.removeEventListener('pointerup', done); clearTimeout(t); sfx.tap(); d.hidden = true; ui.onSayEnd && ui.onSayEnd(who); res(); };
     const t = ui.fast ? setTimeout(done, 40) : null;
     setTimeout(() => d.addEventListener('pointerup', done), ui.fast ? 0 : 350);
   });
