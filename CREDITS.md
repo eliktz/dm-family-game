@@ -52,3 +52,8 @@ project in Blender: vertex colours only, no third-party meshes, textures, rigs o
 `assets/models/ana.glb` and `kepri.glb` (key `sunDragon`) are original procedural models made for this project in Blender: vertex colours only,
 no third-party meshes, textures, rigs or animation. No attribution required. `bo.glb`, `griffith.glb` and `roland.glb` were rebuilt from the same
 sources (a fix for uncoloured hair and beard vertices).
+
+## Rori, Vulcan, Petra and the crystal dragon
+`assets/models/rori.glb`, `vulcan.glb` (key `fireDragon`), `petra.glb` and `crystal_dragon.glb` (key `crystalDragon`) are original procedural
+models made for this project in Blender: vertex colours only, no third-party meshes, textures, rigs or animation. No attribution required.
+`bo.glb` and `ana.glb` were rebuilt from the same sources with an added Walk clip.

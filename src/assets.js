@@ -26,7 +26,7 @@ import { glowSprite } from './tex.js';
 
 const MANIFEST = 'assets/models/models.json', DIR = 'assets/models/', TIMEOUT_MS = 30000;
 const ALIASES = {
-  idle: ['idle', 'rest', 'breath', 'stand'], wiggle: ['wiggle', 'happy', 'cheer', 'joy', 'dance', 'jump'], chomp: ['chomp', 'eat', 'bite'], happy: ['happy', 'cheer'], cheer: ['cheer', 'happy'], talk: ['talk'], pet: ['pet'],
+  idle: ['idle', 'rest', 'breath', 'stand'], wiggle: ['wiggle', 'happy', 'cheer', 'joy', 'dance', 'jump'], chomp: ['chomp', 'eat', 'bite', 'hiccup'], shy: ['shy'], happy: ['happy', 'cheer'], cheer: ['cheer', 'happy'], talk: ['talk'], pet: ['pet'],
   fly: ['fly', 'glide', 'float', 'hover'], coil: ['coil', 'curl', 'sleep'], walk: ['walk', 'run'], sit: ['sit', 'ride'], wave: ['wave', 'greet', 'hello'],
 };
 const ss = THREE.MathUtils.smoothstep, clamp = THREE.MathUtils.clamp;
@@ -37,7 +37,9 @@ const ss = THREE.MathUtils.smoothstep, clamp = THREE.MathUtils.clamp;
 // Shu ends up about 9.5 m long (Worm's size), the baby about 1.25 m long and 0.65 m tall (tiny next to Bo, big enough to read on a phone).
 // `coil`: offset (rig units) while the rig is in its coiled pose, whose centre is 2.9 units beside the head (the baby inside her shell).
 const FIT = { worm: { scale: 2.8 }, drake: { scale: 1.3 }, griffith: { scale: 1.3 }, king: { scale: 1.3 }, bo: { scale: 1.3 }, waterDragon: { scale: 3.1 }, babyDragon: { scale: 2.7, coil: [-2.9, 0, 0.5] },
-  ana: { scale: 1.3 }, sunDragon: { scale: 3.1, glow: 0xffc850 } };   // Kepri: about 8.5 m long on her 0.9-scaled rig; her glow is sun-gold, not Worm's green
+  ana: { scale: 1.3 }, sunDragon: { scale: 3.1, glow: 0xffc850 },
+  rori: { scale: 1.3 }, fireDragon: { scale: 3.1 }, petra: { scale: 1.3 },
+  crystalDragon: { scale: 3.5 } };   // about 4.5 m long on his 0.62-scaled rig: clearly smaller and shyer than Worm (about 9 m)   // Kepri: about 8.5 m long on her 0.9-scaled rig; her glow is sun-gold, not Worm's green
 const CURL_SPINE = 0.28, CURL_TAIL = 0.2; // radians per joint: about 210° in all, a C that stays open toward the camera
 const CURL_AT = new THREE.Vector3(-3.6, 0, 0), CURL_HEAD_ANG = 0.3; // rig-local: what he curls around, and where his head sits on that circle
 const wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
@@ -99,8 +101,8 @@ function makeSwap(key, t, gltf, e) {
   const has = name => !!(mixer && find(name));
   function loop(names) { // first available of `names` becomes the looping base clip
     if (!mixer) return; const name = names.find(has); if (!name || name === loopName) return;
-    const act = mixer.clipAction(find(name)); act.reset().setLoop(THREE.LoopRepeat, Infinity).fadeIn(0.25).play();
-    if (loopAct) loopAct.fadeOut(0.25); loopAct = act; loopName = name;
+    const act = mixer.clipAction(find(name)); act.reset().setLoop(THREE.LoopRepeat, Infinity).fadeIn(0.35).play();
+    if (loopAct) loopAct.fadeOut(0.35); loopAct = act; loopName = name;
   }
   function once(name) { // one-shot on top of the base loop; false when the model has no such clip
     if (!has(name)) return false;
@@ -156,7 +158,7 @@ function makeSwap(key, t, gltf, e) {
     const s = t.state || {}; let bob = 0, sway = 0, squash = 0, drop = 0;
     for (const [b, q] of rest) b.quaternion.copy(q); // bones we pose by hand start from rest; clips then overwrite the ones they animate
     if (isDragon) {
-      loop(s.pose === 'fly' ? ['fly', 'idle'] : s.pose === 'coil' ? ['coil', 'idle'] : ['idle']);
+      loop(s.shy ? ['shy', 'idle'] : s.pose === 'fly' ? ['fly', 'idle'] : s.pose === 'coil' ? ['coil', 'idle'] : ['idle']); // shy: a held, tucked pose (crystal dragon)
       const w = ss(s.wiggle || 0, 0, 0.5);
       if (rose('wiggle', s.wiggle || 0)) once('wiggle');
       if (rose('chomp', s.chomp || 0)) once('chomp') || once('happy');

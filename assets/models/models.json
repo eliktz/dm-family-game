@@ -1,5 +1,5 @@
 {
-  "_doc": "Optional Blender-built GLBs that replace the procedural placeholders. Add an entry like \"worm\": { \"url\": \"assets/models/worm.glb\", \"scale\": 1, \"y\": 0, \"rotY\": 0 }. Keys: worm, drake, griffith, king, castle, bo, waterDragon, babyDragon, ana, sunDragon. Animation clips named idle / wiggle / fly / walk / sit / wave are played automatically when present. Empty = all procedural.",
+  "_doc": "Optional Blender-built GLBs that replace the procedural placeholders. Add an entry like \"worm\": { \"url\": \"assets/models/worm.glb\", \"scale\": 1, \"y\": 0, \"rotY\": 0 }. Keys: worm, drake, griffith, king, castle, bo, waterDragon, babyDragon, ana, sunDragon, rori, fireDragon, petra, crystalDragon. Animation clips named idle / wiggle / fly / walk / sit / wave are played automatically when present. Empty = all procedural.",
   "worm": {
     "url": "assets/models/worm.glb",
     "scale": 1,
@@ -50,6 +50,30 @@
   },
   "sunDragon": {
     "url": "assets/models/kepri.glb",
+    "scale": 1,
+    "y": 0,
+    "rotY": 0
+  },
+  "rori": {
+    "url": "assets/models/rori.glb",
+    "scale": 1,
+    "y": 0,
+    "rotY": 0
+  },
+  "fireDragon": {
+    "url": "assets/models/vulcan.glb",
+    "scale": 1,
+    "y": 0,
+    "rotY": 0
+  },
+  "petra": {
+    "url": "assets/models/petra.glb",
+    "scale": 1,
+    "y": 0,
+    "rotY": 0
+  },
+  "crystalDragon": {
+    "url": "assets/models/crystal_dragon.glb",
     "scale": 1,
     "y": 0,
     "rotY": 0

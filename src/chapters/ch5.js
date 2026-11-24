@@ -29,7 +29,7 @@ export function chapter5(G) {
   const CAM_SHY = { pos: V(2.6, 2.4, 2.4), look: V(8.4, 1.1, -1.6) };
 
   // ---------------------------------------------------------------- actors
-  const petra = makeChibi({ hairStyle: 'tousled', hair: 0xe9dcc0, eye: 0x2a2440, tunic: 0x7a5fc0, sleeve: 0x9a84dc, pants: 0x4a4460, belt: 0xbfe9ff, shoes: 0x3a3450, skin: 0xf0c8a8, pendant: true, lod: 0.5 });
+  const petra = makeChibi({ hairStyle: 'tousled', hair: 0x2a1e2e, eye: 0x2a2440, tunic: 0x7a5fc0, sleeve: 0x9a84dc, pants: 0x4a4460, belt: 0xbfe9ff, shoes: 0x3a3450, skin: 0xf0c8a8, pendant: true, lod: 0.5 });
   const gem = createWorm({ name: 'crystalDragon', colors: CRYSTAL, length: 7.5, finScale: 1.2, lod: 0.4, light: false, shadow: false, simple: true });
   gem.root.scale.setScalar(0.62); petra.root.traverse(o => { o.castShadow = false; });
   const crystalG = new THREE.OctahedronGeometry(0.5, 0).scale(0.8, 1.5, 0.8);
@@ -95,8 +95,7 @@ export function chapter5(G) {
     gem.root.visible = true; // he stays hidden in the dark until the first pattern is done
     const from = gem.root.position.clone(), to = HIDE[n];
     await step(tween(1.6, k => { gem.root.position.lerpVectors(from, to, ease(k)); }));
-    gem.wiggle(0.8);
-  }
+  }   // (no happy hop while he is still shy: he just creeps closer)
   async function riddle(step, n, kind, lines) {
     G.phase = 'c5-math' + n; G.camGoal = CAM_WORM;
     for (const [who, text] of lines) await step(say(who, text));
@@ -110,7 +109,7 @@ export function chapter5(G) {
     drake.root.position.copy(DRAKE_AT); drake.root.rotation.set(0, Math.PI, 0);
     griffith.root.position.set(-8.6, 0, 3.6);
     petra.root.position.copy(here ? PETRA_AT : PETRA_FROM); petra.root.rotation.set(0, here ? Math.PI + 0.5 : 0, 0); petra.setWalk(0);
-    gem.root.position.copy(HIDE[0]); gem.root.rotation.set(0, -1.9, 0); gem.setPose('rest'); gem.state.blend = 1; gem.lookAt(null);
+    gem.root.position.copy(HIDE[0]); gem.root.rotation.set(0, -1.9, 0); gem.setPose('rest'); gem.state.blend = 1; gem.lookAt(null); gem.state.shy = true; // tucked and shy until Worm's gentle words
     gem.root.visible = false; path.forEach((_, i) => setSlot(i, -1)); active = false; done = null; pat = null; humming = false; G.playerTurn = false; G.camGoal = here ? CAM_WIDE : CAM_WORM;
   }
 
@@ -147,7 +146,7 @@ export function chapter5(G) {
     await step(say('drake', 'הוא מדבר ממש בשקט.'));
     worm.wiggle(0.8); sfx.purr();
     await step(say('worm', `זה בסדר להיות שקט, ${PETRA_DRAGON_NAME}. גם אני אוהב שקט. אפשר להיות חברים גם בלי הרבה מילים.`));
-    gem.wiggle(1.6); sfx.happy(); fx.hearts3(gem.headWorld().add(V(0, 0.6, 0)), 5);
+    gem.state.shy = false; gem.wiggle(1.6); sfx.happy(); fx.hearts3(gem.headWorld().add(V(0, 0.6, 0)), 5);
     await step(say('gem', 'תודה, וורם. הנה, זה בשבילך.'));
     const r0 = gem.headWorld().add(V(0, 0.8, 0)), r1 = worm.headWorld().add(V(1.8, 1.0, 1.6)); rainbow.visible = true;
     await step(tween(1.6, k => { const e = ease(k); rainbow.position.lerpVectors(r0, r1, e); rainbow.position.y += Math.sin(e * Math.PI) * 1.4; }));
@@ -162,7 +161,7 @@ export function chapter5(G) {
     return ending(step, false);
   }
   async function ending(step, direct) {
-    if (direct) { await step(fade(true)); stage(true); gem.root.visible = true; gem.root.position.copy(HIDE[3]); await step(fade(false)); }
+    if (direct) { await step(fade(true)); stage(true); gem.root.visible = true; gem.state.shy = false; gem.root.position.copy(HIDE[3]); await step(fade(false)); }
     G.phase = 'c5-end'; G.markDone(5);
     const v = await step(card({ kicker: 'סוף פרק 5 – מערת הקריסטלים של פטרה', title: 'המשך יבוא…', text: 'בפרק הבא: כל הצבעים נעלמים מהממלכה! לאן הם הלכו? 🎨',
       buttons: [{ label: '🔁 עוד פעם?', value: 'again' }, { label: '🏠 לתפריט', value: 'home', cls: 'green' }] }));
