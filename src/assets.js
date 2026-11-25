@@ -26,7 +26,7 @@ import { glowSprite } from './tex.js';
 
 const MANIFEST = 'assets/models/models.json', DIR = 'assets/models/', TIMEOUT_MS = 30000;
 const ALIASES = {
-  idle: ['idle', 'rest', 'breath', 'stand'], wiggle: ['wiggle', 'happy', 'cheer', 'joy', 'dance', 'jump'], chomp: ['chomp', 'eat', 'bite', 'hiccup'], shy: ['shy'], happy: ['happy', 'cheer'], cheer: ['cheer', 'happy'], talk: ['talk'], pet: ['pet'],
+  idle: ['idle', 'rest', 'breath', 'stand'], wiggle: ['wiggle', 'happy', 'cheer', 'joy', 'dance', 'jump'], chomp: ['chomp', 'eat', 'bite', 'hiccup'], shy: ['shy'], sad: ['sad'], happy: ['happy', 'cheer'], cheer: ['cheer', 'happy'], talk: ['talk'], pet: ['pet'],
   fly: ['fly', 'glide', 'float', 'hover'], coil: ['coil', 'curl', 'sleep'], walk: ['walk', 'run'], sit: ['sit', 'ride'], wave: ['wave', 'greet', 'hello'],
 };
 const ss = THREE.MathUtils.smoothstep, clamp = THREE.MathUtils.clamp;
@@ -169,7 +169,7 @@ function makeSwap(key, t, gltf, e) {
       curlK += ((s.pose === 'curl' && spineB.length ? 1 : 0) - curlK) * Math.min(1, dt * 1.6); yawOff = 0; flyDrop += ((s.pose === 'fly' && seatB ? 0.34 * S : 0) - flyDrop) * k; drop = flyDrop;
     } else if (key !== 'castle') {
       const walk = Math.min(1, s.walk || 0), sit = s.sit || 0, wave = s.wave || 0;
-      loop(sit > 0.5 ? ['sit', 'idle'] : walk > 0.1 ? ['walk', 'idle'] : ['idle']);
+      loop(s.mood ? [s.mood, 'idle'] : sit > 0.5 ? ['sit', 'idle'] : walk > 0.1 ? ['walk', 'idle'] : ['idle']); // mood: a held expression loop (the Grumble Cloud: 'sad' / 'happy')
       if (rose('wave', wave)) (wave >= 2.8 && once('cheer')) || once('wave');
       if (!has('walk')) bob = Math.abs(Math.sin(time * 9)) * 0.05 * walk;
       if (!has('wave') && wave > 0) sway = Math.sin(time * 12) * 0.08;

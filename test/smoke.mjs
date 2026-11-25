@@ -35,6 +35,8 @@ async function run(dev) {
   const errors = [];
   page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));
+  page.on('crash', () => console.error(`[${engineName} ${dev.name}] !! the page CRASHED (web process died) at ${new Date().toISOString()}`));
+  page.on('close', () => console.error(`[${engineName} ${dev.name}] page closed at ${new Date().toISOString()}`)); browser.on('disconnected', () => console.error(`[${engineName}] browser disconnected at ${new Date().toISOString()}`));
   page.on('requestfailed', r => errors.push('requestfailed: ' + r.url()));
   page.on('response', r => { if (r.status() >= 400) errors.push(`http ${r.status()}: ${r.url()}`); });
   const log = (...a) => console.log(`[${engineName} ${dev.name}]`, ...a);
@@ -125,7 +127,7 @@ async function run(dev) {
     // ---- chapter map, locked chapters, hidden parent unlock
     check(await page.locator('#chapters .chap').count() === 8, 'chapter map shows 8 chapters');
     check(await page.locator('#ch-2.locked').count() === 1, 'chapter 2 is locked on a fresh start');
-    check(await page.locator('#ch-6 .soon').isVisible(), 'unbuilt chapters say בקרוב');
+    check(await page.locator('#ch-7 .soon').isVisible(), 'unbuilt chapters say בקרוב');
     await shot('01-title-map');
     await tap('#ch-2'); await tap('#ch-5'); await page.waitForTimeout(300);
     check(await page.evaluate(() => __dm.mode === 'title'), 'tapping a locked / unbuilt chapter only gives a friendly nudge');
@@ -412,10 +414,51 @@ async function run(dev) {
     await page.waitForFunction(() => window.__dm.mode === 'title', null, { timeout: 15000 }); await page.waitForTimeout(1200);
     check((await page.locator('#ch-5 .ic').innerText()).includes('💎') && JSON.stringify(await page.evaluate(() => __dm.progress)) === '[1,2,3,4,5]', 'chapter 5 keepsake badge shown, progress is [1,2,3,4,5]');
     await shot('ch5-10-title-badges');
+
+    // ---------------- chapter 6: הענן הרטנן
+    check(await page.locator('#ch-6.locked').count() === 0 && (await page.locator('#btn-continue').innerText()).includes('פרק 6'), 'chapter 6 unlocked after chapter 5, continue points at it');
+    await tap('#btn-continue');
+    await advanceTo('c6-intro'); await page.waitForTimeout(1500);
+    await clearOfActors('ch6 dialog'); await shot('ch6-01-grey-flowers');
+    await tap('#btn-home'); await page.waitForFunction(() => window.__dm.mode === 'title', null, { timeout: 30000 }); await page.waitForTimeout(800);
+    await tap('#btn-continue'); await page.waitForFunction(() => __dm.phase === 'c6-intro' && !document.querySelector('#dialog').hidden, null, { timeout: 60000 });
+    await tap('#dialog'); await page.waitForTimeout(900);
+    check(await page.locator('#dialog').isVisible(), 'ch6: after 🏠 mid-dialog and continue, the bubble is still there');
+    await advanceTo('c6-fly-ready'); await page.locator('#btn-team').waitFor({ timeout: 60000 }); await tap('#btn-team');
+    await advanceTo('c6-flight'); await page.waitForTimeout(4500);
+    check(await page.locator('#counter').isVisible() && !(await page.locator('#arrow').isVisible()), 'ch6 team flight: counter, no arrow');
+    await shot('ch6-02-team-flight');
+    await page.waitForFunction(() => __dm.G.fl.got >= 2, null, { timeout: 240000 }); await page.waitForTimeout(900);
+    check(/^\d × 2 = \d+$/.test((await page.locator('#count').innerText()).replace(/\s+/g, ' ').trim()), 'puff pairs are counted in equal groups (n × 2)');
+    await shot('ch6-03-puff-pairs');
+    await advanceTo('c6-flight-done', 300000); check((await page.locator('#count').innerText()).replace(/\s+/g, ' ').trim() === '6 × 2 = 12', 'six pairs: 6 × 2 = 12 (rail flight collected all without input)');
+    for (let n = 1; n <= 2; n++) {
+      await advanceTo('c6-pots' + n); await page.waitForFunction(() => __dm.potScreen(), null, { timeout: 240000 }); await page.waitForTimeout(700);
+      if (n === 1) await shot('ch6-04-paint-pots');
+      let taps = 0; for (const t0 = Date.now(); Date.now() - t0 < 240000 && await phase() === 'c6-pots' + n;) { const xy = await page.evaluate(() => __dm.potScreen()); if (xy) { await page.mouse.click(xy[0], xy[1]); taps++; } await page.waitForTimeout(700); }
+      check(taps >= 2, `pots round ${n} filled by tapping (${taps} taps)`);
+      if (n === 1) check((await page.locator('#count').innerText()).trim() === '5 + 5 = 10', 'pots count by fives');
+      await advanceTo('c6-math' + n); for (const t0 = Date.now(); Date.now() - t0 < 240000 && !(await cur());) { if (await page.locator('#dialog:not([hidden])').count()) await tap('#dialog'); await page.waitForTimeout(300); }
+      check(await solveBeat('c6-math' + n, { firstWrong: n === 1, shotName: n === 1 ? 'ch6-05-colour-riddle' : null }) === 1, `colour riddle ${n} asked once`);
+    }
+    await advanceTo('c6-sad'); await page.waitForFunction(() => !document.querySelector('#dialog').hidden && document.querySelector('#dialog').dataset.who === 'cloud', null, { timeout: 240000 }); await page.waitForTimeout(1800);
+    await shot('ch6-06-sad-cloud');
+    await advanceTo('c6-celebrate'); await page.locator('#card:not([hidden])').waitFor({ timeout: 60000 });
+    check((await page.locator('#card').innerText()).includes('נוצת מכחול'), 'ch6 celebration card with the paintbrush feather keepsake');
+    await shot('ch6-07-celebrate-card');
+    log('stats ch6', JSON.stringify(await page.evaluate(() => __dm.stats())));
+    await tap('#card button[data-v="end"]');
+    await page.waitForFunction(() => window.__dm.phase === 'c6-end'); await page.waitForTimeout(800);
+    check((await page.locator('#card').innerText()).includes('הר הקשת'), 'ch6 teaser about Rainbow Mountain');
+    await shot('ch6-08-teaser');
+    await tap('#card button[data-v="home"]');
+    await page.waitForFunction(() => window.__dm.mode === 'title', null, { timeout: 15000 }); await page.waitForTimeout(1200);
+    check((await page.locator('#ch-6 .ic').innerText()).includes('🖌️') && JSON.stringify(await page.evaluate(() => __dm.progress)) === '[1,2,3,4,5,6]', 'chapter 6 keepsake badge shown, progress is [1,2,3,4,5,6]');
+    await shot('ch6-09-title-badges');
     // ---- no read-aloud anywhere
     check(await page.evaluate(() => window.__speech === 0), 'no speechSynthesis use');
     for (const f of ['src/audio.js', 'src/ui.js', 'src/main.js']) check(!/speechSynthesis|SpeechSynthesisUtterance/.test(await (await page.request.get(base + f)).text()), `${f} has no speech code`);
-    check(bubbleChecks > 150, `never more than one bubble or banner on screen (${bubbleChecks} checks across chapters 1-5)`);
+    check(bubbleChecks > 150, `never more than one bubble or banner on screen (${bubbleChecks} checks across chapters 1-6)`);
     { const f = await page.evaluate(() => ({ ...__dm.frameStats, watchdog: __dm.watchdog })); log('frames', JSON.stringify(f)); check(f.watchdog === 0, 'the story watchdog never had to nudge'); }
     check(errors.length === 0, 'no console/page/network errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
     ok = true;

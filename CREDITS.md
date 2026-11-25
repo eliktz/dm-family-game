@@ -57,3 +57,7 @@ sources (a fix for uncoloured hair and beard vertices).
 `assets/models/rori.glb`, `vulcan.glb` (key `fireDragon`), `petra.glb` and `crystal_dragon.glb` (key `crystalDragon`) are original procedural
 models made for this project in Blender: vertex colours only, no third-party meshes, textures, rigs or animation. No attribution required.
 `bo.glb` and `ana.glb` were rebuilt from the same sources with an added Walk clip.
+
+## The Grumble Cloud
+`assets/models/grumble_cloud.glb` (key `grumbleCloud`) is an original procedural model made for this project in Blender: vertex colours only,
+no third-party meshes, textures, rigs or animation. No attribution required.

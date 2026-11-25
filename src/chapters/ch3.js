@@ -28,7 +28,7 @@ export function chapter3(G) {
   const CAM_WIDE = G.engine.viewShift ? { pos: ground(0.4, 42, 6.4), look: ground(0.4, 26.8, 1.2) } : { pos: ground(0.2, 48.5, 8.2), look: ground(0.2, 26.4, 1.6) };
   const CAM_MEET = { pos: ground(-1.5, 41.5, 3.8), look: ground(-7.4, 28, 1.6) };
   const CAM_WORM = { pos: ground(0.5, 33.5, 2.6), look: ground(2.6, 24.4, 1.9) };
-  const CLOUD_UP = ground(0.5, 19.5, 8.4), CLOUD_FAR = ground(34, 6, 24);
+  const CLOUD_UP = ground(0.5, 19.5, G.engine.viewShift ? 7.3 : 6.7), /* low enough that the speech bubble never covers his face */ CLOUD_FAR = ground(34, 6, 24);
 
   // ---------------------------------------------------------------- actors
   const ana = makeChibi({ hairStyle: 'tousled', hair: 0x2a1a12, eye: 0x2a1408, tunic: 0xe8a02c, sleeve: 0xf2c04e, pants: 0x8a5a34, belt: 0xb5462e, shoes: 0x6a4028, skin: 0xd9a070, pendant: true, lod: 0.5 });
@@ -47,6 +47,7 @@ export function chapter3(G) {
   const cheekM = new THREE.MeshStandardMaterial({ color: 0xe7a0aa, roughness: 0.9 });
   for (const sx of [-1, 1]) { const c = new THREE.Mesh(new THREE.SphereGeometry(0.34, 10, 8), cheekM); c.scale.set(1, 0.6, 0.4); c.position.set(sx * 1.5, -0.35, 2.05); cloud.add(c);
     const br = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.4, 3, 6), eyeB); br.position.set(sx * 0.8, 0.95, 2.2); br.rotation.z = Math.PI / 2 + sx * 0.35; cloud.add(br); }
+  const cloudState = { mood: null };   // read by the GLB driver (assets.js): 'sad' / 'happy' expression loops
   const tuft = new THREE.Mesh(new THREE.IcosahedronGeometry(0.55, 1), puffM); tuft.position.set(0.3, 2.9, 0); cloud.add(tuft);
   // three little puffs that drift into the sunbeams
   const puffs = [0, 1, 2].map(() => new THREE.Mesh(new THREE.IcosahedronGeometry(0.9, 1).scale(1.3, 0.75, 1), puffM));
@@ -95,7 +96,7 @@ export function chapter3(G) {
     sun.intensity = sunBase * (1 - 0.5 * dim); outdoor.backgroundIntensity = bgBase * (1 - 0.35 * dim);
     cloud.position.y += Math.sin(time * 0.9) * 0.004; cloud.rotation.y = Math.sin(time * 0.5) * 0.18;
     const huff = !$('#dialog').hidden && $('#dialog').dataset.who === 'cloud' ? 1 : 0; // puffs up and bounces while he grumbles
-    cloud.scale.set(1 + 0.05 * Math.sin(time * 3) + 0.1 * huff * Math.abs(Math.sin(time * 9)), 1 - 0.05 * Math.sin(time * 3) + 0.08 * huff * Math.abs(Math.sin(time * 9)), 1);
+    if (G.hdCloud) cloud.scale.setScalar(1); else /* the HD cloud's clips bounce and puff by themselves: no double bounce */ cloud.scale.set(1 + 0.05 * Math.sin(time * 3) + 0.1 * huff * Math.abs(Math.sin(time * 9)), 1 - 0.05 * Math.sin(time * 3) + 0.08 * huff * Math.abs(Math.sin(time * 9)), 1);
     tuft.position.x = 0.3 + Math.sin(time * 5) * 0.18; tuft.rotation.z = Math.sin(time * 5) * 0.4;
     const src = kepri.mouthWorld(_a);
     mirrors.forEach((m, i) => {
@@ -116,7 +117,7 @@ export function chapter3(G) {
     sun.position.copy(WORM_AT).addScaledVector(world.sunDir, 120); sun.target.position.copy(WORM_AT);
   }
   function cleanup() {
-    active = -1; tapWait = null; blocked = false; dim = dimTo = 0; showAll(false);
+    active = -1; tapWait = null; blocked = false; dim = dimTo = 0; cloudState.mood = null; showAll(false);
     if (sunBase != null) { sun.intensity = sunBase; outdoor.backgroundIntensity = bgBase; }
   }
   const begin = () => { G.tick = tick; G.onLeave = cleanup; G.tap = onTap; };
@@ -211,7 +212,9 @@ export function chapter3(G) {
     // ---- the garden blooms, the cloud floats off (a little less grumpy)
     G.phase = 'c3-bloom'; dimTo = 0; sfx.fanfare(); worm.wiggle(2.5); kepri.wiggle(2.5); ana.wave(3); drake.wave(3);
     for (let i = 0; i < 3; i++) setTimeout(() => { if (G.tick === tick) fx.confetti(ground(0.5, 28, 4), 60); }, i * 500);
+    cloudState.mood = 'happy';
     await step(say('cloud', 'הממפ… בעצם, זה די יפה.'));
+    cloudState.mood = null;
     await step(tween(3.0, k => { cloud.position.lerpVectors(CLOUD_UP, CLOUD_FAR, ease(k)); }));
     camGoal = CAM_WORM; worm.lookAt(DRAKE_AT.clone().setY(DRAKE_AT.y + 1.4));
     await step(say('drake', 'הענן הזה נראה לי קצת… בודד.'));
@@ -238,6 +241,7 @@ export function chapter3(G) {
     start: story, showAll,
     nextMirrorPos() { return active >= 0 ? mirrors[active].g.position.clone() : null; },
     debug: () => ({ tweens: G.tweenCount(), active, taps, lit: mirrors.map(m => m.lit), blocked }),
-    modelTargets: { ana, sunDragon: kepri },
+    modelTargets: { ana, sunDragon: kepri, grumbleCloud: { root: cloud, state: cloudState } },
+    cloudActor: { root: cloud, state: cloudState },
   };
 }

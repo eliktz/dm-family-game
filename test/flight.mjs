@@ -12,6 +12,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2); const urlArg = args.find(a => /^https?:/.test(a));
 const only = args.find(a => a.startsWith('--device='))?.split('=')[1];
 const MODES = (args.find(a => a.startsWith('--modes='))?.split('=')[1] || 'none,kid,hold-right,hold-up,hold-down-left').split(',');
+const chapterArg = args.find(a => a.startsWith('--chapter='))?.split('=')[1]; // e.g. --chapter=ch1
 const shots = args.includes('--shots'), STALL_MS = 8000;
 let server, base = urlArg; if (!base) { const s = await startServer(root); server = s.server; base = `http://127.0.0.1:${s.port}/`; }
 const DEVICES = [
@@ -24,7 +25,7 @@ for (const dev of DEVICES) {
   const ctx = await browser.newContext(dev.ctx); const page = await ctx.newPage(); const errors = [];
   page.on('pageerror', e => errors.push(e.message + ' @ ' + (e.stack || '').split('\n').slice(0, 4).join(' < ').replace(/http:\/\/[^/]+\//g, ''))); page.on('console', m => m.type() === 'error' && errors.push(m.text()));
   await page.goto(base + 'index.html?tier=low&all=1'); await page.waitForFunction(() => window.__dm?.ready, null, { timeout: 90000 });
-  for (const [chapter, go] of [['ch1 stars', 'flight'], ['ch2 river', 'ch2-glide']]) for (const mode of MODES) {
+  for (const [chapter, go] of [['ch1 stars', 'flight'], ['ch2 river', 'ch2-glide'], ['ch6 puffs', 'ch6-flight']].filter(c => !chapterArg || c[0].startsWith(chapterArg))) for (const mode of MODES) {
     await page.evaluate(g => __dm.go(g), go);
     await page.locator('#joy').waitFor({ state: 'visible', timeout: 15000 });
     const jb = await page.locator('#joy').boundingBox(), jc = [jb.x + jb.width / 2, jb.y + jb.height / 2], R = jb.width / 2 * 0.95;

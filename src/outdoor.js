@@ -122,7 +122,7 @@ export function buildOutdoor() {
   const R = (() => { let s = 99; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); })();
   const foliageG = mergeGeometries([new THREE.IcosahedronGeometry(1.6, 1).translate(0, 3.2, 0), new THREE.IcosahedronGeometry(1.25, 0).translate(0.6, 4.3, 0.3), new THREE.IcosahedronGeometry(1.1, 0).translate(-0.6, 4.0, -0.4)]);
   const trunkG = new THREE.CylinderGeometry(0.25, 0.38, 2.8, 6).translate(0, 1.4, 0);
-  const NT = 212, trees = [];
+  const NT = 190, trees = [];
   for (let i = 0; i < 3000 && trees.length < NT; i++) {
     const a = R() * Math.PI * 2, d = 34 + Math.pow(R(), 0.8) * 190, x = Math.cos(a) * d, z = Math.sin(a) * d;
     if (Math.hypot(x - 70, z - 45) < 50) continue; if (z > 10 && Math.abs(x - pathX(z)) < 5) continue;
@@ -159,7 +159,7 @@ export function buildOutdoor() {
     greens.push(paint(new THREE.OctahedronGeometry(0.05, 0).scale(1, 0.6, 1).translate(0, 0.02, 0).applyMatrix4(face).translate(top.x, top.y, top.z), 0xd9a520));
   }
   const greenG = mergeGeometries(greens), petalG = mergeGeometries(petals); greenG.computeVertexNormals(); petalG.computeVertexNormals();
-  const NF = 124, flowerGreen = new THREE.InstancedMesh(greenG, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, side: THREE.DoubleSide }), NF);
+  const NF = 104, flowerGreen = new THREE.InstancedMesh(greenG, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, side: THREE.DoubleSide }), NF);
   const flowers = new THREE.InstancedMesh(petalG, new THREE.MeshStandardMaterial({ roughness: 0.65, side: THREE.DoubleSide }), NF);
   const fc = [0xe8668f, 0xe6c63a, 0xd8d6cf, 0x9c7ae0, 0xe8862f], col = new THREE.Color(), yAxis = new THREE.Vector3(0, 1, 0);
   let nf = 0;

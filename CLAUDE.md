@@ -26,7 +26,7 @@ A Hebrew, iPad-first, **plot-driven** three.js game for Elik's 7-year-old son, b
 - **Plot-driven chapters**, not free exploration. Each chapter is a short story card, then scenes with dialogue bubbles,
   then one clear activity (riddle, guided flight, …), then a celebration and a "המשך יבוא…" teaser.
   The story runner is in `src/main.js` (cancellable async script: `runner()`, `step()`, `waitFor()`); each chapter's script is
-  `src/chapters/chN.js` (chapters 1-5 are built) and receives the shared core as `G`. The arc is in `STORY.md`. Progress: localStorage `dm.progress`; `?all=1` unlocks all.
+  `src/chapters/chN.js` (chapters 1-6 are built) and receives the shared core as `G`. The arc is in `STORY.md`. Progress: localStorage `dm.progress`; `?all=1` unlocks all.
 - **Worm is the star** (the kid's favourite). He gets the most polished model and animation (breathing, happy wiggle, chomp,
   look-at, Dragon-Stone eye glow) and warm reactions everywhere. In the books Worm has no wings and moves with mind power,
   so in flight he *floats/glides* with a green aura.
@@ -66,6 +66,9 @@ A Hebrew, iPad-first, **plot-driven** three.js game for Elik's 7-year-old son, b
   a dialog advances on a tap anywhere on the bubble, accepts `pointerup` and `click` once, and pulses "המשך" after 12 s (never auto-advances);
   a story watchdog nudges a phase that sits 45 s while it is not the player's turn (`G.playerTurn`; it finishes all tweens first; `__dm.watchdog` counts
   nudges and the smoke test expects 0). New scripted waits must go through `step()`, never a bare promise.
+- **Chapter 6 (cloud):** `src/chapters/ch6.js`: a rail flight (`G.startFlight`, mode `flight`) with Kepri and Vulcan borrowed from chapters 3-4
+  through `G.team`, then the lawn (mode `paint`). The Grumble Cloud is one shared actor (`G.grumble`, built in ch3.js, GLB key `grumbleCloud`); its
+  expression loops are set with `state.mood` ('sad' / 'happy'). Debug: `__dm.go('ch6' | 'ch6-flight' | 'ch6-pots' | 'ch6-end')`, `__dm.potScreen()`.
 - **Chapter 5 (crystals):** `src/chapters/ch5.js` in the cave scene (mode `cave`, cameras through `G.camGoal`). Petra's dragon's name lives only in
   `src/names.js` (`PETRA_DRAGON_NAME`). Debug: `__dm.go('ch5' | 'ch5-patterns' | 'ch5-end')`, `__dm.crystalScreen(wrong?)`, `__dm.ch5.debug()`.
 - **Chapter 4 (bakery):** `src/chapters/ch4.js`, mode `bakery`. Debug: `__dm.go('ch4' | 'ch4-catch' | 'ch4-end')`, `__dm.fireballScreen()`,
@@ -74,10 +77,15 @@ A Hebrew, iPad-first, **plot-driven** three.js game for Elik's 7-year-old son, b
   `__dm.mirrorScreen()`, `__dm.ch3.debug()`. `node test/soak.mjs --chapter=3` presses 🏠 mid-dialog in every loop. Background characters use
   `makeChibi({ lod })` / `createWorm({ lod })` to stay inside the triangle budget (garden main pass: 121 draw calls, 190k triangles).
   Test output goes to the git-ignored `test-logs/`.
+- **Browser dies mid-smoke (not a game leak).** A full-session smoke holds about 2 GB in the WebKit web process (1.1 GB for one chapter); the
+  shared box's free memory swings by 2-3 GB from other work, and when it dips the whole headless browser goes away ("Target page, context or
+  browser has been closed", page closed + browser disconnected together, **no** `crash` event; the smoke logs all three). `node test/mem.mjs`
+  visits every chapter twice in one session: GPU geometries / textures / programs must be flat on the second pass (146 / 61 / 149) and 40 cloud
+  mood flips must allocate nothing. Re-run a smoke that died this way once, alone; `flight.mjs --chapter=ch1 --modes=kid` re-runs single cases.
 - **Slow test machine:** run one test at a time; `smoke.mjs --dsf=1` renders the iPhone at 1x; phase waits are 240 s. The box is shared, so
   a single timeout is not proof of a bug: re-run, and use `soak.mjs` to tell a real stall from load.
 
 ## Layout
 `index.html` `style.css` | `src/` (main, chapters/chN, worm, people, cave, outdoor, engine, fx, tex, ui, audio, assets) | `lib/` vendored |
-`assets/` CC0 textures/HDRI/models | `test/` Playwright (`smoke.mjs`, `flight.mjs`, `soak.mjs`, `starve.mjs`, `models.mjs`, `perf.mjs`, `math.mjs`, `peek.mjs`, `serve.mjs`) | `shots/` screenshots.
+`assets/` CC0 textures/HDRI/models | `test/` Playwright (`smoke.mjs`, `flight.mjs`, `soak.mjs`, `starve.mjs`, `models.mjs`, `perf.mjs`, `mem.mjs`, `math.mjs`, `peek.mjs`, `serve.mjs`) | `shots/` screenshots.
 Serve locally with `python3 -m http.server 8765`, or use `test/serve.mjs`.

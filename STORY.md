@@ -36,7 +36,7 @@ Each chapter picks the *kinds* of riddle that fit its story; the level decides h
 | 3 | Subtraction, missing number | sunbeams and clouds |
 | 4 | Addition, then a missing number (ten loaves on a ten-frame) | the dragon bakery |
 | 5 | Missing number, then multiplication; colour patterns AB / AAB / ABC | crystal patterns |
-| 6 | Multiplication (equal groups), word problems | colour sparks, paint pots |
+| 6 | Equal groups (n × 2 up to 12) and counting by fives in the activities; a multiplication and an addition riddle | colour sparks, paint pots |
 | 7 | Multiplication, missing factor, two-step stories | lanterns, stepping stones, bridge planks |
 | 8 | Everything: "Worm's big quiz" of five riddles | the finale |
 
@@ -77,10 +77,16 @@ steps and removes one wrong answer, and on the third Worm shows the answer and t
    - *Friendship moment:* Worm tells him that being quiet is okay, and that friends don't need many words.
    - *Teaser:* all the colours are vanishing from the kingdom! *Keepsake:* a rainbow crystal.
 
-6. **הענן הרטנן**: The Grumble Cloud steals the flowers' colours and hides them in little grey puffs.
-   - *Activity A, team flight:* fly with all the dragons in formation and pop grey puffs to free colour sparks. Collect them in **equal groups** (3 groups of 2).
-   - *Activity B, count by 5s:* refill the castle's paint pots.
-   - Drake notices the cloud looks… sad? Worm: "אולי הוא פשוט רוצה חבר?" *Keepsake:* a paintbrush feather.
+6. **הענן הרטנן** (done): the Grumble Cloud takes the colours from King Roland's flower beds ("הם שלי עכשיו!") and hides them in little grey
+   puffs in the sky.
+   - *Activity A, team flight:* Worm flies with Kepri and Vulcan in formation, rail-guided like chapters 1 and 2 (it collects by itself, so it can
+     never stall), right round the castle. This is the longest part of the chapter. Six pairs of grey puffs pop into colour sparks, in
+     **equal groups**: 2, 2 × 2 = 4 … 6 × 2 = 12. Kepri's sunbeam and Vulcan's fireball take turns popping them, and the colours trail behind the team.
+   - *Activity B, paint pots:* on the lawn, tap each of four pots and Worm pours 5 sparks into it, **counting by fives** (5, 10, 15, 20). Each pot
+     gives a flower bed its colour back. After a quiet while Worm pours one himself.
+   - *Riddles:* a multiplication and an addition from the adaptive engine, between the pots.
+   - *Emotional beat:* the cloud peeks back ("עכשיו שוב אין לי כלום"); Drake notices he is not angry but sad. Worm: "אולי הוא פשוט רוצה חבר?"
+   - *Teaser:* the whole team sets out for Rainbow Mountain, the cloud's home. *Keepsake:* a paintbrush feather, from King Roland.
 
 7. **המסע אל הר הקשת**: The team journeys to the Rainbow Mountain, where the cloud lives. Three friendly gates, each opened by one dragon's power:
    the water dragon fills a fountain, the sun dragon lights lanterns, and the fire dragon warms a frozen bridge.

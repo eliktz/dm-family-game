@@ -19,6 +19,8 @@ async function drive(until, ms = 300000) {
     if (/math/.test(ph)) { const c = await page.evaluate(() => __dm.math.current()); if (c) await page.locator(`#math .m-answers button[data-v="${c.answer}"]`).dispatchEvent('pointerup').catch(() => { }); }
     if (/^c4-catch/.test(ph)) { const xy = await page.evaluate(() => __dm.fireballScreen()); if (xy) await page.mouse.click(xy[0], xy[1]); }
     if (/^c5-pattern/.test(ph)) { const xy = await page.evaluate(() => __dm.crystalScreen()); if (xy) await page.mouse.click(xy[0], xy[1]); }
+    if (/^c6-pots/.test(ph)) { const xy = await page.evaluate(() => __dm.potScreen()); if (xy) await page.mouse.click(xy[0], xy[1]); }
+    if (ph === 'c6-fly-ready') await page.locator('#btn-team').dispatchEvent('pointerup').catch(() => { });
     if (ph === 'c2-place') { const xy = await page.evaluate(() => __dm.stoneScreen()); if (xy) await page.mouse.click(xy[0], xy[1]); }
     await page.waitForTimeout(350);
   }
@@ -45,6 +47,9 @@ const t3 = Date.now(); check(await drive(p => p === 'c4-celebrate', 400000), `ch
 // 3c. chapter 5 without animation frames: Petra walks in, three patterns, riddles, the shy dragon comes out
 await page.evaluate(() => __dm.go('ch5'));
 const t4 = Date.now(); check(await drive(p => p === 'c5-celebrate', 400000), `chapter 5 from start to the celebration without animation frames (${((Date.now() - t4) / 1000).toFixed(0)} s)`);
+// 3d. chapter 6 without animation frames: intro, the rail flight collecting by itself, pots, riddles, the sad cloud
+await page.evaluate(() => __dm.go('ch6'));
+const t5 = Date.now(); check(await drive(p => p === 'c6-celebrate', 500000), `chapter 6 from start to the celebration without animation frames (${((Date.now() - t5) / 1000).toFixed(0)} s)`);
 // 4. chapter 1 feeding (was a bare requestAnimationFrame loop) without animation frames
 await page.evaluate(() => __dm.go('bond')); await page.locator('#btn-feed').waitFor({ timeout: 120000 }); await page.waitForTimeout(800);
 await page.locator('#btn-feed').dispatchEvent('pointerup');

@@ -1,6 +1,6 @@
 // Diagnostic soak test for the chapter 2 cave (no gameplay changes): plays the cave beats in a loop the way the smoke
 // test does and, when nothing changes for STALL_S seconds, records what the page is doing.
-// Usage: node soak.mjs [baseURL] [--loops=10] [--device=iphone|ipad] [--stall=40] [--chapter=2|3|4|5]
+// Usage: node soak.mjs [baseURL] [--loops=10] [--device=iphone|ipad] [--stall=40] [--chapter=2|3|4|5|6]
 // --chapter=3 plays the garden and presses 🏠 mid-dialog in every loop (a bubble must never be stranded).
 import { webkit, devices } from 'playwright'; import { startServer } from './serve.mjs';
 import { fileURLToPath } from 'node:url'; import { dirname, join } from 'node:path';
@@ -35,7 +35,7 @@ async function diagnose(label) {
       pendingTimers: [...T.timers.values()].map(x => `${x.ms}ms@+${Math.round(now - x.at)}`).slice(0, 12), overdue: [...T.timers.values()].filter(x => now - x.at > x.ms + 1500).length,
       dialog: dlg.hidden ? null : { who: dlg.dataset.who, text: dlg.querySelector('.text').textContent }, math: __dm.math.current(), count: document.querySelector('#count').textContent,
       card: !document.querySelector('#card').hidden, actions: [...document.querySelector('#actions').children].map(x => x.id), fade: document.querySelector('#fade').classList.contains('on'),
-      ch2: __dm.ch2.debug(), ch3: __dm.ch3.debug(), ch4: __dm.ch4.debug(), ch5: __dm.ch5.debug(), ch2later: await new Promise(r => setTimeout(() => r(__dm.ch2.debug().tweens), 1000)), tickCalls1s: await new Promise(r => { const o = G.tick; let n = 0; if (!o) return r(-1); const w = (...a) => { n++; return o(...a); }; G.tick = w; setTimeout(() => { if (G.tick === w) G.tick = o; r(n); }, 1000); }),
+      ch2: __dm.ch2.debug(), ch3: __dm.ch3.debug(), ch4: __dm.ch4.debug(), ch5: __dm.ch5.debug(), ch6: __dm.ch6.debug(), ch2later: await new Promise(r => setTimeout(() => r(__dm.ch2.debug().tweens), 1000)), tickCalls1s: await new Promise(r => { const o = G.tick; let n = 0; if (!o) return r(-1); const w = (...a) => { n++; return o(...a); }; G.tick = w; setTimeout(() => { if (G.tick === w) G.tick = o; r(n); }, 1000); }),
       tick: !!G.tick, tap: !!G.tap, camGoal: !!G.camGoal, busy: G.busy, stone: __dm.stoneScreen(), lastPointer: T.ptr.slice(-4) };
   });
   console.log(`  STALL at ${label}: ` + JSON.stringify(d));
@@ -71,6 +71,8 @@ if (CH >= 3) for (let i = 1; i <= LOOPS; i++) { try {
     await page.locator('#dialog').dispatchEvent('pointerup'); await page.waitForTimeout(700);                 // the early tap that used to hide the new bubble
     if (!(await page.locator('#dialog:not([hidden])').count())) { note += ' BUBBLE HIDDEN AFTER HOME+CONTINUE'; stalls++; }
     ok = await drive(`loop ${i} ch${CH} play`, p => p === `c${CH}-celebrate`, async ph => {
+      if (/^c6-pots/.test(ph) && Date.now() - lastTap > 700) { const xy = await page.evaluate(() => __dm.potScreen()); if (xy) { await page.mouse.click(xy[0], xy[1]); taps++; lastTap = Date.now(); } }
+      if (ph === 'c6-fly-ready') await page.locator('#btn-team').dispatchEvent('pointerup').catch(() => { });
       if (/^c5-pattern/.test(ph) && Date.now() - lastTap > 600) { const xy = await page.evaluate(() => __dm.crystalScreen()); if (xy) { await page.mouse.click(xy[0], xy[1]); taps++; lastTap = Date.now(); } }
       if (/^c4-catch/.test(ph) && Date.now() - lastTap > 450) { const xy = await page.evaluate(() => __dm.fireballScreen()); if (xy) { await page.mouse.click(xy[0], xy[1]); taps++; lastTap = Date.now(); } }
       if (/^c\d-math/.test(ph)) { const c = await page.evaluate(() => __dm.math.current()); if (c) { await page.waitForTimeout(300); await page.locator(`#math .m-answers button[data-v="${c.answer}"]`).dispatchEvent('pointerup').catch(() => { }); await page.waitForTimeout(400); } }
