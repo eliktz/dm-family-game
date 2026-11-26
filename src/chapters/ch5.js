@@ -15,7 +15,7 @@ const COLS = [0x3fa9ff, 0xffd23f, 0xff5fa0], NOTES = [523, 659, 784];   // blue,
 const PATTERNS = [{ seq: [0, 1, 0, 1, 0, 1], given: 4 }, { seq: [0, 0, 1, 0, 0, 1], given: 4 }, { seq: [0, 1, 2, 0, 1, 2], given: 4 }];
 
 export function chapter5(G) {
-  const { THREE, cam, fx, worm, drake, griffith, cave, caveScene, ui, say, toast, hideToast, card, fade, sfx, runner, wait, tween } = G;
+  const { THREE, cam, fx, worm, drake, griffith, cave, caveScene, outdoor, world, ui, say, toast, hideToast, card, fade, sfx, runner, wait, tween, fl, actions, clearActions } = G;
   const V = (x, y, z) => new THREE.Vector3(x, y, z), $ = s => document.querySelector(s);
   const ease = k => k * k * (3 - 2 * k);
 
@@ -56,7 +56,70 @@ export function chapter5(G) {
     for (let i = 0; i < n; i++) setTimeout(() => { if (G.tick === tick && pat) { chime(pat.seq[i]); path[i].pop = performance.now(); } }, 380 * i);
     setTimeout(() => { humming = false; if (G.tick === tick) worm.setGlow(false); }, 380 * n + 200); }
 
+  // ---------------------------------------------------------------- the crystal tunnel (rail-guided flight, like chapters 3 and 4)
+  // A long glowing tunnel that winds down in a helix (about 485 m: 57 s). It lives in the outdoor scene, high above the
+  // castle, so the shared sun and environment light the dragons; the rest of the world is hidden while we are inside.
+  // Everything is unlit and tiny: one tube (3,000 triangles), one instanced mesh of wall crystals, 12 gate rings.
+  const helix = a => V(Math.cos(a) * 46, G.PLATEAU + 150 - a * 4.8, Math.sin(a) * 46);
+  class Helix extends THREE.Curve { getPoint(t, out = new THREE.Vector3()) { return out.copy(helix(-0.5 + t * 11.7)); } }
+  const tunnel = new THREE.Group(); tunnel.visible = false; outdoor.add(tunnel);
+  { const R = (() => { let s = 7; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
+    const tg = new THREE.TubeGeometry(new Helix(), 150, 13, 10, false).toNonIndexed(), n = tg.attributes.position.count, col = new Float32Array(n * 3);
+    for (let i = 0; i < n; i += 3) { const sh = 0.45 + R() * 0.55; for (let k = 0; k < 3; k++) { col[(i + k) * 3] = 0.11 * sh; col[(i + k) * 3 + 1] = 0.09 * sh; col[(i + k) * 3 + 2] = 0.25 * sh; } }
+    tg.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    const tube = new THREE.Mesh(tg, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false })); tube.castShadow = tube.receiveShadow = false; tunnel.add(tube);
+    const N = 210, wall = new THREE.InstancedMesh(crystalG, new THREE.MeshBasicMaterial({ fog: false }), N), m = new THREE.Matrix4(), q = new THREE.Quaternion(), up = V(0, 1, 0), c = new THREE.Color();
+    for (let i = 0; i < N; i++) { const a = -0.3 + (i + R()) / N * 11.3, ph = R() * Math.PI * 2, rad = V(Math.cos(a), 0, Math.sin(a)), dir = rad.clone().multiplyScalar(Math.cos(ph)).addScaledVector(up, Math.sin(ph));
+      const s = 1.4 + R() * 2.4; m.compose(helix(a).addScaledVector(dir, 12.4), q.setFromUnitVectors(up, dir.clone().negate()), V(s, s, s)); wall.setMatrixAt(i, m); wall.setColorAt(i, c.set(COLS[i % 3]).multiplyScalar(0.75 + R() * 0.5)); }
+    wall.castShadow = false; wall.frustumCulled = false; tunnel.add(wall); tunnel.userData.wallM = wall.material; }
+  const GATES = 12, gateG = new THREE.TorusGeometry(6.2, 0.42, 8, 28), gateM = COLS.map(c => new THREE.MeshBasicMaterial({ color: c, fog: false }));
+  const gates = Array.from({ length: GATES }, (_, i) => { // the colours repeat blue, yellow, pink: the pattern of the chapter
+    const a = 0.9 + i * 0.76, g = new THREE.Group(); g.position.copy(helix(a)); g.lookAt(helix(a + 0.05)); const ring = new THREE.Mesh(gateG, gateM[i % 3]); g.add(ring);
+    const sp = mkGlow(COLS[i % 3], 17); g.add(sp); tunnel.add(g); return { g, ring, sp, base: g.position.clone(), got: false, pop: 0 };
+  });
+  let tunneling = false, sparkAt = 0, sparking = false, sparkle = 0, rainbowAt = null;
+  function flightTick(dt, time) { // the crystal dragon keeps formation beside Worm; the NEXT gate always glows and pulses
+    const yaw = worm.root.rotation.y, c = Math.cos(yaw), s = Math.sin(yaw), ox = -4.6, oz = 1.0;
+    gem.root.position.set(worm.root.position.x + ox * c + oz * s, worm.root.position.y + 1.6 + Math.sin(time * 1.8) * 0.3, worm.root.position.z - ox * s + oz * c); gem.root.rotation.set(0, yaw, 0); gem.update(dt, time);
+    const ni = G.nextItem(); sparkle = Math.max(0, sparkle - dt * 1.2); tunnel.userData.wallM.color.setScalar(1 + sparkle * 0.9 + 0.08 * Math.sin(time * 3));
+    gates.forEach((o, i) => { if (o.got) { o.pop += dt; const k = Math.max(0, 1 - o.pop * 2.5); o.g.scale.setScalar(k * (1 + o.pop * 1.5)); o.g.visible = k > 0; }
+      else { const hi = i === ni; o.sp.material.opacity = hi ? 0.75 + 0.2 * Math.sin(time * 6) : 0.18; if (!sparking || !hi) o.g.scale.setScalar(hi ? 1 + 0.06 * Math.sin(time * 6) : 0.92); } });
+  }
+  function onGate(i, o) { // each gate chimes its colour's note, so the tunnel plays the pattern as a tune
+    const n = fl.got; sfx.note(NOTES[i % 3]); fx.burst(fl.pos.clone(), COLS[i % 3], 44, 7, 0.6, 1.2, 0); worm.wiggle(0.8); gem.wiggle(1);
+    G.setCounter(`${n} / ${GATES}`, '💎');
+    const line = { 1: 'כחול, צהוב, ורוד… הדוגמה ממשיכה! 💎', 6: 'חצי דרך! איזו מנהרה יפה', 11: 'רק עוד שער אחד!' }[n]; if (line) toast('worm', line, 2000);
+  }
+  // The crystal dragon's sparkle (power button): the whole tunnel lights up and the next gate flies to Worm. Always
+  // works; a 2.5 s rest between uses keeps the flight the longest part of the chapter.
+  function crystalSparkle() {
+    const i = G.nextItem(), o = gates[i], now = performance.now(); if (!tunneling || !o || sparking || now - sparkAt < 2500 || fl.done) return;
+    sparking = true; sparkAt = now; sparkle = 1; gem.setGlow(true); gem.wiggle(1.2); sfx.magic(); const from = o.g.position.clone(), head = gem.headWorld();
+    for (let k = 0; k <= 5; k++) fx.burst(head.clone().lerp(from, k / 5), COLS[i % 3], 10, 2, 0.45, 0.7, 0);
+    tween(0.5, k => { o.g.position.lerpVectors(from, fl.pos, k * k); o.g.scale.setScalar(1 - 0.6 * k); }).then(() => { sparking = false; gem.setGlow(false); if (tunneling && !o.got && G.nextItem() === i) G.collectNext(); });
+  }
+  const endTunnel = () => { tunneling = false; sparking = false; tunnel.visible = false; world.group.visible = true; clearActions(); caveScene.add(gem.root); gem.setGlow(false); gem.setPose('rest'); };
+  async function flight(step) {
+    showAll(false); for (const o of gates) { o.got = false; o.pop = 0; o.g.visible = true; o.g.scale.setScalar(1); o.g.position.copy(o.base); }
+    G.startFlight({ items: gates, lead: [helix(0), helix(0.45)], exit: [helix(9.8), helix(10.15), helix(10.5)], speed: 8.5, camSide: -1, corridor: [3, 2], lookDown: 2.2, onCollect: onGate });
+    world.group.visible = false; G.stars.group.visible = false; tunnel.visible = true;
+    outdoor.add(gem.root); gem.root.visible = true; gem.state.shy = false; gem.setPose('fly'); gem.state.blend = 1; gem.lookAt(null); tunneling = true; sparking = false; sparkle = 0;
+    G.tick = tick; G.phase = 'c5-flight'; G.checkpoint(5, 'flight'); G.setCounter(`0 / ${GATES}`, '💎');
+    await step(fade(false)); G.showJoy(true); worm.wiggle(1);
+    toast('worm', 'טסים דרך שערי הקריסטל! השער הבא תמיד זוהר ✨', 3800);
+    await step(wait(3900));
+    actions([{ id: 'btn-sparkle', label: '✨ נצנוץ קריסטל!', onClick: crystalSparkle }]);
+    await step(G.waitFor(() => fl.got >= GATES));
+    G.phase = 'c5-flight-done'; fl.done = true; G.showJoy(false); clearActions(); sfx.fanfare(); worm.wiggle(2); gem.wiggle(2);
+    toast('worm', `איזו מנהרה! תודה, ${PETRA_DRAGON_NAME}!`, 2600);
+    await step(wait(2600)); await step(fade(true));
+    endTunnel(); stage(true); document.querySelector('#counter').hidden = true;
+    gem.root.visible = true; gem.state.shy = false; gem.root.position.copy(HIDE[3]); if (rainbowAt) { rainbow.visible = true; rainbow.position.copy(rainbowAt); }
+    G.camGoal = CAM_WIDE; await step(fade(false));
+  }
+
   function tick(dt, time) {
+    if (G.mode === 'flight' && tunneling) return flightTick(dt, time);
     if (G.mode !== 'cave') return;
     gem.update(dt, time); petra.update(dt, time); drake.setWalk(0);
     const now = performance.now();
@@ -68,7 +131,7 @@ export function chapter5(G) {
     arrow.visible = active; if (active) { arrow.position.copy(SLOTS[next]).y += 1.35 + Math.sin(time * 4) * 0.15; arrow.rotation.y = time * 2; }
     if (rainbow.visible) rainbow.rotation.y = time * 1.5;
   }
-  function cleanup() { active = false; done = null; pat = null; showAll(false); cave.closeGate(); griffith.root.position.set(7.2, 0, -3.5); }
+  function cleanup() { active = false; done = null; pat = null; endTunnel(); showAll(false); cave.closeGate(); griffith.root.position.set(7.2, 0, -3.5); }
   const begin = () => { G.tick = tick; G.onLeave = cleanup; G.tap = onTap; };
 
   function onTap(ray) {
@@ -132,7 +195,8 @@ export function chapter5(G) {
       G.camGoal = CAM_WORM; worm.setGlow(true); sfx.magic(); worm.lookAt(SLOTS[2]);
       await step(say('worm', 'אני אזמזם לקריסטלים. דרייק, בחר איזה קריסטל בא אחר כך!'));
       worm.setGlow(false);
-    } else await step(fade(false));
+    } else if (from !== 'flight') await step(fade(false));
+    if (from !== 'flight') {
     G.checkpoint(5, 'patterns');
     await pattern(step, 1);
     toast('petra', `תראו, ${PETRA_DRAGON_NAME} מציץ!`, 2000); await step(wait(1400));
@@ -152,6 +216,13 @@ export function chapter5(G) {
     await step(tween(1.6, k => { const e = ease(k); rainbow.position.lerpVectors(r0, r1, e); rainbow.position.y += Math.sin(e * Math.PI) * 1.4; }));
     G.camGoal = CAM_WIDE; worm.wiggle(2); worm.lookAt(rainbow.position);
     await step(say('petra', 'קריסטל קשת! הוא נותן אותו רק לחברים אמיתיים.'));
+    rainbowAt = rainbow.position.clone();
+    // ---- the action set piece: the crystal dragon shows his friends his crystal tunnel
+    G.phase = 'c5-fly-ready'; toast('petra', `${PETRA_DRAGON_NAME} רוצה להראות לכם את מנהרת הקריסטלים שלו!`, 3400);
+    await step(new Promise(res => actions([{ id: 'btn-tunnel-fly', label: '💎 טסים במנהרה!', cls: 'pulse', onClick: () => res() }])));
+    clearActions(); worm.setGlow(true); sfx.magic(); await step(wait(600)); worm.setGlow(false); await step(fade(true));
+    }
+    await flight(step);
     G.phase = 'c5-celebrate'; sfx.fanfare(); worm.wiggle(2.5); gem.wiggle(2); petra.wave(3); drake.wave(3);
     for (let i = 0; i < 3; i++) setTimeout(() => { if (G.tick === tick) fx.confetti(V(2.5, 3.4, -1), 60); }, i * 500);
     await step(wait(1800));
@@ -173,7 +244,7 @@ export function chapter5(G) {
   return {
     start: story, showAll,
     nextCrystalPos(wrong = false) { if (!active || !pat) return null; const want = pat.seq[next]; return choices[wrong ? (want + 1) % 3 : want].g.position.clone(); },
-    debug: () => ({ tweens: G.tweenCount(), active, next, misses, hint, pattern: pat ? PATTERNS.indexOf(pat) + 1 : 0 }),
+    debug: () => ({ tweens: G.tweenCount(), active, next, misses, hint, pattern: pat ? PATTERNS.indexOf(pat) + 1 : 0, tunneling }),
     modelTargets: { petra, crystalDragon: gem },
   };
 }

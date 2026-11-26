@@ -86,8 +86,8 @@ export function chapter4(G) {
   });
   let chasing = false, puffAt = 0, puffing = false;
   function flightTick(dt, time) { // Vulcan keeps formation on the inside of the turn; the fireballs bob and flicker
-    const yaw = worm.root.rotation.y, c = Math.cos(yaw), s = Math.sin(yaw), ox = 5.6, oz = -0.8;
-    vulcan.root.position.set(worm.root.position.x + ox * c + oz * s, worm.root.position.y + 0.6 + Math.sin(time * 1.8) * 0.35, worm.root.position.z - ox * s + oz * c); vulcan.root.rotation.set(0, yaw, 0); vulcan.update(dt, time);
+    const yaw = worm.root.rotation.y, c = Math.cos(yaw), s = Math.sin(yaw), ox = 5.6, oz = 1.6; // a little ahead of Worm and higher, so his tail stays clear of the joystick corner
+    vulcan.root.position.set(worm.root.position.x + ox * c + oz * s, worm.root.position.y + 2.6 + Math.sin(time * 1.8) * 0.35, worm.root.position.z - ox * s + oz * c); vulcan.root.rotation.set(0, yaw, 0); vulcan.update(dt, time);
     const ni = G.nextItem();
     chase.forEach((o, i) => { if (o.got) { o.pop += dt; const k = Math.max(0, 1 - o.pop * 2.5); o.g.scale.setScalar(k * (1 + o.pop * 3)); o.g.visible = k > 0; }
       else { if (!puffing || i !== ni) o.g.position.y = o.base.y + Math.sin(time * 2.2 + i * 1.7) * 0.6; o.sp.material.opacity = (i === ni ? 0.85 : 0.6) + 0.12 * Math.sin(time * 9 + i); } });
@@ -112,7 +112,7 @@ export function chapter4(G) {
     showAll(false); rori.root.visible = table.visible = cloth.visible = true; setTable(); G.stars.group.visible = false;
     chaseGroup.visible = true; for (const o of chase) { o.got = false; o.pop = 0; o.g.visible = true; o.g.scale.setScalar(1); o.g.position.copy(o.base); }
     vulcan.root.visible = true; vulcan.setPose('fly'); vulcan.state.blend = 1; vulcan.lookAt(null); chasing = true; puffing = false;
-    G.startFlight({ items: chase, lead: [spiral(3.2, 38, 11.5), spiral(2.75, 38, 12)], exit: [spiral(-6.0, 61, 14), spiral(-6.4, 61, 13), spiral(-6.8, 60, 12)], speed: 8.5, camSide: 1, onCollect: onBall });
+    G.startFlight({ items: chase, lead: [spiral(3.2, 38, 11.5), spiral(2.75, 38, 12)], exit: [spiral(-6.0, 61, 14), spiral(-6.4, 61, 13), spiral(-6.8, 60, 12)], speed: 8.5, camSide: 1, lookDown: 3.2, onCollect: onBall });
     G.tick = tick; G.phase = 'c4-flight'; G.checkpoint(4, 'flight'); G.setCounter('10', '🍞');
     await step(fade(false)); G.showJoy(true); worm.wiggle(1); G.glance(1.4);
     toast('worm', 'כדורי האש עפו לשמיים! תופסים אותם יחד עם וולקן 🔥', 3800);

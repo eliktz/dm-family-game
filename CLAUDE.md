@@ -81,7 +81,11 @@ A Hebrew, iPad-first, **plot-driven** three.js game for Elik's 7-year-old son, b
 - **Chapter 6 (cloud):** `src/chapters/ch6.js`: a rail flight (`G.startFlight`, mode `flight`) with Kepri and Vulcan borrowed from chapters 3-4
   through `G.team`, then the lawn (mode `paint`). The Grumble Cloud is one shared actor (`G.grumble`, built in ch3.js, GLB key `grumbleCloud`); its
   expression loops are set with `state.mood` ('sad' / 'happy'). Debug: `__dm.go('ch6' | 'ch6-flight' | 'ch6-pots' | 'ch6-end')`, `__dm.potScreen()`.
-- **Chapter 5 (crystals):** `src/chapters/ch5.js` in the cave scene (mode `cave`, cameras through `G.camGoal`). Petra's dragon's name lives only in
+- **Chapter 5 (crystals):** `src/chapters/ch5.js` in the cave scene (mode `cave`, cameras through `G.camGoal`). After the rainbow crystal comes
+  the crystal tunnel (mode `flight`, phases `c5-fly-ready` → `c5-flight` → `c5-flight-done`): a helix tube built once in the OUTDOOR scene high above
+  the castle (unlit tube + one instanced mesh of wall crystals + 12 gate rings in the blue/yellow/pink pattern; `world.group` is hidden while inside),
+  the crystal dragon beside Worm, the next gate always glows, `#btn-sparkle` (✨, 2.5 s rest). `endTunnel()` restores the world and puts the dragon back
+  in the cave scene. `__dm.go('ch5-flight')`. `startFlight({ lookDown })` aims the chase camera lower on the short iPhone screen only. Petra's dragon's name lives only in
   `src/names.js` (`PETRA_DRAGON_NAME`). Debug: `__dm.go('ch5' | 'ch5-patterns' | 'ch5-end')`, `__dm.crystalScreen(wrong?)`, `__dm.ch5.debug()`.
 - **Chapter 4 (bakery):** `src/chapters/ch4.js`, mode `bakery`. After the second riddle comes the fireball chase (mode `flight`, phases
   `c4-fly-ready` → `c4-flight` → `c4-flight-done`): 12 fireballs on a clockwise spiral rail with Vulcan beside Worm, `#btn-puff` (🔥, 2.5 s rest)

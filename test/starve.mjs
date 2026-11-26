@@ -23,6 +23,7 @@ async function drive(until, ms = 300000) {
     if (ph === 'c6-fly-ready') await page.locator('#btn-team').dispatchEvent('pointerup').catch(() => { });
     if (ph === 'c3-fly-ready') await page.locator('#btn-sun-fly').dispatchEvent('pointerup').catch(() => { });
     if (ph === 'c4-fly-ready') await page.locator('#btn-fire-fly').dispatchEvent('pointerup').catch(() => { });
+    if (ph === 'c5-fly-ready') await page.locator('#btn-tunnel-fly').dispatchEvent('pointerup').catch(() => { });
     if (ph === 'c2-place') { const xy = await page.evaluate(() => __dm.stoneScreen()); if (xy) await page.mouse.click(xy[0], xy[1]); }
     await page.waitForTimeout(350);
   }

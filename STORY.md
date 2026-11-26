@@ -80,6 +80,8 @@ steps and removes one wrong answer, and on the third Worm shows the answer and t
      after two misses or a quiet while the right one glows. After each pattern the shy dragon comes a little closer.
    - *Riddles:* a missing number and a multiplication (counting in equal steps) from the adaptive engine, between the patterns.
    - *Friendship moment:* Worm tells him that being quiet is okay, and that friends don't need many words.
+   - *Action, the crystal tunnel:* the shy dragon shows his friends his tunnel: a long rail flight (about 57 s) through 12 crystal gates in the
+     blue, yellow, pink pattern. The next gate always glows and each one chimes its note. His ✨ button lights the tunnel and brings the next gate to Worm.
    - *Teaser:* all the colours are vanishing from the kingdom! *Keepsake:* a rainbow crystal.
 
 6. **הענן הרטנן** (done): the Grumble Cloud takes the colours from King Roland's flower beds ("הם שלי עכשיו!") and hides them in little grey

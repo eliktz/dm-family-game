@@ -254,7 +254,7 @@ function smoothDamp(o, target, smoothTime, dt) {
 // 4.5 m to collect, forever: the autopilot only helped once the stick was released.)
 // camSide: which side the chase / glance camera sits on (1 = left of the flight direction, -1 = right).
 // cfg: { items (list of {g, base, got, pop}), loop (closed path, keeps cruising when done), lead / exit (extra path points
-//        before / after the items), pathPts? (explicit rail points), startU, speed?, corridor? [side, up], onCollect(i, item) }
+//        before / after the items), pathPts? (explicit rail points), startU, speed?, corridor? [side, up], lookDown? (iPhone only), onCollect(i, item) }
 function startFlight(cfg) {
   useScene(outdoor); G.mode = 'flight';
   king.root.position.set(0, PLATEAU + 7.0, 15.6); king.root.scale.setScalar(1.7);
@@ -264,7 +264,7 @@ function startFlight(cfg) {
   const N = 800, itemU = cfg.items.map(() => 0), best = cfg.items.map(() => Infinity), q = new THREE.Vector3();
   for (let k = 0; k <= N; k++) { path.getPointAt(k / N, q); cfg.items.forEach((it, i) => { const d = q.distanceToSquared(it.base); if (d < best[i]) { best[i] = d; itemU[i] = k / N; } }); }
   Object.assign(fl, { got: 0, done: false, kingSaid: false, vy: 0, yawRate: 0, glanceT: 0, items: cfg.items, onCollect: cfg.onCollect || null,
-    speed: cfg.speed ?? 8.5, corridor: cfg.corridor ?? [5, 3.5], path, len: path.getLength(), loop: !!cfg.loop, itemU, u: cfg.startU ?? 0, ox: 0, oy: 0, since: 0, helped: false, yaw: null, camSide: cfg.camSide ?? 1 });
+    speed: cfg.speed ?? 8.5, corridor: cfg.corridor ?? [5, 3.5], path, len: path.getLength(), loop: !!cfg.loop, itemU, u: cfg.startU ?? 0, ox: 0, oy: 0, since: 0, helped: false, yaw: null, camSide: cfg.camSide ?? 1, lookDown: cfg.lookDown ?? 0 });
   fl.cam.v = fl.cam.vel = 0; path.getPointAt(((fl.u % 1) + 1) % 1, fl.pos);
   worm.setPose('fly'); worm.state.blend = 1; worm.setGlow(false); worm.lookAt(null);
   drake.setSit(1); drake.setWalk(0); drake.root.scale.setScalar(1);
@@ -334,7 +334,7 @@ function updateFlight(dt) {
   const k = fl.cam.v, lerp = THREE.MathUtils.lerp;
   const ang = lerp(0.21, 1.85, k), rad = lerp(15.3, 11, k); // orbit from behind (chase) round to his face side
   const camPos = fl.pos.clone().addScaledVector(fwd, -Math.cos(ang) * rad).addScaledVector(side, Math.sin(ang) * rad * fl.camSide).add(new THREE.Vector3(0, lerp(6.5, 3.2, k), 0));
-  const look = fl.pos.clone().addScaledVector(fwd, lerp(10, 1.0, k)).add(new THREE.Vector3(0, lerp(0.5, 0.8, k), 0));
+  const look = fl.pos.clone().addScaledVector(fwd, lerp(10, 1.0, k)).add(new THREE.Vector3(0, lerp(0.5, 0.8, k) - (engine.viewShift ? fl.lookDown : 0), 0)); // lookDown: aim lower on the short iPhone screen so Worm sits higher in the frame
   camPos.y = Math.max(camPos.y, heightAt(camPos.x, camPos.z) + 1.5);
   if (camSnap) { cam.position.copy(camPos); camLook.copy(look); camSnap = false; }
   cam.position.lerp(camPos, Math.min(1, dt * 3)); camLook.lerp(look, Math.min(1, dt * 4)); cam.lookAt(camLook);
@@ -525,7 +525,7 @@ const GO = {
   ch2: () => guard(() => ch2.start('intro')), 'ch2-glide': () => guard(() => ch2.start('glide')), 'ch2-warm': () => guard(() => ch2.start('warm')),
   'ch2-hatch': () => guard(() => ch2.start('hatch')), 'ch2-end': () => guard(() => ch2.start('end')),
   ch6: () => guard(() => ch6.start('intro')), 'ch6-flight': () => guard(() => ch6.start('flight')), 'ch6-pots': () => guard(() => ch6.start('pots')), 'ch6-end': () => guard(() => ch6.start('end')),
-  ch5: () => guard(() => ch5.start('intro')), 'ch5-patterns': () => guard(() => ch5.start('patterns')), 'ch5-end': () => guard(() => ch5.start('end')),
+  ch5: () => guard(() => ch5.start('intro')), 'ch5-patterns': () => guard(() => ch5.start('patterns')), 'ch5-flight': () => guard(() => ch5.start('flight')), 'ch5-end': () => guard(() => ch5.start('end')),
   ch4: () => guard(() => ch4.start('intro')), 'ch4-catch': () => guard(() => ch4.start('catch')), 'ch4-flight': () => guard(() => ch4.start('flight')), 'ch4-end': () => guard(() => ch4.start('end')),
   ch3: () => guard(() => ch3.start('intro')), 'ch3-mirrors': () => guard(() => ch3.start('mirrors')), 'ch3-flight': () => guard(() => ch3.start('flight')), 'ch3-end': () => guard(() => ch3.start('end')),
 };
