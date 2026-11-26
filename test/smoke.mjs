@@ -245,9 +245,9 @@ async function run(dev) {
     await clearOfActors('flight lap 2 HUD'); await shot('10b-flight-rings');
     // prove it is the button and not the rail: press it while the next ring is still far ahead; the ring must be in well before Worm could fly there
     { const far = await (await page.waitForFunction(() => { const fl = __dm.G.fl, i = fl.items.findIndex(s => !s.got), r = fl.items[i]; if (!r || !r.gold) return null; const d = r.base.distanceTo(fl.pos); if (d < 18) return null;
-        document.querySelector('#btn-lift').dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); return { i, d: Math.round(d), t: __dm.G.time }; }, null, { timeout: 30000 })).jsonValue();
-      const dt = await (await page.waitForFunction(f => __dm.G.fl.items[f.i].got ? __dm.G.time - f.t : null, far, { timeout: 20000 })).jsonValue();
-      check(dt < far.d / 8.5 * 0.7, `mind-lift pulled a ring ${far.d} m ahead to Worm in ${dt.toFixed(1)} s of game time (flying there takes ${(far.d / 8.5).toFixed(1)} s)`); }
+        document.querySelector('#btn-lift').dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); return { i, d: Math.round(d), t: performance.now() }; }, null, { timeout: 30000 })).jsonValue();
+      const dt = await (await page.waitForFunction(f => __dm.G.fl.items[f.i].got ? (performance.now() - f.t) / 1000 : null, far, { timeout: 20000 })).jsonValue();
+      check(dt < far.d / 8.5 * 0.7, `mind-lift pulled a ring ${far.d} m ahead to Worm in ${dt.toFixed(1)} s (flying there takes ${(far.d / 8.5).toFixed(1)} s)`); }
     log('ok', 'the mind-lift button pulls the next ring to Worm (' + (await page.locator('#count').innerText()).trim() + ')'); await page.waitForTimeout(600); await shot('10c-mind-lift');
     await page.evaluate(() => __dm.collectAll());
     await advanceTo('celebrate'); await page.waitForTimeout(1200); await bubbleCap('ch1'); await shot('11-celebrate-sky');
@@ -291,10 +291,10 @@ async function run(dev) {
       check(g.btn && g.h >= (dev.name === 'ipad' ? 72 : 44) && g.shu, `Shu swims below and her splash button is a big touch target (${g.w}×${g.h})`); await clearOfActors('river glide HUD with the splash button'); }
     // prove it is the button and not the rail: press while the next pair is still far ahead; it must be in well before Worm could fly there
     { const far = await (await page.waitForFunction(() => { const fl = __dm.G.fl, i = fl.items.findIndex(s => !s.got), r = fl.items[i]; if (!r) return null; const d = r.base.distanceTo(fl.pos); if (d < 18) return null;
-        document.querySelector('#btn-splash').dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); return { i, d: Math.round(d), t: __dm.G.time }; }, null, { timeout: 30000 })).jsonValue();
+        document.querySelector('#btn-splash').dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); return { i, d: Math.round(d), t: performance.now() }; }, null, { timeout: 30000 })).jsonValue();
       await page.waitForTimeout(250); await shot('ch2-06b-shu-splash');
-      const dt = await (await page.waitForFunction(f => __dm.G.fl.items[f.i].got ? __dm.G.time - f.t : null, far, { timeout: 20000 })).jsonValue();
-      check(dt < far.d / 8 * 0.7, `Shu's splash lifted a pair ${far.d} m ahead to Worm in ${dt.toFixed(1)} s of game time (flying there takes ${(far.d / 8).toFixed(1)} s)`); }
+      const dt = await (await page.waitForFunction(f => __dm.G.fl.items[f.i].got ? (performance.now() - f.t) / 1000 : null, far, { timeout: 20000 })).jsonValue();
+      check(dt < far.d / 8 * 0.7, `Shu's splash lifted a pair ${far.d} m ahead to Worm in ${dt.toFixed(1)} s (flying there takes ${(far.d / 8).toFixed(1)} s)`); }
     await page.evaluate(() => __dm.collectAll());
     await advanceTo('c2-warm'); await page.waitForTimeout(1500); await shot('ch2-07-warm-egg');
     await advanceTo('c2-math'); await page.waitForTimeout(800);
@@ -361,10 +361,10 @@ async function run(dev) {
       check(/^12( − \d+ = \d+)?$/.test(g.count), `the orb counter counts down as a subtraction (${g.count})`);
       check(g.h >= (dev.name === 'ipad' ? 72 : 44), `Kepri's sunbeam button is a big touch target (${g.w}×${g.h})`); await clearOfActors('sunbeam flight HUD'); await shot('ch3-06b-sunbeam-flight'); }
     { const far = await (await page.waitForFunction(() => { const fl = __dm.G.fl, i = fl.items.findIndex(s => !s.got), r = fl.items[i]; if (!r) return null; const d = r.base.distanceTo(fl.pos); if (d < 18) return null;
-        document.querySelector('#btn-sunbeam').dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); return { i, d: Math.round(d), t: __dm.G.time }; }, null, { timeout: 30000 })).jsonValue();
+        document.querySelector('#btn-sunbeam').dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); return { i, d: Math.round(d), t: performance.now() }; }, null, { timeout: 30000 })).jsonValue();
       await page.waitForTimeout(250); await shot('ch3-06c-kepri-sunbeam');
-      const dt = await (await page.waitForFunction(f => __dm.G.fl.items[f.i].got ? __dm.G.time - f.t : null, far, { timeout: 20000 })).jsonValue();
-      check(dt < far.d / 8.5 * 0.7, `Kepri's sunbeam carried an orb ${far.d} m ahead to Worm in ${dt.toFixed(1)} s of game time (flying there takes ${(far.d / 8.5).toFixed(1)} s)`);
+      const dt = await (await page.waitForFunction(f => __dm.G.fl.items[f.i].got ? (performance.now() - f.t) / 1000 : null, far, { timeout: 20000 })).jsonValue();
+      check(dt < far.d / 8.5 * 0.7, `Kepri's sunbeam carried an orb ${far.d} m ahead to Worm in ${dt.toFixed(1)} s (flying there takes ${(far.d / 8.5).toFixed(1)} s)`);
       const c = (await page.locator('#count').innerText()).replace(/\s+/g, ' ').trim(); check(/^12 − \d+ = \d+$/.test(c) && await page.evaluate(() => getComputedStyle(document.querySelector('#count')).direction === 'ltr'), `orb counter shows a subtraction, laid out ltr (${c})`); }
     await page.evaluate(() => __dm.collectAll());
     await advanceTo('c3-bloom', 300000); await page.waitForTimeout(1500); await shot('ch3-07-garden-blooms');
@@ -403,7 +403,21 @@ async function run(dev) {
       check(await solveBeat('c4-math' + r, { firstWrong: r === 1, shotName: r === 1 ? 'ch4-05-loaf-riddle' : null }) === 1, `loaf riddle ${r} asked once`);
     }
     check((await page.locator('#count').innerText()).trim() === '10 / 10', 'ten loaves on the table');
-    await advanceTo('c4-breathe'); await page.waitForTimeout(2500); await shot('ch4-06-breathing');
+    // ---- the fireball chase with Vulcan: a long rail flight catching 12 fireballs, with his power button
+    await advanceTo('c4-fly-ready'); await page.locator('#btn-fire-fly').waitFor({ state: 'visible', timeout: 20000 }); await page.waitForTimeout(600); await clearOfActors('ch4 chase button'); await tap('#btn-fire-fly');
+    await page.waitForFunction(() => __dm.phase === 'c4-flight' && !!document.querySelector('#btn-puff'), null, { timeout: 120000 }); await page.waitForTimeout(1200);
+    { const g = await page.evaluate(() => { const fl = __dm.G.fl, r = document.querySelector('#btn-puff').getBoundingClientRect(); return { balls: fl.items.length, len: Math.round(fl.len), speed: fl.speed, w: Math.round(r.width), h: Math.round(r.height), chasing: __dm.ch4.debug().chasing, count: document.querySelector('#count').textContent.replace(/\s+/g, ' ').trim() }; });
+      check(g.balls === 12 && g.chasing && g.len / g.speed >= 45 && g.len / g.speed <= 60, `fireball chase: ${g.balls} fireballs on a ${g.len} m rail, about ${Math.round(g.len / g.speed)} s of flying with Vulcan`);
+      check(/^10( \+ \d+ = \d+)?$/.test(g.count), `the bun counter adds on to the ten loaves (${g.count})`);
+      check(g.h >= (dev.name === 'ipad' ? 72 : 44), `Vulcan's puff button is a big touch target (${g.w}×${g.h})`); await clearOfActors('fireball chase HUD'); await shot('ch4-05b-fireball-chase'); }
+    { const far = await (await page.waitForFunction(() => { const fl = __dm.G.fl, i = fl.items.findIndex(s => !s.got), r = fl.items[i]; if (!r) return null; const d = r.base.distanceTo(fl.pos); if (d < 18) return null;
+        document.querySelector('#btn-puff').dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); return { i, d: Math.round(d), t: performance.now() }; }, null, { timeout: 30000 })).jsonValue();
+      await page.waitForTimeout(250); await shot('ch4-05c-vulcan-puff');
+      const dt = await (await page.waitForFunction(f => __dm.G.fl.items[f.i].got ? (performance.now() - f.t) / 1000 : null, far, { timeout: 20000 })).jsonValue();
+      check(dt < far.d / 8.5 * 0.7, `Vulcan's puff carried a fireball ${far.d} m ahead to Worm in ${dt.toFixed(1)} s (flying there takes ${(far.d / 8.5).toFixed(1)} s)`);
+      const c = (await page.locator('#count').innerText()).replace(/\s+/g, ' ').trim(); check(/^10 \+ \d+ = \d+$/.test(c) && await page.evaluate(() => getComputedStyle(document.querySelector('#count')).direction === 'ltr'), `bun counter shows a sum, laid out ltr (${c})`); }
+    await page.evaluate(() => __dm.collectAll());
+    await advanceTo('c4-breathe', 300000); await page.waitForTimeout(2500); await shot('ch4-06-breathing');
     await advanceTo('c4-feast'); await page.waitForTimeout(1200); await shot('ch4-07-feast');
     await advanceTo('c4-celebrate'); await bubbleCap('ch4'); await page.locator('#card:not([hidden])').waitFor({ timeout: 30000 });
     check((await page.locator('#card').innerText()).includes('גחלת'), 'ch4 celebration card with the ember keepsake');

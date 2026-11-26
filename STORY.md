@@ -69,6 +69,8 @@ steps and removes one wrong answer, and on the third Worm shows the answer and t
    - *Riddles:* an addition after the first row and a missing number after the second, from the adaptive engine.
    - *The cure:* Worm teaches Vulcan to breathe slowly with him (a calm, guided moment, no rhythm game) and the hiccups stop.
      One last tiny hiccup leaves a small ember.
+   - *Action, the fireball chase:* one giant hiccup sends 12 little fireballs up round the castle. Worm, Drake and Vulcan chase them on a rail (about 55 s);
+     each one caught becomes a warm bun and the counter adds on to the ten loaves (10 + 4 = 14). Vulcan's 🔥 button carries the next fireball to Worm.
    - *Teaser:* a strange echo comes from the crystal caves… *Keepsake:* a warm ember (glows but doesn't burn).
 
 5. **מערת הקריסטלים של פטרה** (done): the strange echo in the Dragon Cave is **Petra's shy crystal dragon**, hiding in the dark. His name is a

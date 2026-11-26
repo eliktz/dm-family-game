@@ -13,7 +13,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 const FIRE = { back: 0xa8261c, side: 0xd2402a, belly: 0xffc978, tail: 0xd2402a, spike: 0xff9a2e, head: 0xc4331f, muzzle: 0xe2603a, fin: 0xff8a2a, horn: 0xffe2b0, iris: 0x7a2a10, sheen: 0xffc0a0 };
 
 export function chapter4(G) {
-  const { THREE, cam, fx, worm, drake, outdoor, heightAt, sun, world, ui, say, toast, hideToast, card, fade, sfx, runner, wait, tween } = G;
+  const { THREE, cam, fx, worm, drake, outdoor, heightAt, sun, world, ui, say, toast, hideToast, card, fade, sfx, runner, wait, tween, fl, actions, clearActions } = G;
   const V = (x, y, z) => new THREE.Vector3(x, y, z), $ = s => document.querySelector(s);
   const ground = (x, z, up = 0) => V(x, heightAt(x, z) + up, z);
   const ease = k => k * k * (3 - 2 * k), lerp = THREE.MathUtils.lerp;
@@ -72,7 +72,62 @@ export function chapter4(G) {
     if (caught >= target && catchDone) { const r = catchDone; catchDone = null; catching = false; setTimeout(r, ui.fast ? 0 : 600); }
   }
 
+  // ---------------------------------------------------------------- the fireball chase (rail-guided, like the other chapters' flights)
+  // One giant hiccup sends 12 little fireballs up round the castle. Worm, Drake and Vulcan fly a spiral rail (clockwise,
+  // opening out; about 55 s) and every fireball they reach turns into a warm bun. The balls reuse the bakery's geometry,
+  // material and glow texture, so the chase adds almost nothing to the budget.
+  const CHASE = 12, chaseGroup = new THREE.Group(); chaseGroup.visible = false; outdoor.add(chaseGroup);
+  const spiral = (a, R, y) => V(Math.cos(a) * R, G.PLATEAU + y, Math.sin(a) * R);
+  const chase = Array.from({ length: CHASE }, (_, i) => {
+    const g = new THREE.Group(); g.position.copy(spiral(2.3 - i * 0.72, 38 + i * 1.9, 12 + 3.2 * Math.sin(i * 1.4) + i * 0.25)); g.position.y = Math.max(g.position.y, heightAt(g.position.x, g.position.z) + 8); // never inside a hill
+    const m = new THREE.Mesh(ballG, ballM); m.scale.setScalar(2); g.add(m);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: fireTex, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.8 })); sp.scale.setScalar(6.5); g.add(sp); chaseGroup.add(g);
+    return { g, sp, base: g.position.clone(), got: false, pop: 0 };
+  });
+  let chasing = false, puffAt = 0, puffing = false;
+  function flightTick(dt, time) { // Vulcan keeps formation on the inside of the turn; the fireballs bob and flicker
+    const yaw = worm.root.rotation.y, c = Math.cos(yaw), s = Math.sin(yaw), ox = 5.6, oz = -0.8;
+    vulcan.root.position.set(worm.root.position.x + ox * c + oz * s, worm.root.position.y + 0.6 + Math.sin(time * 1.8) * 0.35, worm.root.position.z - ox * s + oz * c); vulcan.root.rotation.set(0, yaw, 0); vulcan.update(dt, time);
+    const ni = G.nextItem();
+    chase.forEach((o, i) => { if (o.got) { o.pop += dt; const k = Math.max(0, 1 - o.pop * 2.5); o.g.scale.setScalar(k * (1 + o.pop * 3)); o.g.visible = k > 0; }
+      else { if (!puffing || i !== ni) o.g.position.y = o.base.y + Math.sin(time * 2.2 + i * 1.7) * 0.6; o.sp.material.opacity = (i === ni ? 0.85 : 0.6) + 0.12 * Math.sin(time * 9 + i); } });
+  }
+  function onBall(i, o) { // caught: a puff of steam and a warm bun for the feast
+    const n = fl.got; sfx.star(n - 1); fx.burst(o.g.position.clone(), 0xffb060, 36, 6, 0.6, 1.1, -1); fx.burst(o.g.position.clone(), 0xf2f2f2, 16, 3, 0.5, 0.9, 1.2); fx.burst(fl.pos.clone(), 0xc98a45, 14, 3, 0.5, 0.9, 0.5);
+    worm.wiggle(0.8); vulcan.wiggle(1); if (n % 3 === 1) G.glance(1.0, 0.8); if (n % 4 === 0) hiccup();
+    G.setCounter(`10 + ${n} = ${10 + n}`, '🍞');
+    const line = { 1: 'תפסנו! לחמנייה חמה! 🍞', 6: 'חצי דרך! עוד לחמניות לסעודה', 11: 'רק עוד אחד!' }[n]; if (line) toast('worm', line, 1900);
+  }
+  // Vulcan's warm puff (power button): his breath carries the next fireball straight to Worm. Always works; a 2.5 s rest
+  // between uses keeps the chase the longest part of the chapter.
+  function firePuff() {
+    const i = G.nextItem(), o = chase[i], now = performance.now(); if (!chasing || !o || puffing || now - puffAt < 2500 || fl.done) return;
+    puffing = true; puffAt = now; hiccup(); const from = o.g.position.clone(), mouth = vulcan.mouthWorld(V(0, 0, 0));
+    for (let k = 0; k <= 5; k++) fx.burst(mouth.clone().lerp(from, k / 5), 0xff9a3a, 10, 2, 0.45, 0.7, 0);
+    tween(0.5, k => { o.g.position.lerpVectors(from, fl.pos, k * k); fx.trail(o.g.position.clone(), 0xffb060, 0.45); }).then(() => { puffing = false; if (chasing && !o.got && G.nextItem() === i) G.collectNext(); });
+  }
+  const endChase = () => { chasing = false; puffing = false; chaseGroup.visible = false; clearActions(); };
+  const setTable = () => { loaves.forEach((l, i) => { l.visible = true; l.position.copy(SLOTS[i]); l.scale.setScalar(1); }); caught = 10; }; // the ten loaves already baked
+  async function flight(step) {
+    showAll(false); rori.root.visible = table.visible = cloth.visible = true; setTable(); G.stars.group.visible = false;
+    chaseGroup.visible = true; for (const o of chase) { o.got = false; o.pop = 0; o.g.visible = true; o.g.scale.setScalar(1); o.g.position.copy(o.base); }
+    vulcan.root.visible = true; vulcan.setPose('fly'); vulcan.state.blend = 1; vulcan.lookAt(null); chasing = true; puffing = false;
+    G.startFlight({ items: chase, lead: [spiral(3.2, 38, 11.5), spiral(2.75, 38, 12)], exit: [spiral(-6.0, 61, 14), spiral(-6.4, 61, 13), spiral(-6.8, 60, 12)], speed: 8.5, camSide: 1, onCollect: onBall });
+    G.tick = tick; G.phase = 'c4-flight'; G.checkpoint(4, 'flight'); G.setCounter('10', '🍞');
+    await step(fade(false)); G.showJoy(true); worm.wiggle(1); G.glance(1.4);
+    toast('worm', 'כדורי האש עפו לשמיים! תופסים אותם יחד עם וולקן 🔥', 3800);
+    await step(wait(3900));
+    actions([{ id: 'btn-puff', label: '🔥 נשיפת אש!', onClick: firePuff }]);
+    await step(G.waitFor(() => fl.got >= CHASE));
+    G.phase = 'c4-flight-done'; fl.done = true; G.showJoy(false); clearActions(); sfx.fanfare(); worm.wiggle(2); vulcan.wiggle(2); G.glance(1.8);
+    toast('worm', 'תפסנו את כולם! איזו סעודה תהיה!', 2600);
+    await step(wait(2600)); await step(fade(true));
+    endChase(); stage(true); setTable(); $('#counter').hidden = true;
+    await step(fade(false));
+  }
+
   function tick(dt, time) {
+    if (G.mode === 'flight' && chasing) return flightTick(dt, time);
     if (G.mode !== 'bakery') return;
     vulcan.update(dt, time); rori.update(dt, time);
     const now = performance.now();
@@ -94,7 +149,7 @@ export function chapter4(G) {
     cam.position.lerp(camGoal.pos, Math.min(1, dt * 2)); camLook.lerp(camGoal.look, Math.min(1, dt * 2.5)); cam.lookAt(camLook);
     sun.position.copy(WORM_AT).addScaledVector(world.sunDir, 120); sun.target.position.copy(WORM_AT);
   }
-  function cleanup() { catching = false; catchDone = null; breathe = 0; showAll(false); $('#counter').hidden = true; }
+  function cleanup() { catching = false; catchDone = null; breathe = 0; endChase(); vulcan.setPose('rest'); showAll(false); $('#counter').hidden = true; }
   const begin = () => { G.tick = tick; G.onLeave = cleanup; G.tap = onTap; };
 
   // a tap near a fireball bakes it (generous target: the ball and its glow)
@@ -152,7 +207,8 @@ export function chapter4(G) {
       await step(say('worm', 'רעיון! נהפוך כל שיהוק לכיכר לחם חמה. גע בכדורי האש!'));
       camGoal = CAM_WIDE; drake.root.rotation.y = Math.PI; vulcan.lookAt(TABLE_AT.clone().setY(TABLE_AT.y + 1.5));
       
-    } else await step(fade(false));
+    } else if (from !== 'flight') await step(fade(false));
+    if (from !== 'flight') {
     G.checkpoint(4, 'catch');
     await catchRound(step, 1, 5);
     await riddle(step, 1, 'add', []);
@@ -160,6 +216,13 @@ export function chapter4(G) {
     
     await catchRound(step, 2, 10);
     await riddle(step, 2, 'missing', []);
+    // ---- the action set piece: one giant hiccup, and a chase round the castle with Vulcan
+    G.phase = 'c4-fly-ready'; $('#counter').hidden = true; camGoal = CAM_WIDE; hiccup(); fx.burst(vulcan.mouthWorld(V(0, 0, 0)), 0xffb060, 60, 6, 0.6, 1.4, 2.5);
+    toast('vulcan', 'היייק! אופס… הם עפו לשמיים!', 3200);
+    await step(new Promise(res => actions([{ id: 'btn-fire-fly', label: '🔥 תופסים בשמיים!', cls: 'pulse', onClick: () => res() }])));
+    clearActions(); worm.setGlow(true); sfx.magic(); await step(wait(600)); worm.setGlow(false); await step(fade(true));
+    }
+    await flight(step);
     // ---- the cure: slow breathing with Worm
     G.phase = 'c4-breathe'; $('#counter').hidden = true; camGoal = CAM_WIDE; // Worm and Vulcan both in frame worm.lookAt(VULCAN_AT.clone().setY(VULCAN_AT.y + 1.4)); vulcan.lookAt(WORM_AT.clone().setY(WORM_AT.y + 1.6));
     await step(say('worm', 'וולקן, נשום איתי לאט. פנימה… והחוצה…'));
@@ -199,7 +262,7 @@ export function chapter4(G) {
   return {
     start: story, showAll,
     nextBallPos() { const b = catching && balls.find(x => x.on && performance.now() - x.t0 > 500); return b ? b.g.position.clone() : null; },
-    debug: () => ({ tweens: G.tweenCount(), catching, caught, target, balls: balls.filter(b => b.on).length }),
+    debug: () => ({ tweens: G.tweenCount(), catching, caught, target, balls: balls.filter(b => b.on).length, chasing }),
     modelTargets: { rori, fireDragon: vulcan },
   };
 }

@@ -488,9 +488,9 @@ function runFrame() {
   try { frameBody(); } catch (e) { const m = String(e && e.message); if (!frameErrors.has(m)) { frameErrors.add(m); console.error('frame error:', (e && e.stack) || e); } }
 }
 function frameBody() {
-  timer.update(); const dt = Math.min(0.05, timer.getDelta()); time += dt;
+  timer.update(); const rawDt = Math.min(0.5, timer.getDelta()), dt = Math.min(0.05, rawDt); time += dt;
   if (G.mode !== lastMode) { camSnap = true; lastMode = G.mode; }
-  if (G.mode === 'title') updateTitle(dt); else if (G.mode === 'cave') updateCave(dt); else if (G.mode === 'flight') updateFlight(dt);
+  if (G.mode === 'title') updateTitle(dt); else if (G.mode === 'cave') updateCave(dt); else if (G.mode === 'flight') { updateFlight(dt); for (let t = rawDt - dt; t > 1e-3; t -= 0.05) updateFlight(Math.min(0.05, t)); } // the rail keeps wall-clock pace when frames are slow (sub-steps of 50 ms, at most 0.5 s per frame)
   updateTweens(); updateSkip();
   if (G.tick) G.tick(dt, time);
   worm.update(dt, time); drake.update(dt, time); griffith.update(dt, time); king.update(dt, time);
@@ -526,7 +526,7 @@ const GO = {
   'ch2-hatch': () => guard(() => ch2.start('hatch')), 'ch2-end': () => guard(() => ch2.start('end')),
   ch6: () => guard(() => ch6.start('intro')), 'ch6-flight': () => guard(() => ch6.start('flight')), 'ch6-pots': () => guard(() => ch6.start('pots')), 'ch6-end': () => guard(() => ch6.start('end')),
   ch5: () => guard(() => ch5.start('intro')), 'ch5-patterns': () => guard(() => ch5.start('patterns')), 'ch5-end': () => guard(() => ch5.start('end')),
-  ch4: () => guard(() => ch4.start('intro')), 'ch4-catch': () => guard(() => ch4.start('catch')), 'ch4-end': () => guard(() => ch4.start('end')),
+  ch4: () => guard(() => ch4.start('intro')), 'ch4-catch': () => guard(() => ch4.start('catch')), 'ch4-flight': () => guard(() => ch4.start('flight')), 'ch4-end': () => guard(() => ch4.start('end')),
   ch3: () => guard(() => ch3.start('intro')), 'ch3-mirrors': () => guard(() => ch3.start('mirrors')), 'ch3-flight': () => guard(() => ch3.start('flight')), 'ch3-end': () => guard(() => ch3.start('end')),
 };
 window.__dm = {

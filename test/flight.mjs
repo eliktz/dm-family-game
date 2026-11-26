@@ -25,7 +25,7 @@ for (const dev of DEVICES) {
   const ctx = await browser.newContext(dev.ctx); const page = await ctx.newPage(); const errors = [];
   page.on('pageerror', e => errors.push(e.message + ' @ ' + (e.stack || '').split('\n').slice(0, 4).join(' < ').replace(/http:\/\/[^/]+\//g, ''))); page.on('console', m => m.type() === 'error' && errors.push(m.text()));
   await page.goto(base + 'index.html?tier=low&all=1'); await page.waitForFunction(() => window.__dm?.ready, null, { timeout: 90000 });
-  for (const [chapter, go] of [['ch1 stars', 'flight'], ['ch2 river', 'ch2-glide'], ['ch3 sunbeams', 'ch3-flight'], ['ch6 puffs', 'ch6-flight']].filter(c => !chapterArg || c[0].startsWith(chapterArg))) for (const mode of MODES) {
+  for (const [chapter, go] of [['ch1 stars', 'flight'], ['ch2 river', 'ch2-glide'], ['ch3 sunbeams', 'ch3-flight'], ['ch4 fireballs', 'ch4-flight'], ['ch6 puffs', 'ch6-flight']].filter(c => !chapterArg || c[0].startsWith(chapterArg))) for (const mode of MODES) {
     await page.evaluate(g => __dm.go(g), go);
     await page.locator('#joy').waitFor({ state: 'visible', timeout: 15000 });
     const jb = await page.locator('#joy').boundingBox(), jc = [jb.x + jb.width / 2, jb.y + jb.height / 2], R = jb.width / 2 * 0.95;
@@ -38,9 +38,11 @@ for (const dev of DEVICES) {
       return { t: G.time * 1000, got: fl.got, total: fl.items.length, dir, dist, pos: fl.pos.toArray().map(n => +n.toFixed(1)) };
     });
     let st = await state(), last = st.t, lastGot = 0, msg = '', maxGap = 0, shotDone = false; const t0 = st.t, w0 = Date.now(); // game time: slow test machines drop frames
+    const f0 = await page.evaluate(() => __dm.frameStats.raf + __dm.frameStats.fallback); let polls = 0;
     while (true) {
-      st = await state(); const now = st.t;
-      if (Date.now() - w0 > 240000) { const d = await page.evaluate(async () => { const G = __dm.G, t0 = G.time; let raf = 0; const f = () => { raf++; requestAnimationFrame(f); }; requestAnimationFrame(f); await new Promise(r => setTimeout(r, 3000)); return `game clock +${(G.time - t0).toFixed(2)}s and ${raf} animation frames in 3 s, mode ${G.mode}, phase ${G.phase}, u ${G.fl.u}, hidden ${document.hidden}`; }); msg = `test timeout (240 s wall clock) at ${st.got}/${st.total}: ${d}`; break; }
+      st = await state(); const now = st.t; polls++;
+      if (Date.now() - w0 > 240000) { const d = await page.evaluate(async () => { const G = __dm.G, t0 = G.time, u0 = G.fl.u; let raf = 0; const f = () => { raf++; requestAnimationFrame(f); }; requestAnimationFrame(f); await new Promise(r => setTimeout(r, 3000)); return `game clock +${(G.time - t0).toFixed(2)}s and ${raf} animation frames in 3 s, rail u ${u0.toFixed(3)} -> ${G.fl.u.toFixed(3)} in those 3 s, mode ${G.mode}, phase ${G.phase}, hidden ${document.hidden}`; }); const f1 = await page.evaluate(() => __dm.frameStats.raf + __dm.frameStats.fallback);
+        msg = `test timeout (240 s wall clock) at ${st.got}/${st.total}: ${d}; over the whole case the page ran ${f1 - f0} frames and answered ${polls} polls (a healthy 240 s is 2000+ frames: far fewer means the page or the box was frozen, not the rail)`; break; }
       if (st.got > lastGot) { maxGap = Math.max(maxGap, now - last); lastGot = st.got; last = now; }
       if (st.got >= st.total) break;
       if (now - last > STALL_MS) { msg = `STALLED at ${st.got}/${st.total} for ${STALL_MS / 1000}s (next item ${st.dist} m away, worm at ${st.pos})`; break; }

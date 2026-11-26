@@ -83,7 +83,11 @@ A Hebrew, iPad-first, **plot-driven** three.js game for Elik's 7-year-old son, b
   expression loops are set with `state.mood` ('sad' / 'happy'). Debug: `__dm.go('ch6' | 'ch6-flight' | 'ch6-pots' | 'ch6-end')`, `__dm.potScreen()`.
 - **Chapter 5 (crystals):** `src/chapters/ch5.js` in the cave scene (mode `cave`, cameras through `G.camGoal`). Petra's dragon's name lives only in
   `src/names.js` (`PETRA_DRAGON_NAME`). Debug: `__dm.go('ch5' | 'ch5-patterns' | 'ch5-end')`, `__dm.crystalScreen(wrong?)`, `__dm.ch5.debug()`.
-- **Chapter 4 (bakery):** `src/chapters/ch4.js`, mode `bakery`. Debug: `__dm.go('ch4' | 'ch4-catch' | 'ch4-end')`, `__dm.fireballScreen()`,
+- **Chapter 4 (bakery):** `src/chapters/ch4.js`, mode `bakery`. After the second riddle comes the fireball chase (mode `flight`, phases
+  `c4-fly-ready` → `c4-flight` → `c4-flight-done`): 12 fireballs on a clockwise spiral rail with Vulcan beside Worm, `#btn-puff` (🔥, 2.5 s rest)
+  carries the next one to him, counter `10 + n`; then `stage(true)` + `setTable()` return to the lawn for the breathing beat. `__dm.go('ch4-flight')`.
+  **Rail flights keep wall-clock pace at low frame rates:** `frameBody` sub-steps `updateFlight` in 50 ms slices (at most 0.5 s per frame), so a
+  57 s flight still takes about 57 s when frames come from the 400 ms fallback timer. Debug: `__dm.go('ch4' | 'ch4-catch' | 'ch4-end')`, `__dm.fireballScreen()`,
   `__dm.ch4.debug()`; `soak.mjs --chapter=4` and `starve.mjs` cover it. Fireball timing uses the wall clock, not frames.
 - **Chapter 3 (garden):** `src/chapters/ch3.js` runs in mode `garden` with its own camera in `G.tick`. After the third mirror comes the
   sunbeam flight (mode `flight`, phases `c3-fly-ready` → `c3-flight` → `c3-flight-done`): 12 light orbs on a spiral rail round the castle with
