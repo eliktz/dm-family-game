@@ -1,8 +1,9 @@
 // Chapter 1 "אבן הדרקון": cave (meet Worm, Dragon Stone, feed + pet, gate riddle) → first flight
-// (8 stars around the castle) → celebration → "to be continued". Keepsake: the green Dragon Stone.
+// (two laps round the castle: 8 stars, then 8 golden rings with Worm's mind-lift button) → celebration → "to be continued".
+// Keepsake: the green Dragon Stone.
 export function chapter1(G) {
   const { THREE, cam, fx, worm, drake, cave, stars, marker, apple, GATE_POS, PLATEAU, params, ui,
-    say, toast, hideToast, actions, clearActions, showJoy, card, fade, sfx, runner, wait, waitFor, fl } = G;
+    say, toast, hideToast, actions, clearActions, showJoy, card, fade, sfx, runner, wait, waitFor, fl, tween } = G;
   const V = (x, y, z) => new THREE.Vector3(x, y, z);
   // HD models: a two-shot from the side of the Drake→Worm line (whichever side the camera is already on), so Drake never hides Worm's face
   function sideCam(dist, h, lookY) {
@@ -100,18 +101,43 @@ export function chapter1(G) {
     toast('worm', 'הי הי, זה מדגדג! אני אוהב את זה!', 2600); await wait(1800); G.busy = false;
   }
 
-  // ---- first flight: 8 stars around the castle
+  // ---- first flight: two laps on one closed rail round the castle. Lap 1: the 8 stars. Lap 2: 8 golden rings that sit on
+  // the same rail between the stars, so Worm always flies through them (rail-guided, nothing can be missed). The rings
+  // are in the item list from the start but marked collected and hidden until the last star is caught.
+  const ringG = new THREE.TorusGeometry(3.4, 0.24, 10, 40), ringM = new THREE.MeshStandardMaterial({ color: 0xd9a520, metalness: 0.8, roughness: 0.25, emissive: 0xffb81f, emissiveIntensity: 0.9 });
+  const starLoop = new THREE.CatmullRomCurve3(stars.list.map(s => s.base.clone()), true, 'centripetal'); starLoop.arcLengthDivisions = 400; starLoop.updateArcLengths();
+  const starU = (() => { const N = 800, u = stars.list.map(() => 0), best = stars.list.map(() => Infinity), q = V(0, 0, 0); for (let k = 0; k <= N; k++) { starLoop.getPointAt(k / N, q); stars.list.forEach((s, i) => { const d = q.distanceToSquared(s.base); if (d < best[i]) { best[i] = d; u[i] = k / N; } }); } return u; })();
+  const n = stars.list.length, rings = [];
+  for (let i = 0; i < n; i++) { // ring 0 is in the gap after the last star, so lap 2 begins right away; then one between each pair of stars
+    const a = starU[(i + n - 1) % n], b = starU[i] + (i === 0 ? 1 : 0), u = ((a + b) / 2) % 1;
+    const g = new THREE.Mesh(ringG, ringM); starLoop.getPointAt(u, g.position); g.lookAt(g.position.clone().add(starLoop.getTangentAt(u))); g.visible = false; stars.group.add(g);
+    rings.push({ g, base: g.position.clone(), got: true, pop: 0, gold: true });
+  }
+  const flightItems = [...stars.list, ...rings]; let lap2 = false, liftAt = 0, lifting = false;
+  function resetRings() { lap2 = false; lifting = false; for (const r of rings) { r.got = true; r.pop = 0; r.g.visible = false; r.g.scale.setScalar(1); r.g.position.copy(r.base); } }
+  function ringTick(dt, time) { for (const r of rings) { if (r.got && lap2) { r.pop += dt; const k = Math.max(0, 1 - r.pop * 2.5); r.g.scale.setScalar(k * (1 + r.pop * 2)); r.g.visible = k > 0; } else if (!r.got && !lifting) r.g.rotation.z = time * 0.8; } ringM.emissiveIntensity = 0.9 + 0.35 * Math.sin(time * 4); }
+  // Worm's mind-lift: the power button pulls the next ring straight to him (always works; a short rest between uses)
+  function mindLift() {
+    const i = G.nextItem(), r = flightItems[i], now = performance.now(); if (!lap2 || !r || !r.gold || lifting || now - liftAt < 1500 || fl.done) return;
+    lifting = true; liftAt = now; worm.setGlow(true); worm.wiggle(1); sfx.magic(); const from = r.g.position.clone(); fx.burst(from.clone(), 0x7dffb0, 40, 5, 0.5, 1.0, 0);
+    tween(0.45, k => { r.g.position.lerpVectors(from, fl.pos, k * k); fx.trail(r.g.position.clone(), 0x7dffb0, 0.4); }).then(() => { lifting = false; worm.setGlow(false); if (G.tick === ringTick && !r.got && G.nextItem() === i) G.collectNext(); });
+  }
   const STAR_LINES = ['יש! ⭐', 'עוד אחד!', 'וואו, אתה מעולה!', 'חצי דרך! 🎉', 'כל הכבוד!', 'אנחנו צוות מנצח!', 'רק עוד אחד!', ''];
-  const n = stars.list.length;
   function onStar(i, s) {
+    if (s.gold) { const k = fl.got - n; sfx.star(k - 1); sfx.chime && sfx.chime(); fx.burst(fl.pos.clone(), 0xffd34a, 50, 8, 0.6, 1.2, -1); worm.wiggle(0.8); if (k % 3 === 0) G.glance(1.0, 0.8); G.setCounter(`${k} / ${n}`, '💫'); return; }
     sfx.star(fl.got - 1); fx.burst(s.g.position.clone(), 0xffe27a, 40, 7, 0.6, 1.2, -2); worm.wiggle(0.8); G.glance(1.0, 0.8); G.setCounter(`${fl.got} / ${n}`);
     if (fl.got < n && STAR_LINES[fl.got - 1]) toast('worm', STAR_LINES[fl.got - 1], 1800);
+    if (fl.got === n) { // lap 2: the golden rings light up along the same rail
+      lap2 = true; for (const r of rings) { r.got = false; r.pop = 0; r.g.visible = true; r.g.scale.setScalar(1); } sfx.magic(); G.setCounter(`0 / ${n}`, '💫');
+      toast('worm', 'סיבוב שני! טסים דרך טבעות הזהב! 💫', 3200);
+      actions([{ id: 'btn-lift', label: '✨ כוח המחשבה', cls: 'green', onClick: mindLift }]);
+    }
   }
   async function storyFlight(step) {
     step = step || runner();
-    stars.group.visible = true; stars.reset();
+    stars.group.visible = true; stars.reset(); resetRings(); clearActions(); G.tick = ringTick; G.onLeave = () => { resetRings(); clearActions(); };
     // a closed loop around the castle through all 8 stars; Worm starts a little before the first one and keeps circling when done
-    G.startFlight({ items: stars.list, loop: true, startU: 1 - 0.085, camSide: -1, onCollect: onStar }); // camera on the outside of the loop: the castle stays behind Worm and no tower can get in the way
+    G.startFlight({ items: flightItems, pathPts: stars.list.map(s => s.base), loop: true, startU: 1 - 0.085, camSide: -1, onCollect: onStar }); // camera on the outside of the loop: the castle stays behind Worm and no tower can get in the way
     G.phase = 'fly'; G.checkpoint(1, 'flight'); G.setCounter(`0 / ${n}`);
     await step(fade(false));
     showJoy(true);
@@ -119,13 +145,13 @@ export function chapter1(G) {
     toast('worm', 'תחזיק חזק! בוא נאסוף את כל 8 הכוכבים הזוהרים!', 3500);
     await step(wait(3600));
     toast(null, 'וורם טס לבד! הג׳ויסטיק מזיז אותו קצת לצדדים ⭐', 4000);
-    await step(waitFor(() => fl.got >= n));
-    G.phase = 'celebrate'; fl.done = true; showJoy(false);
+    await step(waitFor(() => fl.got >= 2 * n));
+    G.phase = 'celebrate'; fl.done = true; showJoy(false); clearActions();
     sfx.fanfare(); worm.wiggle(2.5); G.glance(2.2);
     for (let i = 0; i < 3; i++) setTimeout(() => fx.confetti(fl.pos.clone().add(V(0, 3, 0)), 70), i * 500);
     toast('worm', 'זאת הייתה הטיסה הכי כיפית שלי!', 3000);
     await step(wait(2600));
-    const v = await step(card({ kicker: '⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ⭐', title: 'כל הכבוד!', text: 'אספת את כל 8 הכוכבים יחד עם וורם!', buttons: [{ label: '🔁 עוד פעם?', value: 'again' }, { label: 'סיום הפרק ◀', value: 'end', cls: 'green' }] }));
+    const v = await step(card({ kicker: '⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ⭐', title: 'כל הכבוד!', text: 'אספת 8 כוכבים וטסת דרך 8 טבעות זהב יחד עם וורם!', buttons: [{ label: '🔁 עוד פעם?', value: 'again' }, { label: 'סיום הפרק ◀', value: 'end', cls: 'green' }] }));
     if (v === 'again') { await step(fade(true)); return storyFlight(step); }
     return storyEnd(step);
   }

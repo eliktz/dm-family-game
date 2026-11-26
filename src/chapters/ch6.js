@@ -23,7 +23,7 @@ export function chapter6(G) {
   // ---------------------------------------------------------------- layout: the castle lawn
   const WORM_AT = ground(6.6, 24.2), DRAKE_AT = ground(-6.4, 31.4);
   const BEDS = [-4.8, -1.6, 1.6, 4.8].map(x => ground(x, 26.4)), POTS = [-4.8, -1.6, 1.6, 4.8].map(x => ground(x, 30.6));
-  const CLOUD_UP = ground(0.5, 19.5, 8.4), CLOUD_FAR = ground(34, 6, 24), CLOUD_PEEK = ground(-7.5, 21.5, 7.2);
+  const CLOUD_UP = ground(0.5, 19.5, G.engine.viewShift ? 7.3 : 6.7), /* below the speech bubble, as in chapter 3 */ CLOUD_FAR = ground(34, 6, 24), CLOUD_PEEK = ground(-7.5, 21.5, 7.2);
   const CAM_WIDE = G.engine.viewShift ? { pos: ground(0, 43.5, 6.6), look: ground(0, 27.4, 1.3) } : { pos: ground(0, 49.5, 8.4), look: ground(0, 27, 1.7) };
   const CAM_WORM = { pos: ground(2.4, 34.5, 2.8), look: ground(5.6, 25, 1.9) };
   const CAM_CLOUD = { pos: ground(-1.5, 38, 4.2), look: CLOUD_PEEK.clone() };

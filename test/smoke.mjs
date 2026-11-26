@@ -235,6 +235,20 @@ async function run(dev) {
     await page.waitForTimeout(2500);
     const cnt = (await page.locator('#count').innerText()).trim(); check(/^[3-7] \/ 8$/.test(cnt), `counter counts up (${cnt})`);
     await shot('10-flight-stars');
+    await page.evaluate(() => { for (let k = 0; k < 8 && !document.querySelector('#btn-lift'); k++) __dm.collectNext(); }); // the rest of the stars (collectAll would take the rings too)
+    // lap 2: golden rings on the same rail, with Worm's mind-lift button
+    // read the counter in the same page call that first sees the button: the rail keeps flying, so a ring or two may already be in a moment later
+    { const lap = await (await page.waitForFunction(() => { const b = document.querySelector('#btn-lift'); return b && b.offsetParent !== null ? { count: document.querySelector('#count').textContent.trim(), icon: document.querySelector('#counter .star').textContent, phase: __dm.phase, rings: __dm.G.fl.items.filter(s => s.gold && s.g.visible).length, got: __dm.G.fl.got } : null; }, null, { timeout: 20000 })).jsonValue();
+      check(lap.icon === '💫' && /^[0-2] \/ 8$/.test(lap.count) && lap.phase === 'fly' && lap.got >= 8 && lap.got <= 10 && lap.rings >= 6, `after the 8 stars a second lap begins: golden rings on the rail, ring counter restarts (${lap.count} ${lap.icon}, ${lap.rings} rings ahead)`); }
+    await page.waitForTimeout(1200);
+    { const b = await page.locator('#btn-lift').boundingBox(); check(b.height >= (dev.name === 'ipad' ? 72 : 44), `mind-lift button is a big touch target (${Math.round(b.width)}×${Math.round(b.height)})`); }
+    await clearOfActors('flight lap 2 HUD'); await shot('10b-flight-rings');
+    // prove it is the button and not the rail: press it while the next ring is still far ahead; the ring must be in well before Worm could fly there
+    { const far = await (await page.waitForFunction(() => { const fl = __dm.G.fl, i = fl.items.findIndex(s => !s.got), r = fl.items[i]; if (!r || !r.gold) return null; const d = r.base.distanceTo(fl.pos); if (d < 18) return null;
+        document.querySelector('#btn-lift').dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); return { i, d: Math.round(d), t: __dm.G.time }; }, null, { timeout: 30000 })).jsonValue();
+      const dt = await (await page.waitForFunction(f => __dm.G.fl.items[f.i].got ? __dm.G.time - f.t : null, far, { timeout: 20000 })).jsonValue();
+      check(dt < far.d / 8.5 * 0.7, `mind-lift pulled a ring ${far.d} m ahead to Worm in ${dt.toFixed(1)} s of game time (flying there takes ${(far.d / 8.5).toFixed(1)} s)`); }
+    log('ok', 'the mind-lift button pulls the next ring to Worm (' + (await page.locator('#count').innerText()).trim() + ')'); await page.waitForTimeout(600); await shot('10c-mind-lift');
     await page.evaluate(() => __dm.collectAll());
     await advanceTo('celebrate'); await page.waitForTimeout(1200); await bubbleCap('ch1'); await shot('11-celebrate-sky');
     await page.locator('#card:not([hidden])').waitFor({ timeout: 15000 });

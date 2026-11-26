@@ -191,7 +191,7 @@ const G = {
   get hdCloud() { return !!swapped.grumbleCloud; },
   get hdBaby() { return !!swapped.babyDragon; }, // the HD baby water dragon is in use (much smaller than the code-built one) // the HD Worm model is in use (more compact than the procedural one: some shots are framed differently)
   math: mathApi, makeRiddle,
-  useScene, setupCave, faceEachOther, wormTapped, startFlight, glance, setCounter, markDone, checkpoint, enterTitle, resetOutdoorLook,
+  useScene, setupCave, faceEachOther, wormTapped, startFlight, collectNext: () => { const i = nextItem(); if (i >= 0) collect(i); return i; }, nextItem: () => nextItem(), glance, setCounter, markDone, checkpoint, enterTitle, resetOutdoorLook,
 };
 const fl = G.fl = { pos: new THREE.Vector3(), yaw: 0, vy: 0, yawRate: 0, got: 0, done: false, kingSaid: false, speed: 8.5, minClear: 3,
   items: stars.list, onCollect: null, glanceT: 0, glanceAmt: 1, cam: { v: 0, vel: 0 },
@@ -254,11 +254,11 @@ function smoothDamp(o, target, smoothTime, dt) {
 // 4.5 m to collect, forever: the autopilot only helped once the stick was released.)
 // camSide: which side the chase / glance camera sits on (1 = left of the flight direction, -1 = right).
 // cfg: { items (list of {g, base, got, pop}), loop (closed path, keeps cruising when done), lead / exit (extra path points
-//        before / after the items), startU, speed?, corridor? [side, up], onCollect(i, item) }
+//        before / after the items), pathPts? (explicit rail points), startU, speed?, corridor? [side, up], onCollect(i, item) }
 function startFlight(cfg) {
   useScene(outdoor); G.mode = 'flight';
   king.root.position.set(0, PLATEAU + 7.0, 15.6); king.root.scale.setScalar(1.7);
-  const pts = [...(cfg.lead || []), ...cfg.items.map(it => it.base.clone()), ...(cfg.exit || [])];
+  const pts = cfg.pathPts ? cfg.pathPts.map(p => p.clone()) : [...(cfg.lead || []), ...cfg.items.map(it => it.base.clone()), ...(cfg.exit || [])]; // pathPts: a rail that does not run through every item's own point (the chapter 1 rings sit ON the star loop)
   const path = new THREE.CatmullRomCurve3(pts, !!cfg.loop, 'centripetal'); path.arcLengthDivisions = 400; path.updateArcLengths();
   // arc-length position of every item on the path
   const N = 800, itemU = cfg.items.map(() => 0), best = cfg.items.map(() => Infinity), q = new THREE.Vector3();
@@ -495,7 +495,7 @@ function frameBody() {
   if (G.tick) G.tick(dt, time);
   worm.update(dt, time); drake.update(dt, time); griffith.update(dt, time); king.update(dt, time);
   world.update(dt, time); cave.update(dt, time);
-  stars.update(dt, time, fl.items === stars.list ? nextItem() : -1);
+  stars.update(dt, time, fl.items[0] === stars.list[0] ? nextItem() : -1);
   ch2.update(dt, time, fl.items === ch2.bubbles.list ? nextItem() : -1);
   for (const k in swapped) swapped[k].update(dt, time);
   fx.setScale(innerHeight * Math.min(devicePixelRatio, engine.maxDpr)); fx.update(dt);

@@ -44,7 +44,7 @@ A wrong answer never ends anything: the first miss shows a picture of dragon sto
 steps and removes one wrong answer, and on the third Worm shows the answer and the right button glows.
 
 ## Chapters
-1. **אבן הדרקון** (done): Drake meets Worm in the Dragon Cave, the Dragon Stone glows, he feeds and pets Worm, solves the gate riddle and takes his first flight around King Roland's castle, collecting 8 stars.
+1. **אבן הדרקון** (done): Drake meets Worm in the Dragon Cave, the Dragon Stone glows, he feeds and pets Worm, solves the gate riddle and takes his first flight around King Roland's castle: two rail-guided laps, 8 stars and then 8 golden rings, with Worm's mind-lift button (✨) that pulls the next ring to him.
    *Keepsake:* the green Dragon Stone.
 
 2. **הביצה המסתורית**: A glowing blue egg rolls into the cave. Worm curls protectively around it. Griffith says a new Dragon Master is on the way.

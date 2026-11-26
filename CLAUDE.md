@@ -71,6 +71,10 @@ A Hebrew, iPad-first, **plot-driven** three.js game for Elik's 7-year-old son, b
   a dialog advances on a tap anywhere on the bubble, accepts `pointerup` and `click` once, and pulses "המשך" after 12 s (never auto-advances);
   a story watchdog nudges a phase that sits 45 s while it is not the player's turn (`G.playerTurn`; it finishes all tweens first; `__dm.watchdog` counts
   nudges and the smoke test expects 0). New scripted waits must go through `step()`, never a bare promise.
+- **Chapter 1 flight (two laps):** `src/chapters/ch1.js` flies one closed rail twice: the 8 stars, then 8 golden rings that sit on the same
+  rail (`startFlight({ items: [...stars, ...rings], pathPts })`; the rings are in the list from the start, marked collected and hidden until
+  the last star). The ring items are flagged `gold` (star items already have a `ring` field: their halo). `#btn-lift` (✨ mind-lift) pulls the
+  next ring to Worm. In tests use `__dm.collectNext()` for the stars: `collectAll()` would take the freshly lit rings too.
 - **Chapter 6 (cloud):** `src/chapters/ch6.js`: a rail flight (`G.startFlight`, mode `flight`) with Kepri and Vulcan borrowed from chapters 3-4
   through `G.team`, then the lawn (mode `paint`). The Grumble Cloud is one shared actor (`G.grumble`, built in ch3.js, GLB key `grumbleCloud`); its
   expression loops are set with `state.mood` ('sad' / 'happy'). Debug: `__dm.go('ch6' | 'ch6-flight' | 'ch6-pots' | 'ch6-end')`, `__dm.potScreen()`.
