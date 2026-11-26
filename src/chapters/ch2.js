@@ -143,8 +143,8 @@ export function chapter2(G) {
       G.phase = 'c2-intro'; G.checkpoint(2, 'intro');
       G.camGoal = { pos: V(0.5, 4.6, 9), look: V(1, 1.6, -4) };
       worm.wiggle(1); sfx.purr();
-      await step(say('worm', 'בוקר טוב, דרייק! איזה כיף שבאת.'));
-      await step(say('griffith', 'ששש… שומעים? משהו מתגלגל אל המערה!'));
+      await step(say('worm', 'בוקר טוב, דרייק! שומע? משהו מתגלגל למערה!'));
+      
       // ---- the egg rolls in from the gate and stops at Worm's nose
       G.phase = 'c2-egg';
       G.camGoal = { pos: V(-1.5, 6.2, 9.5), look: V(2, 1, -5) };
@@ -152,15 +152,15 @@ export function chapter2(G) {
       const path = new THREE.CatmullRomCurve3([V(GATE_POS.x - 0.3, EGG.y, GATE_POS.z + 1.6), V(5.6, EGG.y, -8), V(3.9, EGG.y, -1.6), V(0.8, EGG.y, -1.3), EGG.clone()]);
       await step(tween(3.4, k => { const e = ease(k); path.getPointAt(e, egg.position); egg.rotation.set(e * 14, 0, Math.sin(e * 9) * 0.25 * (1 - e)); if (Math.random() < 0.3) fx.trail(egg.position, 0x8fd0ff, 0.3); }));
       egg.rotation.set(0, 0, 0); fx.burst(EGG, 0x9fd8ff, 30, 2.5, 0.4, 1.2, 0.3); sfx.chime();
-      await step(say('drake', 'וואו! ביצה כחולה! והיא זוהרת!'));
+      
       worm.setPose('curl'); worm.lookAt(EGG); worm.wiggle(0.8); sfx.purr();
       G.camGoal = G.engine.viewShift ? { pos: V(-2.6, 3.8, 6.4), look: V(-1.4, 1.0, -3.2) } : { pos: V(-1.9, 4.2, 7.6), look: V(-0.5, 1.0, -3.0) }; // wider on tablets so Drake is fully in frame
       await step(wait(900));
-      await step(say('worm', 'אל תדאגי, ביצה קטנה. אני שומר עלייך.'));
-      await step(say('griffith', 'זאת ביצה של דרקון מים! זה סימן: מאסטר דרקונים חדש בדרך אלינו.'));
-      await step(say('griffith', 'ביצת מים אוהבת טיפות מהנהר. טוסו לאסוף לה בועות מים!'));
+      
+      await step(say('griffith', 'ביצה של דרקון מים! היא אוהבת טיפות מהנהר. טוסו!'));
+      
       worm.lookAt(drake.root.position.clone().setY(1.4)); worm.wiggle(1.2);
-      await step(say('worm', 'עלה על הגב שלי, דרייק. נרחף נמוך מעל הנהר!'));
+      
       G.phase = 'c2-ready';
       await step(new Promise(res => actions([{ id: 'btn-river', label: '💧 אל הנהר!', cls: 'pulse', onClick: () => res() }])));
       clearActions(); worm.setGlow(true); sfx.magic(); fx.burst(worm.headWorld(), 0x7dffb0, 60, 5, 0.5, 1.4, 0);
@@ -220,10 +220,10 @@ export function chapter2(G) {
   async function warmEgg(step, direct) {
     stageCave('warm'); G.camGoal = camEgg(); G.phase = 'c2-warm'; G.checkpoint(2, 'warm');
     if (!direct) { await step(fade(false)); fx.burst(EGG, 0x9fdcff, 50, 3, 0.4, 1.4, 0.5); sfx.chime(); }
-    await step(say('griffith', 'הביצה שתתה את כל הטיפות! עכשיו היא צריכה חום.'));
-    await step(say('griffith', 'צריך 5 אבנים חמות מסביב לביצה.'));
+    await step(say('griffith', 'עכשיו הביצה צריכה חום: 5 אבנים חמות. וורם כבר הניח 2!'));
+    
     worm.setGlow(true); worm.wiggle(0.8);
-    await step(say('worm', 'כבר הנחתי 2 אבנים בכוח המחשבה שלי! פתרו את החידות, ונניח את השאר.'));
+    
     worm.setGlow(false);
     G.phase = 'c2-math';
     // two warm-stone riddles: a missing number, then a subtraction or a multiplication (sizes follow the riddle level)
@@ -244,7 +244,7 @@ export function chapter2(G) {
     if (direct) { stageCave('hatch'); }
     G.camGoal = { pos: V(-2.3, 3.6, 5.6), look: V(-1.8, 0.9, -3.0) }; G.phase = 'c2-hatch'; G.checkpoint(2, 'hatch'); $('#counter').hidden = true;
     worm.lookAt(NEAR_EGG); worm.wiggle(1);
-    await step(say('worm', 'חם ונעים… תראה, דרייק! הביצה זזה!'));
+    
     crack.visible = true; sfx.munch();
     await step(tween(1.8, k => { eggShake = k; }));
     eggShake = 0; sfx.chime(); sfx.happy();
@@ -265,9 +265,9 @@ export function chapter2(G) {
     await step(wait(900)); baby.state.blink = 1; sfx.squeak();
     await step(say('baby', 'פיפ! פיפ! הי הי הי!'));
     G.camGoal = G.hdBaby ? { pos: V(0.9, 2.2, 4.9), look: V(-0.2, 0.8, -0.9) } : { pos: V(-1.0, 3.2, 5.8), look: V(-1.0, 1.0, -2.0) };
-    await step(say('drake', 'וואו! דרקונית מים קטנטונת!'));
+    
     baby.lookAt(worm.headWorld()); baby.wiggle(1.5); worm.wiggle(1.2); sfx.purr();
-    await step(say('worm', 'שלום, קטנטונת! אני וורם. אל תפחדי, אני כאן.'));
+    
     await step(say('drake', 'היא מבעבעת כמו בועה… נקרא לה בועה!'));
     // ---- Bo and Shu come in through the gate
     G.phase = 'c2-bo';
@@ -285,18 +285,19 @@ export function chapter2(G) {
     }));
     bo.setWalk(0); faceTo(bo.root, BO_POS, EGG); faceTo(shu.root, SHU_POS, EGG); shu.lookAt(EGG.clone().setY(0.6)); bo.wave(2);
     worm.lookAt(BO_POS.clone().setY(1.4));
-    await step(say('bo', 'שלום! אני בו, וזאת שו, דרקונית המים שלי.'));
+    await step(say('bo', 'שלום! אני בו, וזאת שו. חיפשנו את הביצה בכל הנהר!'));
     shu.wiggle(1.5); baby.lookAt(shu.headWorld()); baby.wiggle(2); sfx.happy();
-    await step(say('bo', 'חיפשנו את הביצה הזאת לאורך כל הנהר!'));
+    
     await step(say('griffith', 'ברוך הבא, בו! אתה מאסטר דרקונים חדש בטירה.'));
     bo.wave(2);
-    await step(say('bo', 'תודה ששמרתם עליה, דרייק ווורם!'));
+    
     // the baby hops over to her new friend
     const b0 = baby.root.position.clone(), b1 = V(0.9, 0, -1.7);
     baby.lookAt(worm.headWorld()); worm.lookAt(b1.clone().setY(0.4));
     await step(tween(1.2, k => { const e = ease(k); baby.root.position.lerpVectors(b0, b1, e); baby.root.position.y += Math.sin(e * Math.PI) * 1.2; }));
     baby.wiggle(2.5); worm.wiggle(2); sfx.purr(); fx.hearts3(b1.clone().setY(1.2), 8);
-    await step(say('worm', 'בועה ואני כבר חברים טובים!'));
+    toast('worm', 'בועה ואני כבר חברים טובים! 💚', 2400); await step(tween(2.2, () => { }));
+    
     // ---- celebration
     G.phase = 'c2-celebrate';
     sfx.fanfare(); worm.wiggle(2.5); shu.wiggle(2.5); baby.wiggle(2.5); bo.wave(3); drake.wave(3);

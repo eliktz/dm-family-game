@@ -4,7 +4,7 @@ import { PETRA_DRAGON_NAME } from './names.js';
 const $ = s => document.querySelector(s);
 export const FACES = { griffith: '🧙‍♂️', worm: '🐉', drake: '👦', king: '👑', bo: '🧒', baby: '💧', ana: '👧', kepri: '☀️', cloud: '☁️', rori: '👩‍🦰', vulcan: '🔥', petra: '👱‍♀️', gem: '💎' };
 export const NAMES = { griffith: "גריפית'", worm: 'וורם', drake: 'דרייק', king: 'המלך רולנד', bo: 'בו', baby: 'בועה', ana: 'אנה', kepri: 'קפרי', cloud: 'הענן הרטנן', rori: 'רורי', vulcan: 'וולקן', petra: 'פטרה', gem: PETRA_DRAGON_NAME };
-export const ui = { fast: false, onSay: null };
+export const ui = { fast: false, onSay: null, said: [], finishSay: null }; // said: every blocking bubble shown (the smoke test caps them per chapter)
 
 // A bubble that is abandoned (the chapter was left with 🏠 while it was open) must take its tap handlers with it: a stale
 // handler used to hide the NEXT bubble on the first quick tap without resolving it, which left the story stuck.
@@ -16,7 +16,7 @@ let heldToast = null;
 export function say(who, text) {
   if (dropSay) dropSay();
   { const t = $('#toast'); if (!t.hidden) { heldToast = lastToast; clearTimeout(toastT); t.hidden = true; } }
-  const d = $('#dialog'); d.hidden = false; d.dataset.who = who;
+  const d = $('#dialog'); d.hidden = false; d.dataset.who = who; ui.said.push(text);
   d.querySelector('.face').textContent = FACES[who]; d.querySelector('.name').textContent = NAMES[who];
   d.querySelector('.text').textContent = text; d.style.animation = 'none'; d.offsetWidth; d.style.animation = '';
   ui.onSay && ui.onSay(who, text);
@@ -29,7 +29,7 @@ export function say(who, text) {
     const off = () => { finished = true; d.removeEventListener('pointerup', done); d.removeEventListener('click', done); clearTimeout(t); clearTimeout(tw); clearTimeout(ta); d.classList.remove('waiting'); if (dropSay === off) dropSay = null; };
     const done = () => { if (finished || !armed) return; off(); sfx.tap(); d.hidden = true; ui.onSayEnd && ui.onSayEnd(who); res();
       setTimeout(() => { if (heldToast && $('#dialog').hidden) { const h = heldToast; heldToast = null; toast(...h); } }, 60); }; // a banner that was put aside returns if no new bubble opened
-    dropSay = off;
+    dropSay = off; ui.finishSay = () => { armed = true; done(); }; // ⏭ (skip to the action) closes the open bubble
     d.addEventListener('pointerup', done); d.addEventListener('click', done);
     const t = ui.fast ? setTimeout(() => { armed = true; done(); }, 40) : null;
     const tw = setTimeout(() => { if (!finished) d.classList.add('waiting'); }, 12000);
@@ -136,7 +136,9 @@ export function card({ kicker = '', title = '', text = '', buttons = [], cls = '
   c.querySelector('.c-kicker').textContent = kicker; c.querySelector('.c-title').textContent = title; c.querySelector('.c-text').textContent = text;
   const box = c.querySelector('.c-buttons'); box.innerHTML = '';
   return new Promise(res => {
-    if (!buttons.length) { setTimeout(() => { c.hidden = true; res(); }, ui.fast ? 50 : 2000); return; }
+    if (!buttons.length) { // a title card: it goes away by itself after 2 s, or at once on a tap (tap-to-skip)
+      let over = false; const end = () => { if (over) return; over = true; clearTimeout(t); c.removeEventListener('pointerup', end); c.hidden = true; res(); };
+      const t = setTimeout(end, ui.fast ? 50 : 2000); c.addEventListener('pointerup', end); return; }
     for (const b of buttons) { const el = document.createElement('button'); el.className = 'big ' + (b.cls || ''); el.textContent = b.label; el.dataset.v = b.value;
       el.addEventListener('pointerup', () => { sfx.tap(); c.hidden = true; res(b.value); }); box.appendChild(el); }
   });

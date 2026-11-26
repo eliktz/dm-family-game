@@ -42,7 +42,7 @@ h2 { margin: 6px 0 14px; font-size: clamp(22px, 2.8vw, 32px); color: #2f8a4a; fo
 #counter { font-size: 30px; font-weight: 800; padding: 6px 20px; border-radius: 999px; background: rgba(255,247,232,.92); box-shadow: 0 4px 12px rgba(0,0,0,.25); color: #8a5208; }
 #counter.bump { animation: bump .4s; }
 @keyframes bump { 40% { transform: scale(1.25); } }
-#dialog { position: fixed; top: calc(14px + var(--sa-t)); right: 50%; transform: translateX(50%); width: min(780px, 74vw); padding: 16px 24px 14px; border-radius: 26px;
+#dialog { position: fixed; top: calc(14px + var(--sa-t)); right: 50%; transform: translateX(50%); width: min(760px, 72vw); padding: 16px 24px 14px; border-radius: 26px;
   background: var(--paper); box-shadow: 0 12px 30px rgba(0,0,0,.3), inset 0 0 0 3px #f1d9a8; z-index: 6; animation: pop .25s ease-out; }
 @keyframes pop { from { transform: translateX(50%) scale(.85); opacity: 0; } }
 #dialog .who { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 22px; margin-bottom: 4px; }

@@ -145,9 +145,9 @@ export function chapter6(G) {
     lawn(0); G.checkpoint(6, 'pots'); await step(fade(false));
     await step(say('worm', 'עכשיו ממלאים את סירי הצבע: 5 ניצוצות בכל סיר!'));
     await pots(step, 1, 2);
-    await riddle(step, 1, 'mul', [['drake', 'חמש, עשר… רגע, חידה!']]);
+    await riddle(step, 1, 'mul', []);
     await pots(step, 2, 4);
-    await riddle(step, 2, 'add', [['worm', '5, 10, 15, 20! ועוד חידה אחת.']]);
+    await riddle(step, 2, 'add', []);
     // ---- the cloud peeks back, and looks sad
     G.phase = 'c6-sad'; $('#counter').hidden = true; camGoal = CAM_WIDE; sfx.fanfare(); worm.wiggle(2); drake.wave(2.6);
     toast('king', 'הפרחים שלי צבעוניים שוב! תודה! 👑', 3000);
@@ -163,7 +163,7 @@ export function chapter6(G) {
     camGoal = CAM_WIDE; const f0 = G.king.root.position.clone().add(V(0, 2, 0)), f1 = worm.headWorld().add(V(-1.8, 1.0, 1.6)); feather.visible = true;
     await step(tween(1.8, k => { const e = ease(k); feather.position.lerpVectors(f0, f1, e); feather.position.y += Math.sin(e * Math.PI) * 2; }));
     worm.wiggle(1.6); worm.lookAt(feather.position);
-    await step(say('king', 'וורם, קבל נוצת מכחול. היא צובעת בכל צבעי הקשת!'));
+    toast('king', 'וורם, קבל נוצת מכחול בכל צבעי הקשת! 🪶', 2600); await step(wait(1600));
     G.phase = 'c6-celebrate'; for (let i = 0; i < 3; i++) setTimeout(() => { if (G.tick === tick) fx.confetti(ground(0, 28, 4), 60); }, i * 500);
     await step(wait(1500));
     const v = await step(card({ kicker: '🎨 🎨 🎨', title: 'כל הכבוד!', text: 'החזרתם את הצבעים לפרחים, וספרתם בחמישיות עד 20! וורם קיבל מזכרת: נוצת מכחול 🪶',

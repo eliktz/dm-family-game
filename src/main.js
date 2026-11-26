@@ -92,6 +92,20 @@ function tween(dur, fn) {
     tw.deadline = setTimeout(() => finishTween(tw), tw.dur + 1500); tweens.push(tw); });
 }
 function updateTweens() { const now = performance.now(); for (const tw of tweens) { if (tw.done) continue; const k = Math.min(1, (now - tw.t0) / tw.dur); if (k >= 1) finishTween(tw); else tw.fn(k); } tweens = tweens.filter(tw => !tw.done); }
+// Tap-to-skip (⏭ in the top bar): shown whenever the story is talking or playing a scripted move, i.e. a bubble is open or a
+// tween of 1.2 s or longer runs, and it is not the player's turn. One tap fast-forwards to the next thing the player DOES
+// (an activity, a riddle, a button, a card): open bubbles close, tweens finish, and the lines in between flash by.
+// It stops by itself after 6 s at the latest. It is hidden while the counter shows, so the top bar never reaches the bubble.
+const skipEl = $('#btn-skip'), dialogEl = $('#dialog'), counterEl = $('#counter'); let skipping = false, skipT0 = 0, fastWas = false;
+const shown = sel => { const e = $(sel); return !!e && !e.hidden; };
+const playerCanAct = () => G.playerTurn || G.mode === 'title' || G.mode === 'flight' || shown('#math') || shown('#card') || shown('#joy') || $('#actions').childElementCount > 0;
+function stopSkip() { if (!skipping) return; skipping = false; ui.fast = fastWas; }
+function updateSkip() {
+  if (skipping) { if (playerCanAct() || performance.now() - skipT0 > 6000) stopSkip(); else { if (!dialogEl.hidden && ui.finishSay) ui.finishSay(); finishTweens(); } }
+  const on = !skipping && !ui.fast && !playerCanAct() && counterEl.hidden && (!dialogEl.hidden || tweens.some(tw => !tw.done && tw.dur >= 1200));
+  if (skipEl.hidden === on) skipEl.hidden = !on;
+}
+skipEl.addEventListener('pointerup', e => { e.stopPropagation(); if (skipping) return; sfx.tap(); skipping = true; skipT0 = performance.now(); fastWas = ui.fast; ui.fast = true; skipEl.hidden = true; if (ui.finishSay) ui.finishSay(); finishTweens(); });
 function finishTweens() { for (const tw of [...tweens]) finishTween(tw); tweens = []; }
 function clearTweens() { for (const tw of tweens) { tw.done = true; clearTimeout(tw.deadline); } tweens = []; }
 const checkUntil = () => { if (until && until.test()) { const u = until; until = null; u.resolve(); } };
@@ -183,7 +197,7 @@ const fl = G.fl = { pos: new THREE.Vector3(), yaw: 0, vy: 0, yawRate: 0, got: 0,
   items: stars.list, onCollect: null, glanceT: 0, glanceAmt: 1, cam: { v: 0, vel: 0 },
   path: null, len: 1, u: 0, itemU: [], ox: 0, oy: 0, since: 0, helped: false, corridor: [5, 3.5] };
 
-function leaveChapter() { clearTweens(); G.keepShot = false; G.playerTurn = false; nudgeStep = null; griffShot = griffPrev = null; token++; until = null; const f = G.onLeave; G.onLeave = G.tap = G.tick = null; if (f) f(); G.busy = false; G.caveFree = false; G.walkTarget = null; G.camGoal = null; marker.visible = false; apple.visible = false; resetOutdoorLook(); }
+function leaveChapter() { stopSkip(); clearTweens(); G.keepShot = false; G.playerTurn = false; nudgeStep = null; griffShot = griffPrev = null; token++; until = null; const f = G.onLeave; G.onLeave = G.tap = G.tick = null; if (f) f(); G.busy = false; G.caveFree = false; G.walkTarget = null; G.camGoal = null; marker.visible = false; apple.visible = false; resetOutdoorLook(); }
 
 // ---------------------------------------------------------------- TITLE
 const TITLE_POS = new THREE.Vector3(-6, 0, 44);
@@ -477,7 +491,7 @@ function frameBody() {
   timer.update(); const dt = Math.min(0.05, timer.getDelta()); time += dt;
   if (G.mode !== lastMode) { camSnap = true; lastMode = G.mode; }
   if (G.mode === 'title') updateTitle(dt); else if (G.mode === 'cave') updateCave(dt); else if (G.mode === 'flight') updateFlight(dt);
-  updateTweens();
+  updateTweens(); updateSkip();
   if (G.tick) G.tick(dt, time);
   worm.update(dt, time); drake.update(dt, time); griffith.update(dt, time); king.update(dt, time);
   world.update(dt, time); cave.update(dt, time);
@@ -518,6 +532,7 @@ const GO = {
 window.__dm = {
   ready: false,
   get mode() { return G.mode; }, get phase() { return G.phase; },
+  bubbles() { const s = [...new Set(ui.said)]; ui.said.length = 0; return { n: s.length, longest: Math.max(0, ...s.map(t => t.length)) }; }, // blocking bubbles since the last call (repeats after 🏠 count once)
   set fast(v) { ui.fast = !!v; }, get fast() { return ui.fast; },
   go(name) { hideOverlays(); $('#fade').classList.remove('on'); leaveChapter(); GO[name] && GO[name](); return name; },
   walkToWorm() { drake.root.position.copy(worm.headWorld().setY(0)).add(new THREE.Vector3(2.2, 0, 2.2)); },

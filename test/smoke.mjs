@@ -43,6 +43,8 @@ async function run(dev) {
   const phase = () => page.evaluate(() => window.__dm?.phase);
   // at most ONE speech bubble or banner may be on screen at any moment (checked at every poll and every screenshot)
   let bubbleChecks = 0;
+  // brief-18: at most 7 blocking speech bubbles per chapter, none longer than 60 characters (lines repeated after 🏠 count once)
+  const bubbleCap = async ch => { const b = await page.evaluate(() => __dm.bubbles()); check(b.n >= 1 && b.n <= 7 && b.longest <= 60, `${ch}: ${b.n} speech bubbles (cap 7), longest ${b.longest} characters (cap 60)`); };
   const oneBubble = async where => { const v = await page.evaluate(() => ['#dialog', '#toast', '#title-toast'].filter(s => { const e = document.querySelector(s); return e && !e.hidden && e.offsetParent !== null; })); bubbleChecks++;
     if (v.length > 1) throw new Error(`CHECK FAILED: two bubbles/banners at once (${v.join(' + ')}) at ${where}: "${await page.locator('#dialog .text').innerText()}" + "${await page.locator('#toast .text').innerText()}"`); };
   const shot = async name => { await oneBubble('shot ' + name); if (shots) await page.screenshot({ path: join(shotDir, `${dev.name}-${name}.png`), scale: 'css' }); log('shot', name); };
@@ -234,7 +236,7 @@ async function run(dev) {
     const cnt = (await page.locator('#count').innerText()).trim(); check(/^[3-7] \/ 8$/.test(cnt), `counter counts up (${cnt})`);
     await shot('10-flight-stars');
     await page.evaluate(() => __dm.collectAll());
-    await advanceTo('celebrate'); await page.waitForTimeout(1200); await shot('11-celebrate-sky');
+    await advanceTo('celebrate'); await page.waitForTimeout(1200); await bubbleCap('ch1'); await shot('11-celebrate-sky');
     await page.locator('#card:not([hidden])').waitFor({ timeout: 15000 });
     check((await page.locator('#card').innerText()).includes('עוד פעם'), "celebration shows 'עוד פעם?'");
     check(await page.evaluate(() => { const r = document.querySelector('#card .panel').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }), 'card fits the screen');
@@ -288,7 +290,7 @@ async function run(dev) {
     log('ok', 'Bo speaks'); await page.waitForTimeout(500);
     log('stats ch2 cave', JSON.stringify(await page.evaluate(() => __dm.stats())));
     await shot('ch2-11-bo-arrives');
-    await advanceTo('c2-celebrate'); await page.waitForTimeout(1300); await shot('ch2-12-celebrate');
+    await advanceTo('c2-celebrate'); await page.waitForTimeout(1300); await bubbleCap('ch2'); await shot('ch2-12-celebrate');
     await page.locator('#card:not([hidden])').waitFor({ timeout: 15000 });
     check((await page.locator('#card').innerText()).includes('עוד פעם'), "ch2 celebration shows 'עוד פעם?'");
     check(await page.evaluate(() => { const r = document.querySelector('#card .panel').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }), 'ch2 card fits the screen');
@@ -328,7 +330,7 @@ async function run(dev) {
         check(await solveBeat('c3-math' + i, { firstWrong: i === 1, shotName: i === 1 ? 'ch3-06-cloud-riddle' : null }) === 1, `cloud riddle ${i} asked once`); }
     }
     await advanceTo('c3-bloom'); await page.waitForTimeout(1500); await shot('ch3-07-garden-blooms');
-    await advanceTo('c3-celebrate'); await page.locator('#card:not([hidden])').waitFor({ timeout: 30000 });
+    await advanceTo('c3-celebrate'); await bubbleCap('ch3'); await page.locator('#card:not([hidden])').waitFor({ timeout: 30000 });
     check((await page.locator('#card').innerText()).includes('☀️'), 'ch3 celebration card with the sun keepsake');
     await shot('ch3-08-celebrate-card');
     log('stats ch3', JSON.stringify(await page.evaluate(() => __dm.stats())));
@@ -365,7 +367,7 @@ async function run(dev) {
     check((await page.locator('#count').innerText()).trim() === '10 / 10', 'ten loaves on the table');
     await advanceTo('c4-breathe'); await page.waitForTimeout(2500); await shot('ch4-06-breathing');
     await advanceTo('c4-feast'); await page.waitForTimeout(1200); await shot('ch4-07-feast');
-    await advanceTo('c4-celebrate'); await page.locator('#card:not([hidden])').waitFor({ timeout: 30000 });
+    await advanceTo('c4-celebrate'); await bubbleCap('ch4'); await page.locator('#card:not([hidden])').waitFor({ timeout: 30000 });
     check((await page.locator('#card').innerText()).includes('גחלת'), 'ch4 celebration card with the ember keepsake');
     await shot('ch4-08-celebrate-card');
     log('stats ch4', JSON.stringify(await page.evaluate(() => __dm.stats())));
@@ -402,7 +404,7 @@ async function run(dev) {
         check(await solveBeat('c5-math' + n, { firstWrong: n === 1, shotName: n === 1 ? 'ch5-06-crystal-riddle' : null }) === 1, `crystal riddle ${n} asked once`); }
     }
     await advanceTo('c5-friend'); await page.waitForTimeout(2500); await shot('ch5-07-shy-dragon');
-    await advanceTo('c5-celebrate'); await page.locator('#card:not([hidden])').waitFor({ timeout: 60000 });
+    await advanceTo('c5-celebrate'); await bubbleCap('ch5'); await page.locator('#card:not([hidden])').waitFor({ timeout: 60000 });
     check((await page.locator('#card').innerText()).includes('קריסטל קשת'), 'ch5 celebration card with the rainbow crystal keepsake');
     await shot('ch5-08-celebrate-card');
     log('stats ch5', JSON.stringify(await page.evaluate(() => __dm.stats())));
@@ -443,7 +445,7 @@ async function run(dev) {
     }
     await advanceTo('c6-sad'); await page.waitForFunction(() => !document.querySelector('#dialog').hidden && document.querySelector('#dialog').dataset.who === 'cloud', null, { timeout: 240000 }); await page.waitForTimeout(1800);
     await shot('ch6-06-sad-cloud');
-    await advanceTo('c6-celebrate'); await page.locator('#card:not([hidden])').waitFor({ timeout: 60000 });
+    await advanceTo('c6-celebrate'); await bubbleCap('ch6'); await page.locator('#card:not([hidden])').waitFor({ timeout: 60000 });
     check((await page.locator('#card').innerText()).includes('נוצת מכחול'), 'ch6 celebration card with the paintbrush feather keepsake');
     await shot('ch6-07-celebrate-card');
     log('stats ch6', JSON.stringify(await page.evaluate(() => __dm.stats())));
@@ -455,10 +457,22 @@ async function run(dev) {
     await page.waitForFunction(() => window.__dm.mode === 'title', null, { timeout: 15000 }); await page.waitForTimeout(1200);
     check((await page.locator('#ch-6 .ic').innerText()).includes('🖌️') && JSON.stringify(await page.evaluate(() => __dm.progress)) === '[1,2,3,4,5,6]', 'chapter 6 keepsake badge shown, progress is [1,2,3,4,5,6]');
     await shot('ch6-09-title-badges');
+    // ---- tap-to-skip: a tap closes a title card; ⏭ shows during dialogs and scripted moves and jumps to the next thing the player does
+    await page.evaluate(() => __dm.go('ch6')); await page.locator('#card:not([hidden])').waitFor({ timeout: 60000 });
+    await page.evaluate(() => document.querySelector('#card').dispatchEvent(new PointerEvent('pointerup', { bubbles: true })));
+    check(await page.evaluate(() => document.querySelector('#card').hidden), 'a tap skips the chapter title card');
+    await page.waitForFunction(() => __dm.phase === 'c6-intro' && !document.querySelector('#dialog').hidden && !document.querySelector('#btn-skip').hidden, null, { timeout: 60000 }); await page.waitForTimeout(700);
+    { const r = await page.evaluate(() => { const b = document.querySelector('#btn-skip').getBoundingClientRect(), d = document.querySelector('#dialog').getBoundingClientRect(); return { size: Math.min(b.width, b.height), overlap: !(b.right <= d.left || b.left >= d.right || b.bottom <= d.top || b.top >= d.bottom) }; });
+      check(r.size >= 44 && !r.overlap, `⏭ is visible during a dialog and does not touch the bubble (${Math.round(r.size)} px)`); await clearOfActors('skip button during a dialog'); await shot('skip-button'); }
+    await page.evaluate(() => document.querySelector('#btn-skip').dispatchEvent(new PointerEvent('pointerup', { bubbles: true })));
+    await page.waitForFunction(() => __dm.phase === 'c6-fly-ready' && !!document.querySelector('#btn-team'), null, { timeout: 20000 });
+    // normal speed returns on the next frame after the button appears, so wait for it rather than sampling the same instant
+    check(await page.waitForFunction(() => document.querySelector('#dialog').hidden && document.querySelector('#btn-skip').hidden && !__dm.fast, null, { timeout: 10000 }).then(() => true, () => false), '⏭ jumps past the talking to the "fly together" button, then hides and normal speed returns');
+    await page.evaluate(() => __dm.go('title')); await page.waitForFunction(() => window.__dm.mode === 'title', null, { timeout: 15000 }); await page.evaluate(() => __dm.bubbles());
     // ---- no read-aloud anywhere
     check(await page.evaluate(() => window.__speech === 0), 'no speechSynthesis use');
     for (const f of ['src/audio.js', 'src/ui.js', 'src/main.js']) check(!/speechSynthesis|SpeechSynthesisUtterance/.test(await (await page.request.get(base + f)).text()), `${f} has no speech code`);
-    check(bubbleChecks > 150, `never more than one bubble or banner on screen (${bubbleChecks} checks across chapters 1-6)`);
+    check(bubbleChecks > 60, `never more than one bubble or banner on screen (${bubbleChecks} checks across chapters 1-6)`);
     { const f = await page.evaluate(() => ({ ...__dm.frameStats, watchdog: __dm.watchdog })); log('frames', JSON.stringify(f)); check(f.watchdog === 0, 'the story watchdog never had to nudge'); }
     check(errors.length === 0, 'no console/page/network errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
     ok = true;

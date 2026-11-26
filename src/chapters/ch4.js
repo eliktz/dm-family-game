@@ -138,47 +138,48 @@ export function chapter4(G) {
       await step(card({ kicker: 'פרק 4', title: 'הלהבה של רורי' })); await step(fade(false));
       G.phase = 'c4-intro'; G.checkpoint(4, 'intro');
       worm.wiggle(1); sfx.purr();
-      await step(say('drake', 'וורם, אתה מריח? ריח של… לחם קלוי?'));
-      await step(say('worm', 'מישהו מגיע. ואני שומע… "היק"?'));
+      await step(say('drake', 'וורם, אתה מריח? לחם קלוי? ומי עושה "היק"?'));
+      
       camGoal = CAM_MEET; rori.setWalk(1); sfx.whoosh();
       await step(tween(3.2, k => { const e = ease(k); vulcan.root.position.lerpVectors(VULCAN_FROM, VULCAN_AT, e); rori.root.position.lerpVectors(RORI_FROM, RORI_AT, e); }));
       rori.setWalk(0); rori.wave(2.2); vulcan.lookAt(DRAKE_AT.clone().setY(DRAKE_AT.y + 1.2)); worm.lookAt(RORI_AT.clone().setY(RORI_AT.y + 1.3)); drake.root.rotation.y = -2.2;
-      await step(say('rori', 'שלום! אני רורי, וזה וולקן, דרקון האש שלי. יש לו שיהוקים… של אש!'));
+      await step(say('rori', 'שלום! אני רורי, וזה וולקן. יש לו שיהוקים… של אש!'));
       hiccup(); fx.burst(vulcan.mouthWorld(V(0, 0, 0)), 0xffb060, 30, 3, 0.5, 0.9, 1.2);
       await step(say('vulcan', 'היק! אוי, סליחה! היק!'));
       hiccup(); fx.burst(vulcan.mouthWorld(V(0, 0, 0)), 0xf2f2f2, 20, 2.5, 0.45, 0.9, 1.0);
-      await step(say('drake', 'כדורי האש שלו קטנים וחמים. הם לא מפחידים, הם מצחיקים!'));
+      
       camGoal = CAM_WORM; worm.wiggle(1.6); worm.lookAt(TABLE_AT.clone().setY(TABLE_AT.y + 1.2));
-      await step(say('worm', 'יש לי רעיון! הלילה יש סעודה בטירה. נהפוך כל שיהוק לכיכר לחם חמה!'));
+      await step(say('worm', 'רעיון! נהפוך כל שיהוק לכיכר לחם חמה. גע בכדורי האש!'));
       camGoal = CAM_WIDE; drake.root.rotation.y = Math.PI; vulcan.lookAt(TABLE_AT.clone().setY(TABLE_AT.y + 1.5));
-      await step(say('rori', 'דרייק, גע בכדורי האש, ווורם יאפה מהם לחם בכוח המחשבה שלו.'));
+      
     } else await step(fade(false));
     G.checkpoint(4, 'catch');
     await catchRound(step, 1, 5);
-    await riddle(step, 1, 'add', [['rori', 'שורה שלמה של כיכרות! לפני שממשיכים, חידה קטנה.']]);
+    await riddle(step, 1, 'add', []);
     camGoal = CAM_WIDE;
-    await step(say('worm', 'נכון! עכשיו נמלא גם את השורה השנייה.'));
+    
     await catchRound(step, 2, 10);
-    await riddle(step, 2, 'missing', [['rori', 'עשר כיכרות! השולחן מלא.'], ['drake', 'עוד חידה אחת, והסעודה מוכנה!']]);
+    await riddle(step, 2, 'missing', []);
     // ---- the cure: slow breathing with Worm
     G.phase = 'c4-breathe'; $('#counter').hidden = true; camGoal = CAM_WIDE; // Worm and Vulcan both in frame worm.lookAt(VULCAN_AT.clone().setY(VULCAN_AT.y + 1.4)); vulcan.lookAt(WORM_AT.clone().setY(WORM_AT.y + 1.6));
     await step(say('worm', 'וולקן, נשום איתי לאט. פנימה… והחוצה…'));
     breathe = 1; worm.setGlow(true); sfx.purr();
     await step(tween(6.4, () => { }));                       // two slow breaths together
     breathe = 0; worm.setGlow(false); vulcan.wiggle(1.6); sfx.happy();
-    await step(say('vulcan', 'אין יותר שיהוקים! תודה, וורם!'));
+    
     // one last tiny hiccup leaves a warm ember
     hiccup(); const e0 = vulcan.mouthWorld(V(0, 0, 0)), e1 = worm.headWorld().add(V(-1.6, 0.9, 1.4)); ember.visible = true;
     await step(tween(1.6, k => { const e = ease(k); ember.position.lerpVectors(e0, e1, e); ember.position.y += Math.sin(e * Math.PI) * 1.5; }));
     camGoal = CAM_WORM; worm.wiggle(1.6); worm.lookAt(ember.position);
     await step(say('vulcan', 'היק! אופס… רק אחד קטן.'));
-    await step(say('rori', 'זאת גחלת קטנה וחמה. היא זוהרת ולא שורפת. היא בשבילך, וורם!'));
-    await step(say('worm', 'תודה! אני אשמור עליה תמיד.'));
+    await step(say('rori', 'גחלת קטנה וחמה. היא לא שורפת. היא בשבילך, וורם!'));
+    
     // ---- the feast
     G.phase = 'c4-feast'; camGoal = CAM_WIDE; sfx.fanfare(); worm.wiggle(2.5); vulcan.wiggle(2.5); rori.wave(3); drake.wave(3);
     for (let i = 0; i < 3; i++) setTimeout(() => { if (G.tick === tick) fx.confetti(ground(2, 28, 4), 60); }, i * 500);
     toast('king', 'איזה לחם חם וטעים! תודה, מאסטרי הדרקונים! 👑', 3200);
-    await step(say('rori', 'וולקן ואני נשארים כאן, בטירה. תודה, דרייק ווורם!'));
+    await step(tween(3.0, () => { }));                       // a moment to enjoy the feast (⏭ skips it)
+    
     G.phase = 'c4-celebrate';
     const v = await step(card({ kicker: '🍞 🍞 🍞', title: 'כל הכבוד!', text: 'אפיתם 10 כיכרות לסעודה, ועזרתם לוולקן להירגע! וורם קיבל מזכרת: גחלת חמה שזוהרת ולא שורפת 🔥',
       buttons: [{ label: '🔁 עוד פעם?', value: 'again' }, { label: 'סיום הפרק ◀', value: 'end', cls: 'green' }] }));

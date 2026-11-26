@@ -123,29 +123,29 @@ export function chapter5(G) {
       G.phase = 'c5-intro'; G.checkpoint(5, 'intro');
       worm.wiggle(1); sfx.purr();
       await step(say('drake', 'וורם, שמעת? הד מוזר: "הלו… לו… לו…"'));
-      await step(say('worm', 'מישהו מתחבא עמוק במערה. הוא נשמע קצת ביישן.'));
+      
       G.camGoal = CAM_WIDE; petra.setWalk(1); sfx.whoosh();
       await step(tween(3.0, k => { petra.root.position.lerpVectors(PETRA_FROM, PETRA_AT, ease(k)); }));
       petra.setWalk(0); petra.root.rotation.y = Math.PI + 0.5; petra.wave(2.2); worm.lookAt(PETRA_AT.clone().setY(1.3));
-      await step(say('petra', `שלום! אני פטרה. דרקון הקריסטל שלי, ${PETRA_DRAGON_NAME}, מתחבא שם בחושך. הוא ביישן מאוד.`));
-      await step(say('petra', 'הקריסטלים מאירים את הדרך רק כשמזמזמים להם את הדוגמה הנכונה.'));
+      await step(say('petra', `שלום! אני פטרה. ${PETRA_DRAGON_NAME}, דרקון הקריסטל שלי, מתחבא בחושך.`));
+      
       G.camGoal = CAM_WORM; worm.setGlow(true); sfx.magic(); worm.lookAt(SLOTS[2]);
-      await step(say('worm', 'אני אזמזם לכל קריסטל בכוח המחשבה שלי. דרייק, אתה תבחר איזה קריסטל בא אחר כך!'));
+      await step(say('worm', 'אני אזמזם לקריסטלים. דרייק, בחר איזה קריסטל בא אחר כך!'));
       worm.setGlow(false);
     } else await step(fade(false));
     G.checkpoint(5, 'patterns');
     await pattern(step, 1);
-    await step(say('petra', `יופי! תראו, ${PETRA_DRAGON_NAME} מציץ!`));
-    await riddle(step, 1, 'missing', [['petra', 'הקריסטלים אוהבים גם חידות.']]);
+    toast('petra', `תראו, ${PETRA_DRAGON_NAME} מציץ!`, 2000); await step(wait(1400));
+    await riddle(step, 1, 'missing', []);
     await pattern(step, 2);
-    await riddle(step, 2, 'mul', [['worm', 'עוד חידה אחת, ואז הדוגמה האחרונה.']]);
+    await riddle(step, 2, 'mul', []);
     await pattern(step, 3);
     // ---- the shy dragon comes out; Worm's gentle moment
     G.phase = 'c5-friend'; G.camGoal = CAM_SHY; gem.lookAt(worm.headWorld()); worm.lookAt(HIDE[3].clone().setY(1.2));
     await step(say('gem', '…שלום.'));
-    await step(say('drake', 'הוא מדבר ממש בשקט.'));
+    
     worm.wiggle(0.8); sfx.purr();
-    await step(say('worm', `זה בסדר להיות שקט, ${PETRA_DRAGON_NAME}. גם אני אוהב שקט. אפשר להיות חברים גם בלי הרבה מילים.`));
+    await step(say('worm', `זה בסדר להיות שקט, ${PETRA_DRAGON_NAME}. גם אני אוהב שקט.`));
     gem.state.shy = false; gem.wiggle(1.6); sfx.happy(); fx.hearts3(gem.headWorld().add(V(0, 0.6, 0)), 5);
     await step(say('gem', 'תודה, וורם. הנה, זה בשבילך.'));
     const r0 = gem.headWorld().add(V(0, 0.8, 0)), r1 = worm.headWorld().add(V(1.8, 1.0, 1.6)); rainbow.visible = true;

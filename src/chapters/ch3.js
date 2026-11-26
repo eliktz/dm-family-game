@@ -138,7 +138,7 @@ export function chapter3(G) {
     await step(new Promise(res => { tapWait = res; }));
     G.playerTurn = false; active = -1; hideToast(); const m = mirrors[i]; m.lit = true;
     sfx.chime(); sfx.happy(); fx.burst(m.bed.clone().setY(m.bed.y + 1), flowerCols[i], 50, 4, 0.5, 1.4, 0.5); worm.wiggle(1.4); kepri.wiggle(1.2);
-    await step(wait(900)); await step(say('worm', line));
+    toast('worm', line, 2200); await step(wait(1500));
   }
   async function cloudRiddle(step, n, kind, lines) {
     G.phase = 'c3-math' + n; blocked = true; sfx.whoosh(); camGoal = CAM_WIDE;
@@ -177,37 +177,37 @@ export function chapter3(G) {
       G.phase = 'c3-intro'; G.checkpoint(3, 'intro');
       camGoal = CAM_WORM; worm.wiggle(1); sfx.purr();
       await step(say('drake', 'איזה בוקר יפה בגני הטירה, וורם!'));
-      await step(say('worm', 'הפרחים אוהבים את השמש. גם אני!'));
+      
       // Ana and Kepri walk in from the desert road
       camGoal = CAM_MEET; ana.setWalk(1); sfx.whoosh();
       await step(tween(3.2, k => { const e = ease(k); kepri.root.position.lerpVectors(KEPRI_FROM, KEPRI_AT, e); ana.root.position.lerpVectors(ANA_FROM, ANA_AT, e); }));
       ana.setWalk(0); ana.wave(2.2); kepri.lookAt(DRAKE_AT.clone().setY(DRAKE_AT.y + 1.2)); worm.lookAt(ANA_AT.clone().setY(ANA_AT.y + 1.3)); drake.root.rotation.y = -2.2;
-      await step(say('ana', 'שלום! אני אנה, וזאת קפרי, דרקונית השמש שלי. באנו מהמדבר הרחוק.'));
+      await step(say('ana', 'שלום! אני אנה, וזאת קפרי, דרקונית השמש שלי.'));
       kepri.wiggle(1.6); sfx.happy();
-      await step(say('kepri', 'נעים מאוד! איזה גן ירוק ויפה! ☀️'));
+      
       worm.wiggle(1.4);
-      await step(say('worm', 'ברוכות הבאות! אני וורם, וזה דרייק, החבר שלי.'));
+      
       // ---- the Grumble Cloud drifts over the sun
       G.phase = 'c3-cloud'; camGoal = CAM_WIDE; dimTo = 1; drake.root.rotation.y = Math.PI;
       await step(tween(3.0, k => { cloud.position.lerpVectors(CLOUD_FAR, CLOUD_UP, ease(k)); }));
       await step(say('cloud', 'הממפ. גם אני רוצה להיות כאן.'));
-      await step(say('drake', 'אוי, ענן אפור מכסה את השמש! הפרחים נסגרים.'));
+      
       ana.wave(1.5); kepri.lookAt(mirrors[1].pos);
-      await step(say('ana', 'קפרי יכולה לשלוח קרן שמש. אבל צריך מראות שיכוונו אותה אל הפרחים.'));
+      await step(say('ana', 'קפרי תשלח קרן שמש. וורם, הרם את המראות!'));
       camGoal = CAM_WORM; worm.setGlow(true); sfx.magic(); worm.lookAt(mirrors[1].pos);
-      await step(say('worm', 'אני ארים שלוש מראות בכוח המחשבה שלי! ✨'));
+      
       camGoal = CAM_WIDE;
       await step(tween(2.0, k => { mirrors.forEach((m, i) => { m.up = Math.max(0, Math.min(1, k * 1.6 - i * 0.3)); }); }));
       worm.setGlow(false); mirrors.forEach(m => { m.up = 1; });
-      await step(say('ana', 'דרייק, גע במראה כדי לסובב אותה, עד שהקרן תגיע אל ערוגת הפרחים.'));
+      
     }
     else await step(fade(false)); // starting at the mirrors (saved checkpoint, or "עוד פעם?"): fade back in too
     G.checkpoint(3, 'mirrors');
     await lightMirror(step, 0, 'יש! הערוגה הראשונה פורחת!');
-    await cloudRiddle(step, 1, 'sub', [['cloud', 'הממפ! העננים הקטנים שלי חוסמים את הקרניים.'], ['ana', 'פתור את החידה, דרייק, וקפרי תאיר חזק יותר!']]);
-    await step(say('ana', 'כל הכבוד! הקרניים חזרו.'));
+    await cloudRiddle(step, 1, 'sub', [['cloud', 'הממפ! העננים הקטנים שלי חוסמים את הקרניים.']]);
+    
     await lightMirror(step, 1, 'עוד ערוגה פורחת! אתה מכוון מצוין, דרייק!');
-    await cloudRiddle(step, 2, 'missing', [['cloud', 'הממפ, הממפ! עוד עננים קטנים!'], ['ana', 'עוד חידה אחת, והאור יחזור.']]);
+    await cloudRiddle(step, 2, 'missing', []);
     await lightMirror(step, 2, 'כל הגן מלא צבעים!');
     // ---- the garden blooms, the cloud floats off (a little less grumpy)
     G.phase = 'c3-bloom'; dimTo = 0; sfx.fanfare(); worm.wiggle(2.5); kepri.wiggle(2.5); ana.wave(3); drake.wave(3);
@@ -217,10 +217,11 @@ export function chapter3(G) {
     cloudState.mood = null;
     await step(tween(3.0, k => { cloud.position.lerpVectors(CLOUD_UP, CLOUD_FAR, ease(k)); }));
     camGoal = CAM_WORM; worm.lookAt(DRAKE_AT.clone().setY(DRAKE_AT.y + 1.4));
-    await step(say('drake', 'הענן הזה נראה לי קצת… בודד.'));
+    
     await step(say('worm', 'אולי גם הוא רוצה חברים.'));
     camGoal = CAM_WIDE; toast('king', 'הגנים שלי פורחים שוב! תודה, מאסטרי הדרקונים! 👑', 3200);
-    await step(say('ana', 'תודה, דרייק ווורם! קפרי ואני נשארות כאן, בטירה.'));
+    await step(tween(2.8, () => { }));                       // a moment to enjoy the garden (⏭ skips it)
+    
     G.phase = 'c3-celebrate';
     const v = await step(card({ kicker: '☀️ ☀️ ☀️', title: 'כל הכבוד!', text: 'האור חזר לגנים, ופגשת את אנה ואת קפרי! וורם קיבל מזכרת: דיסקית שמש זהובה ☀️',
       buttons: [{ label: '🔁 עוד פעם?', value: 'again' }, { label: 'סיום הפרק ◀', value: 'end', cls: 'green' }] }));

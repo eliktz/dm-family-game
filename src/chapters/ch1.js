@@ -22,13 +22,13 @@ export function chapter1(G) {
         G.camGoal = { pos: V(4.0, 2.7, 0.2), look: V(-2.6, 0.8, -3.3) };
       } else G.camGoal = { pos: V(-1, 4.5, 9), look: V(-3, 2, -4) };
       worm.lookAt(drake.root.position.clone().setY(1.5));
-      await step(say('griffith', 'שלום, דרייק! ברוך הבא למערת הדרקונים, עמוק מתחת לטירה של המלך רולנד.'));
-      await step(say('griffith', "אני גריפית', הקוסם של הטירה. מישהו גדול וחמוד מחכה לך כאן..."));
+      await step(say('griffith', 'שלום, דרייק! ברוך הבא למערת הדרקונים.'));
+      await step(say('griffith', "אני גריפית' הקוסם. מישהו גדול וחמוד מחכה לך…"));
       worm.wiggle(1); sfx.purr();
-      await step(say('drake', 'וואו! זה... דרקון?!'));
-      await step(say('griffith', 'זה וורם, דרקון אדמה. לך אליו – הוא עדין מאוד!'));
+      await step(say('drake', 'וואו! דרקון אמיתי!'));
+      
       G.camGoal = null; G.phase = 'cave-walk'; G.caveFree = true; showJoy(true); marker.visible = true;
-      toast(null, 'הזז את הג׳ויסטיק או גע בוורם כדי ללכת אליו 👆', 6000);
+      toast(null, 'זה וורם! הזז את הג׳ויסטיק או גע בו כדי ללכת אליו 👆', 6000);
       await step(waitFor(() => drake.root.position.distanceTo(worm.headWorld().setY(0)) < 3.6));
       G.caveFree = false; G.walkTarget = null; showJoy(false); marker.visible = false; hideToast();
       // ---- Dragon Stone moment
@@ -37,14 +37,14 @@ export function chapter1(G) {
       G.camGoal = G.hd ? sideCam(5.6, 2.3, 1.3) : { pos: drake.root.position.clone().lerp(worm.headWorld(), 0.5).add(V(3.5, 1.2, 4.2)), look: drake.root.position.clone().lerp(worm.headWorld(), 0.5).setY(1.6) };
       await step(wait(500));
       G.stoneGlow = 1; worm.setGlow(true); sfx.magic(); fx.burst(drake.root.position.clone().setY(1.1), 0x7dffa0, 50, 3, 0.4, 1.6, 0.5);
-      await step(say('griffith', 'תראה! אבן הדרקון שעל הצוואר שלך זוהרת!'));
-      await step(say('griffith', 'דרייק, אתה מאסטר דרקונים!'));
+      await step(say('griffith', 'אבן הדרקון שלך זוהרת! אתה מאסטר דרקונים!'));
+      
       worm.wiggle(1.2); sfx.happy();
-      await step(say('worm', 'שלום, דרייק. אני וורם. אנחנו יכולים לדבר בלי מילים!'));
-      await step(say('drake', 'אני שומע אותך בתוך הראש! איזה כיף!'));
+      await step(say('worm', 'שלום, דרייק. אני וורם. אנחנו מדברים בלי מילים!'));
+      
       G.stoneGlow = 0.25; worm.setGlow(false);
       G.keepShot = false;
-      await step(say('griffith', 'וורם קצת רעב. בוא תאכיל אותו ותלטף אותו.'));
+      toast('griffith', 'וורם קצת רעב. האכל אותו ולטף אותו!', 4000);
     }
     if (from === 'intro' || from === 'bond') {
       if (from === 'bond') { drake.root.position.copy(worm.headWorld().setY(0)).add(V(2.4, 0, 1.6)); G.faceEachOther(); }
@@ -60,8 +60,8 @@ export function chapter1(G) {
         ]);
       }));
       clearActions(); await step(wait(400));
-      await step(say('worm', 'דרייק, אני כל כך שמח שאתה המאסטר שלי!'));
-      await step(say('griffith', 'יפה מאוד! עכשיו נפתח את שער המערה. הוא נפתח רק למי שפותר חידה קסומה.'));
+      
+      toast('worm', 'אני שמח שאתה המאסטר שלי! 💚', 2200); await step(wait(1400));
     }
     // ---- riddle at the gate
     G.phase = 'math'; G.checkpoint(1, 'math');
@@ -75,11 +75,11 @@ export function chapter1(G) {
     await step(G.math.ask({ kind: 'missing', title: '🔮 חידת השער – ועוד אחת!', ...react }));
     G.phase = 'gate'; cave.openGate(); sfx.whoosh(); fx.burst(GATE_POS.clone().setY(3), 0xfff2b0, 60, 5, 0.5, 1.6, -0.5);
     await step(wait(1200));
-    await step(say('griffith', 'השער פתוח! כל הכבוד, דרייק!'));
+    
     G.camGoal = G.hd ? { pos: worm.headWorld().setY(0).add(V(4.2, 2.6, 5.6)), look: worm.headWorld().lerp(GATE_POS, 0.25).setY(1.5) } : { pos: V(9, 5.5, 7), look: worm.headWorld().lerp(GATE_POS, 0.45).setY(2.2) };
     worm.wiggle(1.5);
-    await step(say('worm', 'עלה על הגב שלי, דרייק. אני אראה לך את הממלכה!'));
-    await step(say('worm', 'אין לי כנפיים – אבל אני טס בכוח המחשבה שלי! ✨'));
+    await step(say('worm', 'עלה על הגב שלי! אני טס בכוח המחשבה ✨'));
+    
     G.phase = 'ready-fly';
     await step(new Promise(res => actions([{ id: 'btn-fly', label: '🐉 בוא נטוס!', cls: 'pulse', onClick: () => res() }])));
     clearActions();

@@ -27,6 +27,11 @@ A Hebrew, iPad-first, **plot-driven** three.js game for Elik's 7-year-old son, b
   then one clear activity (riddle, guided flight, …), then a celebration and a "המשך יבוא…" teaser.
   The story runner is in `src/main.js` (cancellable async script: `runner()`, `step()`, `waitFor()`); each chapter's script is
   `src/chapters/chN.js` (chapters 1-6 are built) and receives the shared core as `G`. The arc is in `STORY.md`. Progress: localStorage `dm.progress`; `?all=1` unlocks all.
+- **Less talk, more action (brief-18).** At most **7 blocking speech bubbles per chapter**, none longer than 60 characters (the smoke test
+  checks this with `__dm.bubbles()`); hints and reactions go in non-blocking toasts. Tap-to-skip: a title card goes away on a tap, and ⏭
+  (`#btn-skip`, top bar) shows while a bubble is open or a scripted move of 1.2 s or longer plays; one tap fast-forwards to the next thing the
+  player does (`updateSkip()` in `main.js`; it hides while the counter shows and stops after 6 s at most). Dialog never auto-advances by itself.
+  After cutting a line, keep a short `tween` pause before a celebration card so the beat is still seen.
 - **Worm is the star** (the kid's favourite). He gets the most polished model and animation (breathing, happy wiggle, chomp,
   look-at, Dragon-Stone eye glow) and warm reactions everywhere. In the books Worm has no wings and moves with mind power,
   so in flight he *floats/glides* with a green aura.
