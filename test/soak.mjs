@@ -73,6 +73,7 @@ if (CH >= 3) for (let i = 1; i <= LOOPS; i++) { try {
     ok = await drive(`loop ${i} ch${CH} play`, p => p === `c${CH}-celebrate`, async ph => {
       if (/^c6-pots/.test(ph) && Date.now() - lastTap > 700) { const xy = await page.evaluate(() => __dm.potScreen()); if (xy) { await page.mouse.click(xy[0], xy[1]); taps++; lastTap = Date.now(); } }
       if (ph === 'c6-fly-ready') await page.locator('#btn-team').dispatchEvent('pointerup').catch(() => { });
+      if (ph === 'c3-fly-ready') await page.locator('#btn-sun-fly').dispatchEvent('pointerup').catch(() => { });
       if (/^c5-pattern/.test(ph) && Date.now() - lastTap > 600) { const xy = await page.evaluate(() => __dm.crystalScreen()); if (xy) { await page.mouse.click(xy[0], xy[1]); taps++; lastTap = Date.now(); } }
       if (/^c4-catch/.test(ph) && Date.now() - lastTap > 450) { const xy = await page.evaluate(() => __dm.fireballScreen()); if (xy) { await page.mouse.click(xy[0], xy[1]); taps++; lastTap = Date.now(); } }
       if (/^c\d-math/.test(ph)) { const c = await page.evaluate(() => __dm.math.current()); if (c) { await page.waitForTimeout(300); await page.locator(`#math .m-answers button[data-v="${c.answer}"]`).dispatchEvent('pointerup').catch(() => { }); await page.waitForTimeout(400); } }

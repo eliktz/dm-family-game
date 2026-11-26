@@ -1,7 +1,8 @@
 // Chapter 3 "השמש של אנה" (see STORY.md): Ana and Kepri, her sun dragon, arrive from the desert. The Grumble Cloud
 // covers the sun over the castle gardens and the flowers close. Worm lifts three mirrors with his mind power; the
 // player taps each mirror to turn it until Kepri's sunbeam reaches a flower bed. Twice the cloud's little puffs block
-// the beams and a subtraction / missing-number riddle clears them. Keepsake: a golden sun disc.
+// the beams and a subtraction / missing-number riddle clears them. Then the action set piece: a long rail-guided flight
+// round the castle with Kepri through 12 light orbs (☀️ power button: Kepri's sunbeam). Keepsake: a golden sun disc.
 // Everything is created once at start-up (hidden): no lights or materials are added at runtime.
 import { createWorm } from '../worm.js';
 import { makeChibi } from '../people.js';
@@ -11,7 +12,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 const SUN = { back: 0xc9861a, side: 0xe3a52c, belly: 0xfbe9a8, tail: 0xe3a52c, spike: 0xffd75a, head: 0xdc9a24, muzzle: 0xf0bb4a, fin: 0xffcf52, horn: 0xfff0c0, iris: 0x8a4a10, sheen: 0xfff0b0 };
 
 export function chapter3(G) {
-  const { THREE, cam, fx, worm, drake, outdoor, heightAt, sun, world, ui, say, toast, hideToast, card, fade, sfx, runner, wait } = G;
+  const { THREE, cam, fx, worm, drake, outdoor, heightAt, sun, world, ui, say, toast, hideToast, card, fade, sfx, runner, wait, fl, actions, clearActions } = G;
   const V = (x, y, z) => new THREE.Vector3(x, y, z), $ = s => document.querySelector(s);
   const ground = (x, z, up = 0) => V(x, heightAt(x, z) + up, z);
   const ease = k => k * k * (3 - 2 * k), lerp = THREE.MathUtils.lerp;
@@ -85,10 +86,67 @@ export function chapter3(G) {
   let camGoal = CAM_WIDE, camSnap = true, active = -1, tapWait = null, taps = 0, dim = 0, dimTo = 0, blocked = false, sunBase = null, bgBase = null;
   const camLook = V(0, 0, 0);
   const tween = G.tween; // wall-clock story animations with a deadline (see main.js)
+
+  // ---------------------------------------------------------------- the sunbeam flight (rail-guided, like chapters 1, 2 and 6)
+  // 12 light orbs on a spiral that opens out round the castle (about 430 m of rail: 50 s). Tiny geometry: one shared
+  // low-poly core and one glow sprite per orb.
+  const ORBS = 12, orbG = new THREE.IcosahedronGeometry(0.85, 1), orbM = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.25, 1.05, 0.55) });
+  const orbGlow = glowSprite('rgba(255,236,150,1)', 'rgba(255,200,80,0)'), orbGroup = new THREE.Group(); orbGroup.visible = false; outdoor.add(orbGroup);
+  const spiral = (a, R, y) => V(Math.cos(a) * R, G.PLATEAU + y, Math.sin(a) * R);
+  const orbs = Array.from({ length: ORBS }, (_, i) => {
+    const g = new THREE.Group(); g.position.copy(spiral(0.9 + i * 0.72, 37 + i * 2, 11.5 + 3 * Math.sin(i * 1.1) + i * 0.3)); g.position.y = Math.max(g.position.y, heightAt(g.position.x, g.position.z) + 8); /* never inside a hill */ g.add(new THREE.Mesh(orbG, orbM));
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: orbGlow, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.6 })); sp.scale.setScalar(7); g.add(sp); orbGroup.add(g);
+    return { g, sp, base: g.position.clone(), got: false, pop: 0 };
+  });
+  const BLOOM_COLS = [0xff7fb0, 0xffd34a, 0xb48cff, 0xff9a4a];
+  let flying = false, beamAt = 0, beaming = false;
+  function flightTick(dt, time) { // Kepri keeps formation beside Worm; the garden brightens as the orbs come in
+    const yaw = worm.root.rotation.y, c = Math.cos(yaw), s = Math.sin(yaw), ox = -5.6, oz = -0.8;
+    kepri.root.position.set(worm.root.position.x + ox * c + oz * s, worm.root.position.y + 0.6 + Math.sin(time * 1.8) * 0.35, worm.root.position.z - ox * s + oz * c); kepri.root.rotation.set(0, yaw, 0); kepri.update(dt, time);
+    const ni = G.nextItem();
+    orbs.forEach((o, i) => { if (o.got) { o.pop += dt; const k = Math.max(0, 1 - o.pop * 2.5); o.g.scale.setScalar(k * (1 + o.pop * 3)); o.g.visible = k > 0; }
+      else { if (!beaming || i !== ni) o.g.position.y = o.base.y + Math.sin(time * 1.5 + i) * 0.4; o.sp.material.opacity = i === ni ? 0.75 + 0.2 * Math.sin(time * 5) : 0.5; } });
+    if (sunBase != null) { const left = 1 - fl.got / ORBS; sun.intensity = sunBase * (1 - 0.5 * left); outdoor.backgroundIntensity = bgBase * (1 - 0.35 * left); }
+  }
+  function onOrb(i, o) { // every orb: Kepri's sunbeam pours down and a patch of garden below bursts into colour
+    const n = fl.got; sfx.star(n - 1); fx.burst(o.g.position.clone(), 0xffe27a, 40, 7, 0.6, 1.2, -1.5); worm.wiggle(0.8); kepri.wiggle(1); if (n % 3 === 1) G.glance(1.0, 0.8);
+    const patch = ground(o.base.x * 0.82, o.base.z * 0.82, 0.6), from = kepri.headWorld();
+    for (let k = 1; k <= 5; k++) fx.burst(from.clone().lerp(patch, k / 5), 0xffe27a, 6, 1.5, 0.45, 0.6, 0);
+    for (const col of [BLOOM_COLS[i % 4], BLOOM_COLS[(i + 1) % 4]]) fx.burst(patch.clone(), col, 30, 5, 0.6, 1.3, 1.5);
+    G.setCounter(`${ORBS} − ${n} = ${ORBS - n}`, '☀️');
+    const line = { 1: 'קרן שמש ראשונה! ☀️', 6: 'חצי דרך! הגנים מתעוררים 🌸', 11: 'רק עוד אחד!' }[n]; if (line) toast('worm', line, 1900);
+  }
+  // Kepri's sunbeam (power button): a beam from Kepri carries the next orb straight to Worm. Always works; a 2.5 s rest
+  // between uses keeps the flight the longest part of the chapter even if the button is tapped all the time.
+  function sunbeam() {
+    const i = G.nextItem(), o = orbs[i], now = performance.now(); if (!flying || !o || beaming || now - beamAt < 2500 || fl.done) return;
+    beaming = true; beamAt = now; kepri.setGlow(true); kepri.wiggle(1.2); sfx.magic(); const from = o.g.position.clone(), head = kepri.headWorld();
+    for (let k = 0; k <= 5; k++) fx.burst(head.clone().lerp(from, k / 5), 0xfff0a0, 10, 2, 0.45, 0.7, 0);
+    tween(0.5, k => { o.g.position.lerpVectors(from, fl.pos, k * k); fx.trail(o.g.position.clone(), 0xffe27a, 0.45); }).then(() => { beaming = false; kepri.setGlow(false); if (flying && !o.got && G.nextItem() === i) G.collectNext(); });
+  }
+  const endFlight = () => { flying = false; beaming = false; orbGroup.visible = false; clearActions(); kepri.setGlow(false); };
+  async function flight(step) {
+    showAll(false); cloud.visible = true; ana.root.visible = true; for (const m of mirrors) m.soil.visible = m.flowers.visible = true; // the garden stays below; mirrors and beams rest
+    G.stars.group.visible = false; orbGroup.visible = true; for (const o of orbs) { o.got = false; o.pop = 0; o.g.visible = true; o.g.scale.setScalar(1); o.g.position.copy(o.base); }
+    kepri.root.visible = true; kepri.setPose('fly'); kepri.state.blend = 1; kepri.lookAt(null); flying = true; beaming = false;
+    G.startFlight({ items: orbs, lead: [spiral(0.0, 37, 11), spiral(0.45, 37, 11.5)], exit: [spiral(9.2, 61, 14), spiral(9.6, 61, 13), spiral(10.0, 60, 12)], speed: 8.5, camSide: -1, onCollect: onOrb });
+    G.tick = tick; G.phase = 'c3-flight'; G.checkpoint(3, 'flight'); G.setCounter(`${ORBS}`, '☀️');
+    await step(fade(false)); G.showJoy(true); worm.wiggle(1); G.glance(1.4);
+    toast('worm', 'קפרי טסה איתנו! נאסוף 12 כדורי אור ונאיר את כל הגנים ☀️', 3800);
+    await step(wait(3900));
+    actions([{ id: 'btn-sunbeam', label: '☀️ קרן שמש!', onClick: sunbeam }]);
+    await step(G.waitFor(() => fl.got >= ORBS));
+    G.phase = 'c3-flight-done'; fl.done = true; G.showJoy(false); clearActions(); sfx.fanfare(); worm.wiggle(2); kepri.wiggle(2); G.glance(1.8);
+    toast('worm', 'כל הגנים מוארים! תודה, קפרי!', 2600);
+    await step(wait(2600)); await step(fade(true));
+    endFlight(); stage(true); mirrors.forEach(m => { m.lit = true; m.step = m.good; m.yaw = m.good * STEP; m.bloom = 1; }); $('#counter').hidden = true;
+    await step(fade(false));
+  }
   const setBeam = (b, from, to) => { b.position.copy(from); b.lookAt(to); b.scale.set(1, 1, from.distanceTo(to)); };
   const _a = V(0, 0, 0), _b = V(0, 0, 0);
 
   function tick(dt, time) {
+    if (G.mode === 'flight' && flying) return flightTick(dt, time);
     if (G.mode !== 'garden') return;
     kepri.update(dt, time); ana.update(dt, time);
     // the cloud over the sun dims the garden (animating intensities only: nothing is added or removed)
@@ -117,7 +175,7 @@ export function chapter3(G) {
     sun.position.copy(WORM_AT).addScaledVector(world.sunDir, 120); sun.target.position.copy(WORM_AT);
   }
   function cleanup() {
-    active = -1; tapWait = null; blocked = false; dim = dimTo = 0; cloudState.mood = null; showAll(false);
+    active = -1; tapWait = null; blocked = false; dim = dimTo = 0; cloudState.mood = null; endFlight(); kepri.setPose('rest'); showAll(false);
     if (sunBase != null) { sun.intensity = sunBase; outdoor.backgroundIntensity = bgBase; }
   }
   const begin = () => { G.tick = tick; G.onLeave = cleanup; G.tap = onTap; };
@@ -201,7 +259,8 @@ export function chapter3(G) {
       worm.setGlow(false); mirrors.forEach(m => { m.up = 1; });
       
     }
-    else await step(fade(false)); // starting at the mirrors (saved checkpoint, or "עוד פעם?"): fade back in too
+    else if (from !== 'flight') await step(fade(false)); // starting at the mirrors (saved checkpoint, or "עוד פעם?"): fade back in too
+    if (from !== 'flight') {
     G.checkpoint(3, 'mirrors');
     await lightMirror(step, 0, 'יש! הערוגה הראשונה פורחת!');
     await cloudRiddle(step, 1, 'sub', [['cloud', 'הממפ! העננים הקטנים שלי חוסמים את הקרניים.']]);
@@ -209,6 +268,14 @@ export function chapter3(G) {
     await lightMirror(step, 1, 'עוד ערוגה פורחת! אתה מכוון מצוין, דרייק!');
     await cloudRiddle(step, 2, 'missing', []);
     await lightMirror(step, 2, 'כל הגן מלא צבעים!');
+    }
+    // ---- the action set piece: fly with Kepri and light up all the gardens round the castle
+    if (from !== 'flight') {
+      G.phase = 'c3-fly-ready'; camGoal = CAM_WORM; toast('worm', 'עכשיו נאיר את כל הגנים שמסביב לטירה! ☀️', 3200);
+      await step(new Promise(res => actions([{ id: 'btn-sun-fly', label: '☀️ טסים עם קפרי!', cls: 'pulse', onClick: () => res() }])));
+      clearActions(); worm.setGlow(true); sfx.magic(); await step(wait(600)); worm.setGlow(false); await step(fade(true));
+    }
+    await flight(step);
     // ---- the garden blooms, the cloud floats off (a little less grumpy)
     G.phase = 'c3-bloom'; dimTo = 0; sfx.fanfare(); worm.wiggle(2.5); kepri.wiggle(2.5); ana.wave(3); drake.wave(3);
     for (let i = 0; i < 3; i++) setTimeout(() => { if (G.tick === tick) fx.confetti(ground(0.5, 28, 4), 60); }, i * 500);
@@ -241,7 +308,7 @@ export function chapter3(G) {
   return {
     start: story, showAll,
     nextMirrorPos() { return active >= 0 ? mirrors[active].g.position.clone() : null; },
-    debug: () => ({ tweens: G.tweenCount(), active, taps, lit: mirrors.map(m => m.lit), blocked }),
+    debug: () => ({ tweens: G.tweenCount(), active, taps, lit: mirrors.map(m => m.lit), blocked, flying }),
     modelTargets: { ana, sunDragon: kepri, grumbleCloud: { root: cloud, state: cloudState } },
     cloudActor: { root: cloud, state: cloudState },
   };

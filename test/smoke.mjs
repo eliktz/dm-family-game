@@ -353,7 +353,21 @@ async function run(dev) {
       if (i < 3) { await advanceTo('c3-math' + i); for (const t0 = Date.now(); Date.now() - t0 < 240000 && !(await cur());) { if (await page.locator('#dialog:not([hidden])').count()) await tap('#dialog'); await page.waitForTimeout(300); } // the cloud and Ana speak before the riddle opens
         check(await solveBeat('c3-math' + i, { firstWrong: i === 1, shotName: i === 1 ? 'ch3-06-cloud-riddle' : null }) === 1, `cloud riddle ${i} asked once`); }
     }
-    await advanceTo('c3-bloom'); await page.waitForTimeout(1500); await shot('ch3-07-garden-blooms');
+    // ---- the sunbeam flight with Kepri: a long rail flight through 12 light orbs, with her power button
+    await advanceTo('c3-fly-ready'); await page.locator('#btn-sun-fly').waitFor({ state: 'visible', timeout: 20000 }); await page.waitForTimeout(600); await clearOfActors('ch3 fly button'); await tap('#btn-sun-fly');
+    await page.waitForFunction(() => __dm.phase === 'c3-flight' && !!document.querySelector('#btn-sunbeam'), null, { timeout: 120000 }); await page.waitForTimeout(1200);
+    { const g = await page.evaluate(() => { const fl = __dm.G.fl, r = document.querySelector('#btn-sunbeam').getBoundingClientRect(); return { orbs: fl.items.length, len: Math.round(fl.len), speed: fl.speed, w: Math.round(r.width), h: Math.round(r.height), flying: __dm.ch3.debug().flying, count: document.querySelector('#count').textContent.replace(/\s+/g, ' ').trim() }; });
+      check(g.orbs === 12 && g.flying && g.len / g.speed >= 45 && g.len / g.speed <= 60, `sunbeam flight: ${g.orbs} light orbs on a ${g.len} m rail, about ${Math.round(g.len / g.speed)} s of flying with Kepri`);
+      check(/^12( − \d+ = \d+)?$/.test(g.count), `the orb counter counts down as a subtraction (${g.count})`);
+      check(g.h >= (dev.name === 'ipad' ? 72 : 44), `Kepri's sunbeam button is a big touch target (${g.w}×${g.h})`); await clearOfActors('sunbeam flight HUD'); await shot('ch3-06b-sunbeam-flight'); }
+    { const far = await (await page.waitForFunction(() => { const fl = __dm.G.fl, i = fl.items.findIndex(s => !s.got), r = fl.items[i]; if (!r) return null; const d = r.base.distanceTo(fl.pos); if (d < 18) return null;
+        document.querySelector('#btn-sunbeam').dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); return { i, d: Math.round(d), t: __dm.G.time }; }, null, { timeout: 30000 })).jsonValue();
+      await page.waitForTimeout(250); await shot('ch3-06c-kepri-sunbeam');
+      const dt = await (await page.waitForFunction(f => __dm.G.fl.items[f.i].got ? __dm.G.time - f.t : null, far, { timeout: 20000 })).jsonValue();
+      check(dt < far.d / 8.5 * 0.7, `Kepri's sunbeam carried an orb ${far.d} m ahead to Worm in ${dt.toFixed(1)} s of game time (flying there takes ${(far.d / 8.5).toFixed(1)} s)`);
+      const c = (await page.locator('#count').innerText()).replace(/\s+/g, ' ').trim(); check(/^12 − \d+ = \d+$/.test(c) && await page.evaluate(() => getComputedStyle(document.querySelector('#count')).direction === 'ltr'), `orb counter shows a subtraction, laid out ltr (${c})`); }
+    await page.evaluate(() => __dm.collectAll());
+    await advanceTo('c3-bloom', 300000); await page.waitForTimeout(1500); await shot('ch3-07-garden-blooms');
     await advanceTo('c3-celebrate'); await bubbleCap('ch3'); await page.locator('#card:not([hidden])').waitFor({ timeout: 30000 });
     check((await page.locator('#card').innerText()).includes('☀️'), 'ch3 celebration card with the sun keepsake');
     await shot('ch3-08-celebrate-card');

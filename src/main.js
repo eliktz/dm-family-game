@@ -527,7 +527,7 @@ const GO = {
   ch6: () => guard(() => ch6.start('intro')), 'ch6-flight': () => guard(() => ch6.start('flight')), 'ch6-pots': () => guard(() => ch6.start('pots')), 'ch6-end': () => guard(() => ch6.start('end')),
   ch5: () => guard(() => ch5.start('intro')), 'ch5-patterns': () => guard(() => ch5.start('patterns')), 'ch5-end': () => guard(() => ch5.start('end')),
   ch4: () => guard(() => ch4.start('intro')), 'ch4-catch': () => guard(() => ch4.start('catch')), 'ch4-end': () => guard(() => ch4.start('end')),
-  ch3: () => guard(() => ch3.start('intro')), 'ch3-mirrors': () => guard(() => ch3.start('mirrors')), 'ch3-end': () => guard(() => ch3.start('end')),
+  ch3: () => guard(() => ch3.start('intro')), 'ch3-mirrors': () => guard(() => ch3.start('mirrors')), 'ch3-flight': () => guard(() => ch3.start('flight')), 'ch3-end': () => guard(() => ch3.start('end')),
 };
 window.__dm = {
   ready: false,

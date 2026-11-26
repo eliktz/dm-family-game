@@ -57,6 +57,8 @@ steps and removes one wrong answer, and on the third Worm shows the answer and t
 
 3. **השמש של אנה** (done): **Ana and her sun dragon** come from the desert. The Grumble Cloud covers the sun over the castle gardens.
    - *Activity, mirror light:* Worm lifts 3 mirrors with mind power, and the player rotates them to bounce the sun dragon's beam onto the flower beds. Subtraction appears as clouds block beams: 8 − 3.
+   - *Action, the sunbeam flight:* after the third mirror Worm and Drake fly with Kepri round the castle through 12 light orbs (rail-guided, about 50 s).
+     Every orb sends a sunbeam down and a patch of garden bursts into colour; the counter counts down as a subtraction (12 − 5 = 7). Kepri's ☀️ button carries the next orb to Worm.
    - *Teaser:* Rori's fire dragon has a hiccup problem… *Keepsake:* a golden sun disc.
 
 4. **הלהבה של רורי** (done): **Rori and Vulcan, her fire dragon**, arrive at the castle lawn. Vulcan has fiery hiccups: every "היק!" pops out a

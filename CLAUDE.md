@@ -85,7 +85,10 @@ A Hebrew, iPad-first, **plot-driven** three.js game for Elik's 7-year-old son, b
   `src/names.js` (`PETRA_DRAGON_NAME`). Debug: `__dm.go('ch5' | 'ch5-patterns' | 'ch5-end')`, `__dm.crystalScreen(wrong?)`, `__dm.ch5.debug()`.
 - **Chapter 4 (bakery):** `src/chapters/ch4.js`, mode `bakery`. Debug: `__dm.go('ch4' | 'ch4-catch' | 'ch4-end')`, `__dm.fireballScreen()`,
   `__dm.ch4.debug()`; `soak.mjs --chapter=4` and `starve.mjs` cover it. Fireball timing uses the wall clock, not frames.
-- **Chapter 3 (garden):** `src/chapters/ch3.js` runs in mode `garden` with its own camera in `G.tick`. Debug: `__dm.go('ch3' | 'ch3-mirrors' | 'ch3-end')`,
+- **Chapter 3 (garden):** `src/chapters/ch3.js` runs in mode `garden` with its own camera in `G.tick`. After the third mirror comes the
+  sunbeam flight (mode `flight`, phases `c3-fly-ready` → `c3-flight` → `c3-flight-done`): 12 light orbs on a spiral rail round the castle with
+  Kepri beside Worm, `#btn-sunbeam` (☀️, 2.5 s rest) carries the next orb to him, then `stage(true)` returns to the garden for the bloom.
+  `__dm.go('ch3-flight')` jumps to it. Debug: `__dm.go('ch3' | 'ch3-mirrors' | 'ch3-end')`,
   `__dm.mirrorScreen()`, `__dm.ch3.debug()`. `node test/soak.mjs --chapter=3` presses 🏠 mid-dialog in every loop. Background characters use
   `makeChibi({ lod })` / `createWorm({ lod })` to stay inside the triangle budget (garden main pass: 121 draw calls, 190k triangles).
   Test output goes to the git-ignored `test-logs/`.
