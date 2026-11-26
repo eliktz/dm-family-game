@@ -49,7 +49,8 @@ steps and removes one wrong answer, and on the third Worm shows the answer and t
 
 2. **הביצה המסתורית**: A glowing blue egg rolls into the cave. Worm curls protectively around it. Griffith says a new Dragon Master is on the way.
    - *Activity A, river glide:* Worm glides low along the river behind the castle (guided, like ch. 1). The player collects water-drop bubbles in **pairs**,
-     and every pair shows a sum (2, 4, 6…).
+     and every pair shows a sum (2, 4, 6… up to 20). It is a long glide (ten pairs, about 50 s). A blue dragon swims in the river below:
+     Shu, before the story introduces her. Her splash button (💦) lifts the next pair straight to Worm.
    - *Activity B, warm the egg:* the egg needs 5 warm stones and Worm already brought 2. "How many more?" (missing addend), with stones on screen. Then tap the stones to place them.
    - The egg hatches into a tiny, giggly water-dragon baby, and **Bo arrives with his water dragon**, who has been looking for it. Worm and the baby become friends.
    - *Teaser:* the river suddenly fills with grey mist… "מישהו קטן ורטנן מסתתר בענן…" *Keepsake:* a blue water drop.

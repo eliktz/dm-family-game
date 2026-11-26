@@ -285,6 +285,16 @@ async function run(dev) {
     const sum = (await page.locator('#count').innerText()).trim(); check(/^\d+ \+ 2 = \d+$/.test(sum), `pairs counter shows a sum (${sum})`);
     check(await page.evaluate(() => getComputedStyle(document.querySelector('#count')).direction === 'ltr'), 'sum is laid out ltr');
     await shot('ch2-06-river-pairs');
+    // the long glide: ten pairs on the rail, a blue dragon (Shu) swimming below, and her splash button
+    { const g = await page.evaluate(() => { const fl = __dm.G.fl, b = document.querySelector('#btn-splash'), r = b && b.getBoundingClientRect(); return { pairs: fl.items.length, len: Math.round(fl.len), speed: fl.speed, btn: !!b && b.offsetParent !== null, h: r ? Math.round(r.height) : 0, w: r ? Math.round(r.width) : 0, shu: __dm.ch2.debug().swim }; });
+      check(g.pairs === 10 && g.len / g.speed >= 45 && g.len / g.speed <= 60, `river glide: ${g.pairs} pairs on a ${g.len} m rail, about ${Math.round(g.len / g.speed)} s of flying`);
+      check(g.btn && g.h >= (dev.name === 'ipad' ? 72 : 44) && g.shu, `Shu swims below and her splash button is a big touch target (${g.w}×${g.h})`); await clearOfActors('river glide HUD with the splash button'); }
+    // prove it is the button and not the rail: press while the next pair is still far ahead; it must be in well before Worm could fly there
+    { const far = await (await page.waitForFunction(() => { const fl = __dm.G.fl, i = fl.items.findIndex(s => !s.got), r = fl.items[i]; if (!r) return null; const d = r.base.distanceTo(fl.pos); if (d < 18) return null;
+        document.querySelector('#btn-splash').dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); return { i, d: Math.round(d), t: __dm.G.time }; }, null, { timeout: 30000 })).jsonValue();
+      await page.waitForTimeout(250); await shot('ch2-06b-shu-splash');
+      const dt = await (await page.waitForFunction(f => __dm.G.fl.items[f.i].got ? __dm.G.time - f.t : null, far, { timeout: 20000 })).jsonValue();
+      check(dt < far.d / 8 * 0.7, `Shu's splash lifted a pair ${far.d} m ahead to Worm in ${dt.toFixed(1)} s of game time (flying there takes ${(far.d / 8).toFixed(1)} s)`); }
     await page.evaluate(() => __dm.collectAll());
     await advanceTo('c2-warm'); await page.waitForTimeout(1500); await shot('ch2-07-warm-egg');
     await advanceTo('c2-math'); await page.waitForTimeout(800);

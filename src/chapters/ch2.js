@@ -1,5 +1,5 @@
 // Chapter 2 "הביצה המסתורית" (see STORY.md): a glowing blue egg rolls into the cave and Worm curls
-// around it → river glide (water-drop bubbles in pairs: 2, 4, 6, 8, 10) → warm the egg (missing
+// around it → long river glide (ten pairs of water drops, counted in twos up to 20; Shu swims below with a splash button) → warm the egg (missing
 // addend 2 + ? = 5, then tap the warm stones into place) → the egg hatches into a tiny water dragon →
 // Bo arrives with Shu, his water dragon → celebration → misty teaser. Keepsake: a blue water drop.
 // All actors are created once at start-up (hidden) so nothing is compiled or lit at runtime.
@@ -28,7 +28,7 @@ export function chapter2(G) {
   const NEAR_EGG = V(-0.9, 0.7, -1.2);              // where Worm looks to watch the egg without turning his face from the kid
 
   // ---------------------------------------------------------------- actors (hidden until the chapter runs)
-  const bubbles = buildBubbles(5); bubbles.group.visible = false; outdoor.add(bubbles.group);
+  const bubbles = buildBubbles(10, -160, 32); // ten pairs down the river: a long glide (about 50 s on the rail) bubbles.group.visible = false; outdoor.add(bubbles.group);
   // egg: two shell halves so it can open
   const eggPt = th => new THREE.Vector2(Math.max(0.001, 0.64 * Math.sin(th) * (1 - 0.17 * Math.cos(th))), 0.86 * Math.cos(th));
   const half = (a, b) => { const pts = []; for (let i = 0; i <= 14; i++) pts.push(eggPt(b + (a - b) * i / 14)); return new THREE.LatheGeometry(pts, 28); };
@@ -90,9 +90,16 @@ export function chapter2(G) {
 
   const tween = G.tween; // wall-clock story animations with a deadline (see main.js)
   const ease = k => k * k * (3 - 2 * k);
-  let placed = 0, placing = false, warm = 0, eggShake = 0, mist = false, bg0 = null;
+  let placed = 0, placing = false, warm = 0, eggShake = 0, mist = false, bg0 = null, swim = false, hop = 0, splashAt = 0, splashing = false;
+  const shuHome = () => { swim = false; splashing = false; caveScene.add(shu.root); shu.root.visible = false; shu.root.rotation.set(0, 0, 0); shu.setPose('rest'); }; // back from the river to the cave scene
 
   function tick(dt, time) {
+    if (swim && G.mode === 'flight') { // a blue dragon swims in the river just ahead of Worm (it is Shu: Drake meets her at the end of the chapter)
+      const x = fl.pos.x + 9, z = riverZ(x) + Math.sin(time * 0.9) * 2.2; hop = Math.max(0, hop - dt * 1.7);
+      shu.root.position.set(x, RIVER_Y + 0.25 + Math.sin(hop * Math.PI) * 3.0, z); shu.root.rotation.set(0, worm.root.rotation.y, 0); shu.update(dt, time);
+      if (Math.random() < 0.35) fx.trail(V(x - 2.6, RIVER_Y + 0.3, z), 0xd6f0ff, 0.3);
+      return;
+    }
     if (G.mode === 'cave') {
       if (baby.root.visible) baby.update(dt, time);
       if (shu.root.visible) shu.update(dt, time);
@@ -111,7 +118,7 @@ export function chapter2(G) {
     }
   }
   function cleanup() {  // leaving the chapter (home, another chapter): put the shared world back
-    placing = false; mist = false; warm = 0; eggShake = 0; showAll(false); stars.group.visible = false;
+    placing = false; mist = false; warm = 0; eggShake = 0; shuHome(); clearActions(); showAll(false); stars.group.visible = false;
     if (bg0) { outdoor.background = bg0; bg0 = null; }
     griffith.root.position.set(7.2, 0, -3.5);
   }
@@ -173,29 +180,39 @@ export function chapter2(G) {
   }
 
   // ---- Activity A: river glide, bubbles in pairs
-  const PAIR_LINES = ['שתי טיפות! 💧💧', 'ועוד שתיים – ארבע!', 'שש טיפות! אתה מעולה!', 'שמונה! רק עוד זוג אחד!', ''];
+  const PAIR_LINES = ['שתי טיפות! 💧💧', 'ועוד שתיים – ארבע!', 'שש טיפות! אתה מעולה!', 'שמונה!', 'עשר! חצי דרך! 🎉', '', 'ארבע־עשרה!', '', 'שמונה־עשרה! רק עוד זוג אחד!', ''];
   const N = bubbles.list.length;
   function onPair(i, s) {
     const n = fl.got; sfx.star(n - 1); fx.burst(s.g.position.clone(), 0x9fdcff, 46, 6, 0.6, 1.2, -1.5); worm.wiggle(0.8); G.glance(1.0, 0.8);
     G.setCounter(n === 1 ? '2' : `${2 * (n - 1)} + 2 = ${2 * n}`, '💧');
     if (n < N && PAIR_LINES[n - 1]) toast('worm', PAIR_LINES[n - 1], 1900);
   }
+  // Shu's splash (power button): she leaps, a column of water lifts the next pair of drops straight to Worm. Always works;
+  // a short rest between uses. Wall-clock tween with a deadline, like every story animation.
+  function splash() {
+    const i = G.nextItem(), it = bubbles.list[i], now = performance.now(); if (!swim || !it || splashing || now - splashAt < 1500 || fl.done) return;
+    splashing = true; splashAt = now; hop = 1; shu.wiggle(1.2); sfx.whoosh(); const from = it.g.position.clone(), foot = V(from.x, RIVER_Y + 0.3, riverZ(from.x));
+    for (let k = 0; k <= 4; k++) fx.burst(foot.clone().lerp(from, k / 4), 0x9fdcff, 14, 3, 0.5, 0.9, -1);
+    tween(0.5, k => { it.g.position.lerpVectors(from, fl.pos, k * k); fx.trail(it.g.position.clone(), 0xbfe6ff, 0.45); }).then(() => { splashing = false; if (swim && !it.got && G.nextItem() === i) G.collectNext(); });
+  }
   async function glide(step) {
     showAll(false); stars.group.visible = false; bubbles.group.visible = true; bubbles.reset();
-    const rp = x => V(x, RIVER_Y + 4.1, riverZ(x)); // low along the river: a lead-in, the 5 pairs, then on downstream
-    G.startFlight({ items: bubbles.list, lead: [rp(-96), rp(-80)], exit: [rp(92), rp(120), rp(150)], speed: 8, corridor: [5, 2.5], onCollect: onPair });
+    const rp = x => V(x, RIVER_Y + 4.1, riverZ(x)); // low along the river: a lead-in, the 10 pairs, then on downstream
+    G.startFlight({ items: bubbles.list, lead: [rp(-200), rp(-184)], exit: [rp(156), rp(184), rp(210)], speed: 8, corridor: [5, 2.5], onCollect: onPair });
+    outdoor.add(shu.root); shu.root.visible = true; shu.root.scale.setScalar(0.8); shu.setPose('fly'); shu.state.blend = 1; shu.lookAt(null); swim = true; hop = 0; splashing = false;
     G.phase = 'c2-glide'; G.checkpoint(2, 'glide'); G.setCounter('0', '💧');
     await step(fade(false)); showJoy(true);
     worm.wiggle(1); G.glance(1.4);
     toast('worm', 'הנה הנהר! הטיפות באות בזוגות – נספור בקפיצות של 2!', 3800);
     await step(wait(3900));
-    toast(null, 'וורם מרחף לבד! הג׳ויסטיק מזיז אותו קצת לצדדים 💧', 3600);
+    toast('worm', 'מישהי כחולה שוחה בנהר! לחץ על 💦 והיא תשפריץ לנו טיפות', 4200);
+    actions([{ id: 'btn-splash', label: '💦 שפריץ!', onClick: splash }]);
     await step(waitFor(() => fl.got >= N));
-    G.phase = 'c2-glide-done'; fl.done = true; showJoy(false);
+    G.phase = 'c2-glide-done'; fl.done = true; showJoy(false); clearActions();
     sfx.fanfare(); worm.wiggle(2); G.glance(1.8);
-    toast('worm', 'עשר טיפות! כל הכבוד, דרייק!', 2600);
+    toast('worm', 'עשרים טיפות! כל הכבוד, דרייק!', 2600);
     await step(wait(2600)); await step(fade(true));
-    bubbles.group.visible = false;
+    bubbles.group.visible = false; shuHome();
   }
 
   // ---- Activity B: warm the egg (missing addend, then tap the stones into place)
@@ -332,6 +349,6 @@ export function chapter2(G) {
     update(dt, time, nextIdx) { if (bubbles.group.visible) bubbles.update(dt, time, nextIdx); },
     nextStonePos() { const s = placing && stones.find(x => !x.placed && !x.moving); return s ? s.m.position.clone() : null; },
     modelTargets: { bo, waterDragon: shu, babyDragon: baby },
-    debug: () => ({ tweens: G.tweenCount(), placed, placing, isTick: G.tick === tick }), // test diagnostics only
+    debug: () => ({ tweens: G.tweenCount(), placed, placing, swim, isTick: G.tick === tick }), // test diagnostics only
   };
 }

@@ -232,7 +232,7 @@ export function buildStars(n = 8) {
 }
 
 // ---- water-drop bubbles over the river (chapter 2): collected in pairs ----------------------
-export function buildBubbles(n = 5) {
+export function buildBubbles(n = 5, x0 = -64, dx = 32) { // pairs of water drops along the river, every dx metres from x0
   const group = new THREE.Group(); const list = [];
   const shellG = new THREE.SphereGeometry(1.25, 24, 16);
   const shellM = new THREE.MeshPhysicalMaterial({ color: 0xbfe6ff, roughness: 0.04, clearcoat: 1, transparent: true, opacity: 0.32, depthWrite: false });
@@ -241,7 +241,7 @@ export function buildBubbles(n = 5) {
   const dropM = new THREE.MeshPhysicalMaterial({ color: 0x3f9fe8, roughness: 0.1, clearcoat: 1, emissive: 0x2a8ae0, emissiveIntensity: 0.9 });
   const glow = glowSprite('rgba(170,225,255,1)', 'rgba(90,170,255,0)');
   for (let i = 0; i < n; i++) {
-    const x = -64 + i * 32, z = riverZ(x), y = RIVER_Y + 3.9;
+    const x = x0 + i * dx, z = riverZ(x), y = RIVER_Y + 3.9;
     const g = new THREE.Group(); g.position.set(x, y, z); const drops = [];
     for (const sz of [-1, 1]) {
       const b = new THREE.Group(); b.position.set(0, 0, sz * 1.55);
@@ -259,6 +259,6 @@ export function buildBubbles(n = 5) {
       const hi = i === nextIdx ? 1 : 0; it.sp.material.opacity = 0.4 + hi * (0.3 + 0.12 * Math.sin(time * 5));
     });
   }
-  function reset() { list.forEach(it => { it.got = false; it.pop = 0; it.g.visible = true; it.g.scale.setScalar(1); }); }
+  function reset() { list.forEach(it => { it.got = false; it.pop = 0; it.g.visible = true; it.g.scale.setScalar(1); it.g.position.copy(it.base); }); }
   return { group, list, update, reset };
 }
