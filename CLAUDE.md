@@ -75,7 +75,7 @@ A Hebrew, iPad-first, **plot-driven** three.js game for Elik's 7-year-old son, b
   rail (`startFlight({ items: [...stars, ...rings], pathPts })`; the rings are in the list from the start, marked collected and hidden until
   the last star). The ring items are flagged `gold` (star items already have a `ring` field: their halo). `#btn-lift` (✨ mind-lift) pulls the
   next ring to Worm. In tests use `__dm.collectNext()` for the stars: `collectAll()` would take the freshly lit rings too.
-- **Chapter 2 river glide:** ten pairs on a ~410 m rail (`buildBubbles(10, -160, 32)`, about 50 s). Shu is moved into the outdoor scene for
+- **Chapter 2 river glide:** ten pairs on a ~407 m rail (`buildBubbles(10, -168, 34)`, speed 7: about 44-49 s of real flying to the last pair). Shu is moved into the outdoor scene for
   the glide and swims just ahead of Worm (`swim` in ch2.js `tick`); `shuHome()` puts her back in the cave scene before her arrival beat and on
   leaving. `#btn-splash` (💦) lifts the next pair to Worm, the same pattern as chapter 1's `#btn-lift`.
 - **Chapter 6 (cloud):** `src/chapters/ch6.js`: a rail flight (`G.startFlight`, mode `flight`) with Kepri and Vulcan borrowed from chapters 3-4

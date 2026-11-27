@@ -28,7 +28,7 @@ export function chapter2(G) {
   const NEAR_EGG = V(-0.9, 0.7, -1.2);              // where Worm looks to watch the egg without turning his face from the kid
 
   // ---------------------------------------------------------------- actors (hidden until the chapter runs)
-  const bubbles = buildBubbles(10, -160, 32); // ten pairs down the river: a long glide (about 50 s on the rail) bubbles.group.visible = false; outdoor.add(bubbles.group);
+  const bubbles = buildBubbles(10, -168, 34); // ten pairs down the river, 34 m apart: a long glide (about 45-50 s of real flying to the last pair) bubbles.group.visible = false; outdoor.add(bubbles.group);
   // egg: two shell halves so it can open
   const eggPt = th => new THREE.Vector2(Math.max(0.001, 0.64 * Math.sin(th) * (1 - 0.17 * Math.cos(th))), 0.86 * Math.cos(th));
   const half = (a, b) => { const pts = []; for (let i = 0; i <= 14; i++) pts.push(eggPt(b + (a - b) * i / 14)); return new THREE.LatheGeometry(pts, 28); };
@@ -198,7 +198,7 @@ export function chapter2(G) {
   async function glide(step) {
     showAll(false); stars.group.visible = false; bubbles.group.visible = true; bubbles.reset();
     const rp = x => V(x, RIVER_Y + 4.1, riverZ(x)); // low along the river: a lead-in, the 10 pairs, then on downstream
-    G.startFlight({ items: bubbles.list, lead: [rp(-200), rp(-184)], exit: [rp(156), rp(184), rp(210)], speed: 8, corridor: [5, 2.5], onCollect: onPair });
+    G.startFlight({ items: bubbles.list, lead: [rp(-205), rp(-190)], exit: [rp(162), rp(182), rp(198)], speed: 7, corridor: [5, 2.5], onCollect: onPair }); // a calm 7 m/s: about 49 s to the last pair hands-off, 44 s while steering
     outdoor.add(shu.root); shu.root.visible = true; shu.root.scale.setScalar(0.8); shu.setPose('fly'); shu.state.blend = 1; shu.lookAt(null); swim = true; hop = 0; splashing = false;
     G.phase = 'c2-glide'; G.checkpoint(2, 'glide'); G.setCounter('0', '💧');
     await step(fade(false)); showJoy(true);

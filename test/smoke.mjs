@@ -294,7 +294,7 @@ async function run(dev) {
         document.querySelector('#btn-splash').dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); return { i, d: Math.round(d), t: performance.now() }; }, null, { timeout: 30000 })).jsonValue();
       await page.waitForTimeout(250); await shot('ch2-06b-shu-splash');
       const dt = await (await page.waitForFunction(f => __dm.G.fl.items[f.i].got ? (performance.now() - f.t) / 1000 : null, far, { timeout: 20000 })).jsonValue();
-      check(dt < far.d / 8 * 0.7, `Shu's splash lifted a pair ${far.d} m ahead to Worm in ${dt.toFixed(1)} s (flying there takes ${(far.d / 8).toFixed(1)} s)`); }
+      check(dt < far.d / 7 * 0.7, `Shu's splash lifted a pair ${far.d} m ahead to Worm in ${dt.toFixed(1)} s (flying there takes ${(far.d / 7).toFixed(1)} s)`); }
     await page.evaluate(() => __dm.collectAll());
     await advanceTo('c2-warm'); await page.waitForTimeout(1500); await shot('ch2-07-warm-egg');
     await advanceTo('c2-math'); await page.waitForTimeout(800);
