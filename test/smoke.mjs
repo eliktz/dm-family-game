@@ -129,7 +129,7 @@ async function run(dev) {
     // ---- chapter map, locked chapters, hidden parent unlock
     check(await page.locator('#chapters .chap').count() === 8, 'chapter map shows 8 chapters');
     check(await page.locator('#ch-2.locked').count() === 1, 'chapter 2 is locked on a fresh start');
-    check(await page.locator('#ch-8 .soon').isVisible(), 'unbuilt chapters say בקרוב');
+    check(await page.locator('.chap .soon:visible').count() === 0 && await page.locator('#ch-8.locked').count() === 1, 'all 8 chapters are built (none says בקרוב); chapter 8 is locked on a fresh start');
     check(await page.locator('#btn-free.locked').count() === 1 && (await page.locator('#btn-free').innerText()).includes('🔒'), 'free flight is locked on a fresh start');
     await tap('#btn-free'); await page.waitForTimeout(500); check(await page.evaluate(() => __dm.mode === 'title' && !document.querySelector('#title-toast').hidden), 'a tap on the locked free-flight button only gives a friendly hint'); await page.waitForTimeout(2700);
     await shot('01-title-map');
@@ -576,8 +576,57 @@ async function run(dev) {
     await shot('ch7-11-teaser');
     await tap('#card button[data-v="home"]');
     await page.waitForFunction(() => window.__dm.mode === 'title', null, { timeout: 15000 }); await page.waitForTimeout(1200);
-    check((await page.locator('#ch-7 .ic').innerText()).includes('🗺️') && JSON.stringify(await page.evaluate(() => __dm.progress)) === '[1,2,3,4,5,6,7]' && await page.locator('#ch-8.locked').count() === 1 && await page.locator('#ch-8 .soon').isVisible(), 'chapter 7 keepsake badge shown, progress is [1,2,3,4,5,6,7], chapter 8 still says בקרוב');
+    check((await page.locator('#ch-7 .ic').innerText()).includes('🗺️') && JSON.stringify(await page.evaluate(() => __dm.progress)) === '[1,2,3,4,5,6,7]', 'chapter 7 keepsake badge shown, progress is [1,2,3,4,5,6,7]');
     await shot('ch7-12-title-badges');
+
+    // ---------------- chapter 8 (the finale): קשת של חברים
+    check(await page.locator('#ch-8.locked').count() === 0 && (await page.locator('#btn-continue').innerText()).includes('פרק 8'), 'chapter 8 unlocked after chapter 7, continue points at it');
+    await tap('#btn-continue');
+    await advanceTo('c8-intro'); await page.waitForTimeout(1500);
+    await clearOfActors('ch8 dialog'); await shot('ch8-01-sad-cloud');
+    await tap('#btn-home'); await page.waitForFunction(() => window.__dm.mode === 'title', null, { timeout: 30000 }); await page.waitForTimeout(800);
+    await tap('#btn-continue'); await page.waitForFunction(() => __dm.phase === 'c8-intro' && !document.querySelector('#dialog').hidden, null, { timeout: 60000 });
+    await tap('#dialog'); await page.waitForTimeout(900);
+    check(await page.locator('#dialog').isVisible(), 'ch8: after 🏠 mid-dialog and continue, the bubble is still there');
+    await advanceTo('c8-lift-ready'); await page.locator('#btn-lift-all').waitFor({ state: 'visible', timeout: 20000 }); await page.waitForTimeout(600);
+    { const r = await page.locator('#btn-lift-all').boundingBox(); check(r.height >= (dev.name === 'ipad' ? 72 : 44), `Worm's mind-lift button is a big touch target (${Math.round(r.width)}×${Math.round(r.height)})`); await clearOfActors('ch8 lift button'); }
+    await tap('#btn-lift-all');
+    await page.waitForFunction(() => __dm.ch8.debug().lifted >= 0.99, null, { timeout: 120000 }); await page.waitForTimeout(700); await shot('ch8-03-mind-lift');
+    await advanceTo('c8-cloud'); await page.waitForFunction(() => !document.querySelector('#dialog').hidden, null, { timeout: 60000 }); await page.waitForTimeout(900); await clearOfActors('ch8 dialog with the lifted team'); await shot('ch8-04-invite-the-cloud');
+    await advanceTo('c8-rainbow', 300000); await page.waitForTimeout(3600); await shot('ch8-05-rainbow-over-the-castle');
+    await advanceTo('c8-quiz', 300000); await page.locator('#card:not([hidden])').waitFor({ timeout: 60000 });
+    check(await page.locator('#card button').count() === 3 && (await page.locator('#card').innerText()).includes('החידון הגדול של וורם'), "Worm's big quiz lets the player pick easy / medium / hard");
+    await shot('ch8-06-quiz-pick'); await tap('#card button[data-v="med"]');
+    await advanceTo('c8-math'); for (const t0 = Date.now(); Date.now() - t0 < 240000 && !(await cur());) { if (await page.locator('#dialog:not([hidden])').count()) await tap('#dialog'); await page.waitForTimeout(300); }
+    check(await solveBeat('c8-math', { shotName: 'ch8-07-big-quiz' }) === 1, "Worm's big quiz asks one riddle");
+    await advanceTo('c8-fly-ready'); await page.locator('#btn-festival-fly').waitFor({ state: 'visible', timeout: 20000 }); await page.waitForTimeout(600); await clearOfActors('ch8 festival button'); await tap('#btn-festival-fly');
+    await page.waitForFunction(() => __dm.phase === 'c8-flight' && !!document.querySelector('#btn-friends-power'), null, { timeout: 120000 }); await page.waitForTimeout(1200);
+    { const g = await page.evaluate(() => { const fl = __dm.G.fl, r = document.querySelector('#btn-friends-power').getBoundingClientRect(), d = __dm.ch8.debug(); return { items: fl.items.length, rings: fl.items.filter(s => s.colour !== undefined).length, len: Math.round(fl.len), speed: fl.speed, w: Math.round(r.width), h: Math.round(r.height), flying: d.flying, active: d.active, count: document.querySelector('#count').textContent.replace(/\s+/g, ' ').trim() }; });
+      check(g.items === 16 && g.rings === 8 && g.flying && g.len / g.speed >= 45 && g.len / g.speed <= 60, `the festival flight: ${g.rings} colour rings and 8 stars on a ${g.len} m rail, about ${Math.round(g.len / g.speed)} s of flying`);
+      check(/^\d \/ 8$/.test(g.count) && g.active.length === 2, `the colour counter runs (${g.count}) and two friends fly along (${g.active.join(' + ')})`);
+      check(g.h >= (dev.name === 'ipad' ? 72 : 44), `the friends' power button is a big touch target (${g.w}×${g.h})`); await clearOfActors('festival flight HUD'); await shot('ch8-08b-festival-flight'); }
+    { const far = await (await page.waitForFunction(() => { const fl = __dm.G.fl, i = fl.items.findIndex(s => !s.got), r = fl.items[i]; if (!r) return null; const d = r.base.distanceTo(fl.pos); if (d < 18) return null;
+        document.querySelector('#btn-friends-power').dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); return { i, d: Math.round(d), t: performance.now() }; }, null, { timeout: 60000 })).jsonValue();
+      await page.waitForTimeout(250); await shot('ch8-08c-friends-power');
+      const dt = await (await page.waitForFunction(f => __dm.G.fl.items[f.i].got ? (performance.now() - f.t) / 1000 : null, far, { timeout: 20000 })).jsonValue();
+      check(dt < far.d / 8.5 * 0.7, `a friend's power carried the next thing ${far.d} m ahead to Worm in ${dt.toFixed(1)} s (flying there takes ${(far.d / 8.5).toFixed(1)} s)`); }
+    { const half = await (await page.waitForFunction(() => { const d = __dm.ch8.debug(); return d.colours >= 4 ? { ...d, count: document.querySelector('#count').textContent.replace(/\s+/g, ' ').trim() } : null; }, null, { timeout: 240000 })).jsonValue();
+      check(half.bands === half.colours && half.active.join('+') === 'shu+gem' && half.count === `${half.colours} / 8`, `every colour collected lights its band of the big rainbow (${half.bands} of 8 lit) and the other two dragons take over (${half.active.join(' + ')})`); await page.waitForTimeout(900); await shot('ch8-09-half-rainbow'); }
+    await page.evaluate(() => __dm.collectAll());
+    await advanceTo('c8-flight-done', 300000); check(await page.evaluate(() => { const d = __dm.ch8.debug(); return d.colours === 8 && d.bands === 8 && document.querySelector('#count').textContent.replace(/\s+/g, ' ').trim() === '8 / 8'; }), 'all 8 colours collected: 8 / 8, the whole rainbow is lit');
+    await advanceTo('c8-medal', 300000); await page.waitForFunction(() => !document.querySelector('#dialog').hidden, null, { timeout: 60000 }); await page.waitForTimeout(1500); await clearOfActors('ch8 medal dialog'); await shot('ch8-10-king-medal');
+    await advanceTo('c8-celebrate', 300000); await bubbleCap('ch8'); await page.locator('#card:not([hidden])').waitFor({ timeout: 60000 });
+    check((await page.locator('#card').innerText()).includes('מדליית הקשת') && (await page.locator('#card').innerText()).includes('מאסטר דרקונים אמיתי'), 'ch8 celebration card: the "true Dragon Master" rainbow medal');
+    await shot('ch8-11-celebrate-card');
+    log('stats ch8', JSON.stringify(await page.evaluate(() => __dm.stats())));
+    await tap('#card button[data-v="end"]');
+    await page.waitForFunction(() => window.__dm.phase === 'c8-end'); await page.waitForTimeout(800);
+    check((await page.locator('#card').innerText()).includes('רק ההתחלה'), 'the ending card: "the end of the adventure… or only the beginning?"');
+    await shot('ch8-12-ending');
+    await tap('#card button[data-v="home"]');
+    await page.waitForFunction(() => window.__dm.mode === 'title', null, { timeout: 15000 }); await page.waitForTimeout(1200);
+    check((await page.locator('#ch-8 .ic').innerText()).includes('🏅') && JSON.stringify(await page.evaluate(() => __dm.progress)) === '[1,2,3,4,5,6,7,8]' && await page.locator('.chap.locked').count() === 0, 'chapter 8 medal badge shown, progress is [1,2,3,4,5,6,7,8], every chapter open');
+    await shot('ch8-13-title-all-badges');
     // ---- tap-to-skip: a tap closes a title card; ⏭ shows during dialogs and scripted moves and jumps to the next thing the player does
     await page.evaluate(() => __dm.go('ch6')); await page.locator('#card:not([hidden])').waitFor({ timeout: 60000 });
     await page.evaluate(() => document.querySelector('#card').dispatchEvent(new PointerEvent('pointerup', { bubbles: true })));
@@ -610,11 +659,11 @@ async function run(dev) {
     { const d = await page.evaluate(() => ({ ...__dm.free.debug(), said: __dm.bubbles().n })); check(d.count >= 10 && d.bursts >= 1 && d.said === 0 && d.ungot >= 6, `every 10 collected is a colour burst (${d.count} collected, ${d.bursts} burst); things keep coming back (${d.ungot} of 16 waiting); no speech bubble was ever shown`); }
     await tap('#btn-home'); await page.waitForFunction(() => window.__dm.mode === 'title', null, { timeout: 30000 }); await page.waitForTimeout(1200);
     { const st = await page.evaluate(() => ({ saved: JSON.parse(localStorage.getItem('dm.progress') || '{}').free || 0, note: document.querySelector('#free-best').hidden ? '' : document.querySelector('#free-best').textContent.replace(/\s+/g, ' ').trim(), flying: __dm.free.debug().flying, acts: document.querySelectorAll('#actions button').length, done: JSON.stringify(__dm.progress) }));
-      check(st.saved >= 10 && st.note.includes('שיא') && st.note.includes(String(st.saved)) && !st.flying && st.acts === 0 && st.done === '[1,2,3,4,5,6,7]', `🏠 leaves free flight; the best count is saved and shown on the title (${st.note})`); }
+      check(st.saved >= 10 && st.note.includes('שיא') && st.note.includes(String(st.saved)) && !st.flying && st.acts === 0 && st.done === '[1,2,3,4,5,6,7,8]', `🏠 leaves free flight; the best count is saved and shown on the title (${st.note})`); }
     // ---- no read-aloud anywhere
     check(await page.evaluate(() => window.__speech === 0), 'no speechSynthesis use');
     for (const f of ['src/audio.js', 'src/ui.js', 'src/main.js']) check(!/speechSynthesis|SpeechSynthesisUtterance/.test(await (await page.request.get(base + f)).text()), `${f} has no speech code`);
-    check(bubbleChecks > 60, `never more than one bubble or banner on screen (${bubbleChecks} checks across chapters 1-7)`);
+    check(bubbleChecks > 60, `never more than one bubble or banner on screen (${bubbleChecks} checks across chapters 1-8)`);
     { const f = await page.evaluate(() => ({ ...__dm.frameStats, watchdog: __dm.watchdog })); log('frames', JSON.stringify(f)); check(f.watchdog === 0, 'the story watchdog never had to nudge'); }
     check(errors.length === 0, 'no console/page/network errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
     ok = true;

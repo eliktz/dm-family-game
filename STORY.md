@@ -103,11 +103,15 @@ steps and removes one wrong answer, and on the third Worm shows the answer and t
      (5 × 2 = 10, 4 × 2 = 8, 10 × 1 = 10). The power button (water → sun → fire) carries the next gem or opens the next gate from afar. Worm's lift is the last beat.
    - *Teaser:* the cloud is right above them, and it's crying a tiny drizzle… *Keepsake:* a mountain map.
 
-8. **קשת של חברים** (finale): Worm's biggest moment. His eyes glow green, and he lifts all the dragons and Dragon Masters up to the cloud with his mind.
+8. **קשת של חברים** (finale, done): Worm's biggest moment. His eyes glow green, and he lifts all the dragons and Dragon Masters up to the cloud with his mind.
    Drake talks to the Grumble Cloud and invites it to play. It laughs for the first time and turns into a huge rainbow over King Roland's castle.
    - *Activities:* "Worm's big quiz" (mixed review where the kid picks easy/medium/hard), then a festival: fly through the rainbow arcs collecting 8 colours.
    - King Roland awards everyone the **"מאסטר דרקונים אמיתי"** medal. Credits roll with all the dragons dancing, and Worm gets the last hug.
    - *Ending card:* "סוף ההרפתקה… או רק ההתחלה?" *Keepsake:* the rainbow medal.
+   - *As built:* the cloud cries a tiny drizzle over the castle; one big button is Worm's mind-lift (always works); Drake's invitation, the cloud's first laugh,
+     and it becomes a rainbow of 8 pale bands. Worm's big quiz is one riddle with a choice of easy / medium / hard. The festival is a rail-guided flight round
+     the castle (about 57 s) through 8 colour rings; each colour lights its band, and all four dragon friends take turns flying along. Then the medal, the hug,
+     the credits card and the ending. Six speech bubbles.
 
 ## Production notes
 - Each chapter is one async story function in `src/` (move to `src/chapters/chN.js` once ch. 2 exists). It is unlocked on the title after the previous one,

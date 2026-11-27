@@ -20,6 +20,7 @@ import { chapter4 } from './chapters/ch4.js';
 import { chapter5 } from './chapters/ch5.js';
 import { chapter6 } from './chapters/ch6.js';
 import { chapter7 } from './chapters/ch7.js';
+import { chapter8 } from './chapters/ch8.js';
 import { freeFlight } from './chapters/free.js';
 
 const $ = s => document.querySelector(s);
@@ -136,7 +137,7 @@ function saveProgress() {
 if (params.has('lvl')) { const l = clampLevel(params.get('lvl')); mathState.level = l; mathState.ceiling = Math.max(mathState.ceiling, l); } // debugging, not saved until a riddle is answered
 // G.math.ask({ kind, title, fixed?, right?, wrong? }): one riddle at the current level; adapts the level afterwards
 const mathApi = {
-  get level() { return mathState.level; },
+  get level() { return mathState.level; }, get ceiling() { return mathState.ceiling; },
   async ask({ kind, title, fixed = null, wordOps = null, right = null, wrong = null } = {}) {
     const r = fixed || makeRiddle(mathState.level, kind, Math.random, { avoid: lastRiddleKey, wordOps }); lastRiddleKey = r.key;
     const res = await askRiddle(r, { title, cb: { right, wrong } });
@@ -420,6 +421,7 @@ const ch1 = mods[1] = chapter1(G), ch2 = mods[2] = chapter2(G), ch3 = mods[3] = 
 G.grumble = ch3.cloudActor; G.team = { kepri: ch3.modelTargets.sunDragon, vulcan: ch4.modelTargets.fireDragon, shu: ch2.modelTargets.waterDragon, gem: ch5.modelTargets.crystalDragon }; // shared with chapter 6 and free flight
 const ch6 = mods[6] = chapter6(G);
 const ch7 = mods[7] = chapter7(G);
+const ch8 = mods[8] = chapter8(G);
 const free = freeFlight(G);
 // while Griffith speaks in the cave the camera turns to a shot of him (with Drake's side of the cave), then goes back;
 // a chapter can set G.keepShot for a beat that must stay on Worm (the Dragon Stone moment)
@@ -535,6 +537,7 @@ const GO = {
   ch2: () => guard(() => ch2.start('intro')), 'ch2-glide': () => guard(() => ch2.start('glide')), 'ch2-warm': () => guard(() => ch2.start('warm')),
   'ch2-hatch': () => guard(() => ch2.start('hatch')), 'ch2-end': () => guard(() => ch2.start('end')),
   free: () => guard(() => free.start()),
+  ch8: () => guard(() => ch8.start('intro')), 'ch8-flight': () => guard(() => ch8.start('flight')), 'ch8-end': () => guard(() => ch8.start('end')),
   ch7: () => guard(() => ch7.start('intro')), 'ch7-flight': () => guard(() => ch7.start('flight')), 'ch7-end': () => guard(() => ch7.start('end')),
   ch6: () => guard(() => ch6.start('intro')), 'ch6-flight': () => guard(() => ch6.start('flight')), 'ch6-pots': () => guard(() => ch6.start('pots')), 'ch6-end': () => guard(() => ch6.start('end')),
   ch5: () => guard(() => ch5.start('intro')), 'ch5-patterns': () => guard(() => ch5.start('patterns')), 'ch5-flight': () => guard(() => ch5.start('flight')), 'ch5-end': () => guard(() => ch5.start('end')),
@@ -583,7 +586,7 @@ window.__dm = {
   },
   stats: () => ({ ...engine.info(), mode: G.mode, phase: G.phase, stars: fl.got, models: modelStatus(MODEL_KEYS, swapped) }),
   setTier: t => { engine.noAuto = true; engine.setTier(t); },
-  worm, engine, G, ch2, ch3, ch4, ch5, ch6, ch7, free, frameStats, get watchdog() { return dog.nudges; },
+  worm, engine, G, ch2, ch3, ch4, ch5, ch6, ch7, ch8, free, frameStats, get watchdog() { return dog.nudges; },
 };
 
 (async () => {
@@ -592,8 +595,8 @@ window.__dm = {
   enterTitle();
   if (params.has('tier')) window.__dm.setTier(params.get('tier'));
   // compile shaders for both scenes up-front (avoids hitches on iPad when the cave opens or chapter 2 actors appear)
-  try { ch2.showAll(true); ch3.showAll(true); ch4.showAll(true); ch5.showAll(true); ch6.showAll(true); ch7.showAll(true); engine.renderer.compile(caveScene, cam); engine.renderer.compile(outdoor, cam); } catch { }
-  ch2.showAll(false); ch3.showAll(false); ch4.showAll(false); ch5.showAll(false); ch6.showAll(false); ch7.showAll(false);
+  try { ch2.showAll(true); ch3.showAll(true); ch4.showAll(true); ch5.showAll(true); ch6.showAll(true); ch7.showAll(true); ch8.showAll(true); engine.renderer.compile(caveScene, cam); engine.renderer.compile(outdoor, cam); } catch { }
+  ch2.showAll(false); ch3.showAll(false); ch4.showAll(false); ch5.showAll(false); ch6.showAll(false); ch7.showAll(false); ch8.showAll(false);
   frame();
   setTimeout(() => { $('#loading').classList.add('done'); window.__dm.ready = true; }, 300);
 })();
