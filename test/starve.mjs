@@ -24,6 +24,7 @@ async function drive(until, ms = 300000) {
     if (ph === 'c3-fly-ready') await page.locator('#btn-sun-fly').dispatchEvent('pointerup').catch(() => { });
     if (ph === 'c4-fly-ready') await page.locator('#btn-fire-fly').dispatchEvent('pointerup').catch(() => { });
     if (ph === 'c5-fly-ready') await page.locator('#btn-tunnel-fly').dispatchEvent('pointerup').catch(() => { });
+    if (ph === 'c7-fly-ready') await page.locator('#btn-trail-fly').dispatchEvent('pointerup').catch(() => { });
     if (ph === 'c2-place') { const xy = await page.evaluate(() => __dm.stoneScreen()); if (xy) await page.mouse.click(xy[0], xy[1]); }
     await page.waitForTimeout(350);
   }
@@ -53,6 +54,10 @@ const t4 = Date.now(); check(await drive(p => p === 'c5-celebrate', 400000), `ch
 // 3d. chapter 6 without animation frames: intro, the rail flight collecting by itself, pots, riddles, the sad cloud
 await page.evaluate(() => __dm.go('ch6'));
 const t5 = Date.now(); check(await drive(p => p === 'c6-celebrate', 500000), `chapter 6 from start to the celebration without animation frames (${((Date.now() - t5) / 1000).toFixed(0)} s)`);
+// 3d2. chapter 7 without animation frames: lawn, the map riddle, the whole climb on the rail, the three gates, Worm's lift, the summit
+await page.evaluate(() => __dm.go('ch7'));
+const t7 = Date.now(); check(await drive(p => p === 'c7-celebrate', 500000), `chapter 7 from start to the celebration without animation frames (${((Date.now() - t7) / 1000).toFixed(0)} s)`);
+check(await page.evaluate(() => { const d = __dm.ch7.debug(); return d.gems === 12 && d.opened === 3; }), 'chapter 7: all 12 gems came in and all 3 gates opened by themselves');
 // 3e. free flight without animation frames: the rail keeps collecting, and 🏠 still leaves
 await page.evaluate(() => __dm.go('free')); await page.waitForFunction(() => __dm.phase === 'free' && __dm.free.debug().flying, null, { timeout: 120000 });
 check(await page.waitForFunction(() => __dm.free.debug().count >= 6, null, { timeout: 120000 }).then(() => true, () => false), 'free flight keeps collecting without animation frames');

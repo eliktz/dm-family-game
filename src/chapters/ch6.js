@@ -197,7 +197,7 @@ export function chapter6(G) {
     sparks = 0; for (const it of items) { it.got = false; it.pop = 0; it.g.visible = true; it.g.scale.setScalar(1); it.g.position.copy(it.base); }
     for (const d of team) { outdoor.add(d.root); d.root.visible = true; d.setPose('fly'); d.state.blend = 1; d.lookAt(null); }
     const P = (a, y) => V(Math.cos(a) * 41, PLATEAU + y, Math.sin(a) * 41);
-    G.startFlight({ items, lead: [P(-0.2, 11), P(0.25, 12)], exit: [P(5.2, 13), P(5.7, 13), P(6.1, 12)], speed: 9, camSide: -1, onCollect: onPuff });
+    G.startFlight({ items, lead: [P(-0.2, 11), P(0.25, 12)], exit: [P(5.2, 13), P(5.7, 13), P(6.1, 12)], speed: 9, camSide: -1, lookDown: 3, onCollect: onPuff }); // lookDown: Worm (tail included) stays in frame on the short iPhone screen
     G.phase = 'c6-flight'; G.checkpoint(6, 'flight'); G.setCounter('0', '🎨');
     await step(fade(false)); G.showJoy(true); worm.wiggle(1); G.glance(1.4);
     toast('worm', 'בכל זוג עננים מסתתרים 2 ניצוצות צבע. טסים סביב כל הטירה!', 3600);

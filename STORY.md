@@ -95,9 +95,12 @@ steps and removes one wrong answer, and on the third Worm shows the answer and t
    - *Emotional beat:* the cloud peeks back ("עכשיו שוב אין לי כלום"); Drake notices he is not angry but sad. Worm: "אולי הוא פשוט רוצה חבר?"
    - *Teaser:* the whole team sets out for Rainbow Mountain, the cloud's home. *Keepsake:* a paintbrush feather, from King Roland.
 
-7. **המסע אל הר הקשת**: The team journeys to the Rainbow Mountain, where the cloud lives. Three friendly gates, each opened by one dragon's power:
+7. **המסע אל הר הקשת** (done): The team journeys to the Rainbow Mountain, where the cloud lives. Three friendly gates, each opened by one dragon's power:
    the water dragon fills a fountain, the sun dragon lights lanterns, and the fire dragon warms a frozen bridge.
    - *Activities:* multiplication as arrays (4 rows of 2 lanterns, 5 × 2 stepping stones, 10 × 1 bridge planks). Worm carries everyone across the last gap with mind power.
+   - *As built:* a map riddle on the lawn, then one long rail-guided climb (about 55 s) spiralling up the pastel mountain with Shu, Kepri and Vulcan:
+     12 rainbow gems to collect and the three gates on the rail. Each gate opens by itself when the team arrives and shows its array in the counter
+     (5 × 2 = 10, 4 × 2 = 8, 10 × 1 = 10). The power button (water → sun → fire) carries the next gem or opens the next gate from afar. Worm's lift is the last beat.
    - *Teaser:* the cloud is right above them, and it's crying a tiny drizzle… *Keepsake:* a mountain map.
 
 8. **קשת של חברים** (finale): Worm's biggest moment. His eyes glow green, and he lifts all the dragons and Dragon Masters up to the cloud with his mind.

@@ -26,7 +26,7 @@ A Hebrew, iPad-first, **plot-driven** three.js game for Elik's 7-year-old son, b
 - **Plot-driven chapters**, not free exploration. Each chapter is a short story card, then scenes with dialogue bubbles,
   then one clear activity (riddle, guided flight, …), then a celebration and a "המשך יבוא…" teaser.
   The story runner is in `src/main.js` (cancellable async script: `runner()`, `step()`, `waitFor()`); each chapter's script is
-  `src/chapters/chN.js` (chapters 1-6 are built) and receives the shared core as `G`. The arc is in `STORY.md`. Progress: localStorage `dm.progress`; `?all=1` unlocks all.
+  `src/chapters/chN.js` (chapters 1-7 are built) and receives the shared core as `G`. The arc is in `STORY.md`. Progress: localStorage `dm.progress`; `?all=1` unlocks all.
 - **Less talk, more action (brief-18).** At most **7 blocking speech bubbles per chapter**, none longer than 60 characters (the smoke test
   checks this with `__dm.bubbles()`); hints and reactions go in non-blocking toasts. Tap-to-skip: a title card goes away on a tap, and ⏭
   (`#btn-skip`, top bar) shows while a bubble is open or a scripted move of 1.2 s or longer plays; one tap fast-forwards to the next thing the
@@ -83,6 +83,12 @@ A Hebrew, iPad-first, **plot-driven** three.js game for Elik's 7-year-old son, b
   the 16 items respawn when Worm is on the far side of the loop). Every 10 collected is a burst; friends whose chapters are done fly along two at
   a time (`G.team`: shu, kepri, vulcan, gem) and swap every 20, each with a power button (`#btn-free-<key>`). Shu and the crystal dragon are moved
   back to the cave scene on leaving. Best count: `dm.progress.free`. All power buttons in the game rest 2.5 s.
+- **Chapter 7 (Rainbow Mountain):** `src/chapters/ch7.js`. Lawn (mode `trail`: two lines, one `mul` riddle, `#btn-trail-fly`), then the climb
+  (mode `flight`, phases `c7-flight` → `c7-lift` → `c7-summit`): a pastel cone built once in the OUTDOOR scene high above the castle (`world.group`
+  hidden while there), a spiral rail with 12 rainbow gems and 3 gates as rail items (`item.gate` 0/1/2). A gate opens by itself when reached
+  (`openGate`: Shu's fountain 5 × 2 stones, Kepri's 4 × 2 lanterns, Vulcan's 10 × 1 planks; the equation holds in the counter for 4.5 s).
+  `#btn-trail-power` (water → sun → fire, 2.5 s rest) carries the next gem or opens the next gate from afar. Then Worm's lift (no input) and the
+  summit. Shu goes back to the cave scene in `endFlight()`. Debug: `__dm.go('ch7' | 'ch7-flight' | 'ch7-end')`, `__dm.ch7.debug()`.
 - **Chapter 6 (cloud):** `src/chapters/ch6.js`: a rail flight (`G.startFlight`, mode `flight`) with Kepri and Vulcan borrowed from chapters 3-4
   through `G.team` (`#btn-team-power`: Kepri's sunbeam and Vulcan's fireball take turns carrying the next pair to Worm), then the lawn (mode `paint`). The Grumble Cloud is one shared actor (`G.grumble`, built in ch3.js, GLB key `grumbleCloud`); its
   expression loops are set with `state.mood` ('sad' / 'happy'). Debug: `__dm.go('ch6' | 'ch6-flight' | 'ch6-pots' | 'ch6-end')`, `__dm.potScreen()`.

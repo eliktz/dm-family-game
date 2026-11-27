@@ -129,7 +129,7 @@ async function run(dev) {
     // ---- chapter map, locked chapters, hidden parent unlock
     check(await page.locator('#chapters .chap').count() === 8, 'chapter map shows 8 chapters');
     check(await page.locator('#ch-2.locked').count() === 1, 'chapter 2 is locked on a fresh start');
-    check(await page.locator('#ch-7 .soon').isVisible(), 'unbuilt chapters say בקרוב');
+    check(await page.locator('#ch-8 .soon').isVisible(), 'unbuilt chapters say בקרוב');
     check(await page.locator('#btn-free.locked').count() === 1 && (await page.locator('#btn-free').innerText()).includes('🔒'), 'free flight is locked on a fresh start');
     await tap('#btn-free'); await page.waitForTimeout(500); check(await page.evaluate(() => __dm.mode === 'title' && !document.querySelector('#title-toast').hidden), 'a tap on the locked free-flight button only gives a friendly hint'); await page.waitForTimeout(2700);
     await shot('01-title-map');
@@ -202,7 +202,9 @@ async function run(dev) {
     await page.evaluate(() => { const d = document.querySelector('#dialog .text'); d.dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); d.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
     await page.waitForTimeout(700);
     check((await page.locator('#dialog .text').innerText()).includes("אני גריפית'"), 'a tap on the bubble text advances exactly one line (pointerup + click de-duped)');
-    await page.evaluate(() => document.querySelector('#dialog').dispatchEvent(new MouseEvent('click', { bubbles: true }))); await page.waitForTimeout(700);
+    // click events only (no pointerup). A bubble ignores taps for its first 350 ms, and on a starved box that timer can fire late, so click
+    // again (as a child would) until the line changes, for at most 10 s; the check is still that clicks alone advance exactly to Drake's line
+    for (const t0 = Date.now(); Date.now() - t0 < 10000 && !(await page.locator('#dialog .name').innerText()).includes('דרייק');) { await page.evaluate(() => document.querySelector('#dialog').dispatchEvent(new MouseEvent('click', { bubbles: true }))); await page.waitForTimeout(700); }
     check((await page.locator('#dialog .name').innerText()).includes('דרייק'), 'a click alone also advances the bubble');
     await advanceTo('cave-walk'); await page.waitForTimeout(1200);
     check(await page.locator('#joy').isVisible(), 'joystick visible in cave');
@@ -533,6 +535,49 @@ async function run(dev) {
     await page.waitForFunction(() => window.__dm.mode === 'title', null, { timeout: 15000 }); await page.waitForTimeout(1200);
     check((await page.locator('#ch-6 .ic').innerText()).includes('🖌️') && JSON.stringify(await page.evaluate(() => __dm.progress)) === '[1,2,3,4,5,6]', 'chapter 6 keepsake badge shown, progress is [1,2,3,4,5,6]');
     await shot('ch6-09-title-badges');
+
+    // ---------------- chapter 7: המסע אל הר הקשת
+    check(await page.locator('#ch-7.locked').count() === 0 && (await page.locator('#btn-continue').innerText()).includes('פרק 7'), 'chapter 7 unlocked after chapter 6, continue points at it');
+    await tap('#btn-continue');
+    await advanceTo('c7-intro'); await page.waitForTimeout(1500);
+    await clearOfActors('ch7 dialog'); await shot('ch7-01-lawn');
+    await tap('#btn-home'); await page.waitForFunction(() => window.__dm.mode === 'title', null, { timeout: 30000 }); await page.waitForTimeout(800);
+    await tap('#btn-continue'); await page.waitForFunction(() => __dm.phase === 'c7-intro' && !document.querySelector('#dialog').hidden, null, { timeout: 60000 });
+    await tap('#dialog'); await page.waitForTimeout(900);
+    check(await page.locator('#dialog').isVisible(), 'ch7: after 🏠 mid-dialog and continue, the bubble is still there');
+    await advanceTo('c7-math'); for (const t0 = Date.now(); Date.now() - t0 < 240000 && !(await cur());) { if (await page.locator('#dialog:not([hidden])').count()) await tap('#dialog'); await page.waitForTimeout(300); }
+    check(await solveBeat('c7-math', { shotName: 'ch7-02-map-riddle' }) === 1, 'the map riddle is asked once');
+    await advanceTo('c7-fly-ready'); await page.locator('#btn-trail-fly').waitFor({ state: 'visible', timeout: 20000 }); await page.waitForTimeout(600); await clearOfActors('ch7 fly button'); await tap('#btn-trail-fly');
+    await page.waitForFunction(() => __dm.phase === 'c7-flight' && !!document.querySelector('#btn-trail-power'), null, { timeout: 120000 }); await page.waitForTimeout(1200);
+    { const g = await page.evaluate(() => { const fl = __dm.G.fl, b = document.querySelector('#btn-trail-power'), r = b.getBoundingClientRect(); return { items: fl.items.length, gates: fl.items.filter(s => s.gate !== undefined).length, len: Math.round(fl.len), speed: fl.speed, w: Math.round(r.width), h: Math.round(r.height), label: b.textContent, flying: __dm.ch7.debug().flying, count: document.querySelector('#count').textContent.replace(/\s+/g, ' ').trim() }; });
+      check(g.items === 15 && g.gates === 3 && g.flying && g.len / g.speed >= 45 && g.len / g.speed <= 60, `the climb: 12 rainbow gems and ${g.gates} gates on a ${g.len} m rail, about ${Math.round(g.len / g.speed)} s of flying with the team`);
+      check(/^\d+ \/ 12$/.test(g.count) && g.label.includes('כוח המים'), `the gem counter runs (${g.count}) and the power button starts with the water dragon`);
+      check(g.h >= (dev.name === 'ipad' ? 72 : 44), `the team power button is a big touch target (${g.w}×${g.h})`); await clearOfActors('rainbow mountain HUD'); await shot('ch7-04b-mountain-flight'); }
+    { const far = await (await page.waitForFunction(() => { const fl = __dm.G.fl, i = fl.items.findIndex(s => !s.got), r = fl.items[i]; if (!r || r.gate !== undefined) return null; const d = r.base.distanceTo(fl.pos); if (d < 18) return null;
+        document.querySelector('#btn-trail-power').dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); return { i, d: Math.round(d), t: performance.now() }; }, null, { timeout: 60000 })).jsonValue();
+      await page.waitForTimeout(250); await shot('ch7-04c-team-power');
+      const dt = await (await page.waitForFunction(f => __dm.G.fl.items[f.i].got ? (performance.now() - f.t) / 1000 : null, far, { timeout: 20000 })).jsonValue();
+      check(dt < far.d / 8.5 * 0.7, `the water dragon's power carried a gem ${far.d} m ahead to Worm in ${dt.toFixed(1)} s (flying there takes ${(far.d / 8.5).toFixed(1)} s)`); }
+    // the three gates open by themselves as the team arrives; each one shows its array as an equation
+    for (const [n, eq, next, name] of [[1, '5 × 2 = 10', 'כוח השמש', 'ch7-05-water-gate'], [2, '4 × 2 = 8', 'כוח האש', 'ch7-06-sun-gate'], [3, '10 × 1 = 10', 'כוח האש', 'ch7-07-fire-gate']]) {
+      const seen = await (await page.waitForFunction(k => __dm.ch7.debug().opened >= k ? { count: document.querySelector('#count').textContent.replace(/\s+/g, ' ').trim(), label: (document.querySelector('#btn-trail-power') || { textContent: '' }).textContent, ltr: getComputedStyle(document.querySelector('#count')).direction === 'ltr' } : null, n, { timeout: 240000 })).jsonValue();
+      check(seen.count === eq && seen.ltr && (n === 3 || seen.label.includes(next)), `gate ${n} opened by itself and shows its array: ${seen.count}`); await page.waitForTimeout(900); await shot(name);
+    }
+    await advanceTo('c7-lift', 300000); await page.waitForTimeout(1500); await shot('ch7-08-worm-lift');
+    check(await page.evaluate(() => { const d = __dm.ch7.debug(); return d.gems === 12 && d.opened === 3 && !document.querySelector('#btn-trail-power'); }), 'all 12 gems and 3 gates done; Worm carries everyone across the last gap (no button, nothing to miss)');
+    await advanceTo('c7-summit', 300000); await page.waitForTimeout(900); await clearOfActors('ch7 summit dialog'); await shot('ch7-09-summit');
+    await advanceTo('c7-celebrate', 300000); await bubbleCap('ch7'); await page.locator('#card:not([hidden])').waitFor({ timeout: 60000 });
+    check((await page.locator('#card').innerText()).includes('מפת ההר'), 'ch7 celebration card with the mountain map keepsake');
+    await shot('ch7-10-celebrate-card');
+    log('stats ch7', JSON.stringify(await page.evaluate(() => __dm.stats())));
+    await tap('#card button[data-v="end"]');
+    await page.waitForFunction(() => window.__dm.phase === 'c7-end'); await page.waitForTimeout(800);
+    check((await page.locator('#card').innerText()).includes('טפטוף'), 'ch7 teaser: the cloud is crying a tiny drizzle');
+    await shot('ch7-11-teaser');
+    await tap('#card button[data-v="home"]');
+    await page.waitForFunction(() => window.__dm.mode === 'title', null, { timeout: 15000 }); await page.waitForTimeout(1200);
+    check((await page.locator('#ch-7 .ic').innerText()).includes('🗺️') && JSON.stringify(await page.evaluate(() => __dm.progress)) === '[1,2,3,4,5,6,7]' && await page.locator('#ch-8.locked').count() === 1 && await page.locator('#ch-8 .soon').isVisible(), 'chapter 7 keepsake badge shown, progress is [1,2,3,4,5,6,7], chapter 8 still says בקרוב');
+    await shot('ch7-12-title-badges');
     // ---- tap-to-skip: a tap closes a title card; ⏭ shows during dialogs and scripted moves and jumps to the next thing the player does
     await page.evaluate(() => __dm.go('ch6')); await page.locator('#card:not([hidden])').waitFor({ timeout: 60000 });
     await page.evaluate(() => document.querySelector('#card').dispatchEvent(new PointerEvent('pointerup', { bubbles: true })));
@@ -565,11 +610,11 @@ async function run(dev) {
     { const d = await page.evaluate(() => ({ ...__dm.free.debug(), said: __dm.bubbles().n })); check(d.count >= 10 && d.bursts >= 1 && d.said === 0 && d.ungot >= 6, `every 10 collected is a colour burst (${d.count} collected, ${d.bursts} burst); things keep coming back (${d.ungot} of 16 waiting); no speech bubble was ever shown`); }
     await tap('#btn-home'); await page.waitForFunction(() => window.__dm.mode === 'title', null, { timeout: 30000 }); await page.waitForTimeout(1200);
     { const st = await page.evaluate(() => ({ saved: JSON.parse(localStorage.getItem('dm.progress') || '{}').free || 0, note: document.querySelector('#free-best').hidden ? '' : document.querySelector('#free-best').textContent.replace(/\s+/g, ' ').trim(), flying: __dm.free.debug().flying, acts: document.querySelectorAll('#actions button').length, done: JSON.stringify(__dm.progress) }));
-      check(st.saved >= 10 && st.note.includes('שיא') && st.note.includes(String(st.saved)) && !st.flying && st.acts === 0 && st.done === '[1,2,3,4,5,6]', `🏠 leaves free flight; the best count is saved and shown on the title (${st.note})`); }
+      check(st.saved >= 10 && st.note.includes('שיא') && st.note.includes(String(st.saved)) && !st.flying && st.acts === 0 && st.done === '[1,2,3,4,5,6,7]', `🏠 leaves free flight; the best count is saved and shown on the title (${st.note})`); }
     // ---- no read-aloud anywhere
     check(await page.evaluate(() => window.__speech === 0), 'no speechSynthesis use');
     for (const f of ['src/audio.js', 'src/ui.js', 'src/main.js']) check(!/speechSynthesis|SpeechSynthesisUtterance/.test(await (await page.request.get(base + f)).text()), `${f} has no speech code`);
-    check(bubbleChecks > 60, `never more than one bubble or banner on screen (${bubbleChecks} checks across chapters 1-6)`);
+    check(bubbleChecks > 60, `never more than one bubble or banner on screen (${bubbleChecks} checks across chapters 1-7)`);
     { const f = await page.evaluate(() => ({ ...__dm.frameStats, watchdog: __dm.watchdog })); log('frames', JSON.stringify(f)); check(f.watchdog === 0, 'the story watchdog never had to nudge'); }
     check(errors.length === 0, 'no console/page/network errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
     ok = true;
