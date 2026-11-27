@@ -20,18 +20,36 @@ const DEVICES = [
   { name: 'iphone', ctx: { ...devices['iPhone 13 landscape'], viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 } },
 ].filter(d => !only || d.name === only);
 const HOLD = { 'hold-right': [1, 0], 'hold-up': [0, -1], 'hold-down-left': [-0.7, 0.7] };
-const browser = await webkit.launch(); let fails = 0;
+const browser = await webkit.launch(); let fails = 0, freeSession = 0;
 for (const dev of DEVICES) {
-  const ctx = await browser.newContext(dev.ctx); const page = await ctx.newPage(); const errors = [];
+  const ctx = await browser.newContext(dev.ctx); const page = await ctx.newPage(); const errors = []; freeSession = 0;
   page.on('pageerror', e => errors.push(e.message + ' @ ' + (e.stack || '').split('\n').slice(0, 4).join(' < ').replace(/http:\/\/[^/]+\//g, ''))); page.on('console', m => m.type() === 'error' && errors.push(m.text()));
   await page.goto(base + 'index.html?tier=low&all=1'); await page.waitForFunction(() => window.__dm?.ready, null, { timeout: 90000 });
-  for (const [chapter, go] of [['ch1 stars', 'flight'], ['ch2 river', 'ch2-glide'], ['ch3 sunbeams', 'ch3-flight'], ['ch4 fireballs', 'ch4-flight'], ['ch5 tunnel', 'ch5-flight'], ['ch6 puffs', 'ch6-flight']].filter(c => !chapterArg || c[0].startsWith(chapterArg))) for (const mode of MODES) {
+  for (const [chapter, go] of [['ch1 stars', 'flight'], ['ch2 river', 'ch2-glide'], ['ch3 sunbeams', 'ch3-flight'], ['ch4 fireballs', 'ch4-flight'], ['ch5 tunnel', 'ch5-flight'], ['ch6 puffs', 'ch6-flight'], ['free flight', 'free']].filter(c => !chapterArg || c[0].startsWith(chapterArg))) for (const mode of MODES) {
     await page.evaluate(g => __dm.go(g), go);
     await page.locator('#joy').waitFor({ state: 'visible', timeout: 15000 });
     const jb = await page.locator('#joy').boundingBox(), jc = [jb.x + jb.width / 2, jb.y + jb.height / 2], R = jb.width / 2 * 0.95;
     const stick = async (x, y) => { await page.mouse.move(jc[0] + x * R, jc[1] + y * R, { steps: 2 }); };
     if (mode !== 'none') { await page.mouse.move(jc[0], jc[1]); await page.mouse.down(); }
     if (HOLD[mode]) await stick(...HOLD[mode]);
+    if (go === 'free') { // endless: fly for FREE_S seconds of real time; the counter must keep rising, things must respawn, no errors
+      // wait for THIS run's flight: a new session with its counter back at 0 (the previous mode's run leaves its own count behind until the restart lands)
+      await page.waitForFunction(s => { const d = __dm.free.debug(); return d.session > s && d.flying && d.count < 3; }, freeSession, { timeout: 60000 }); freeSession = await page.evaluate(() => __dm.free.debug().session);
+      const FREE_S = 70, w0 = Date.now(); let last = Date.now(), n = 0, maxGap = 0, msg = '', d = null, k = 0;
+      while (Date.now() - w0 < FREE_S * 1000) {
+        d = await page.evaluate(() => ({ ...__dm.free.debug(), mode: __dm.mode, phase: __dm.phase, dialog: !document.querySelector('#dialog').hidden }));
+        if (d.count > n) { maxGap = Math.max(maxGap, Date.now() - last); n = d.count; last = Date.now(); }
+        if (Date.now() - last > 20000) { msg = `STALLED: nothing collected for 20 s at ${n} (mode ${d.mode}, phase ${d.phase}, ${d.ungot} of ${d.items} things waiting)`; break; }
+        if (d.dialog) { msg = 'a speech bubble appeared in free flight'; break; }
+        if (mode === 'kid') await stick(Math.sin(k * 0.9), Math.cos(k * 1.3) * 0.8); k++;
+        await page.waitForTimeout(400);
+      }
+      if (!msg && (n < 20 || !d.flying)) msg = `only ${n} collected in ${FREE_S} s (flying ${d && d.flying})`;
+      if (mode !== 'none') await page.mouse.up();
+      if (errors.length) msg = (msg ? msg + '; ' : '') + 'errors: ' + errors.join(' | ');
+      console.log(`${msg ? 'FAIL' : 'ok  '} ${dev.name.padEnd(6)} ${chapter} ${mode.padEnd(14)} ${msg || `${n} collected in ${FREE_S}s real, ${d.bursts} bursts, longest gap ${(maxGap / 1000).toFixed(1)}s, friends ${d.active.join('+')}`}`);
+      if (msg) fails++; errors.length = 0; continue;
+    }
     const state = () => page.evaluate(() => {
       const G = __dm.G, fl = G.fl, i = fl.items.findIndex(s => !s.got); let dir = null, dist = null;
       if (i >= 0) { const p = fl.items[i].g.position, v = p.clone().project(G.cam), behind = v.z > 1; dir = [behind ? -v.x : v.x, behind ? -v.y : v.y, behind]; dist = +p.distanceTo(fl.pos).toFixed(1); }

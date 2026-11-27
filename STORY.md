@@ -113,3 +113,8 @@ steps and removes one wrong answer, and on the third Worm shows the answer and t
   fire = red with small flame wings, crystal = lilac with faceted spikes). Each one gets a GLB swap-in slot in `models.json`.
 - The Grumble Cloud: a puffy grey cloud with big round eyes and a pouty mouth. It's cute, never menacing, and has no lightning.
 - Voice: there is no read-aloud in the game for now (the device's synthetic voice was removed). **Professional voice-over may come later.**
+
+## Free flight (🐉 טיסה חופשית)
+A button on the title screen, open once chapter 1 is finished. No story and no talk: Worm circles the castle, the player steers inside a wide soft
+corridor and collects stars, crystals, bubbles and little fireballs that keep coming back. Every 10 is a colour burst and a cheer. Friends from finished
+chapters fly along two at a time, each with a power button. 🏠 leaves at any time; the best count is kept as a friendly "שיא".

@@ -130,6 +130,8 @@ async function run(dev) {
     check(await page.locator('#chapters .chap').count() === 8, 'chapter map shows 8 chapters');
     check(await page.locator('#ch-2.locked').count() === 1, 'chapter 2 is locked on a fresh start');
     check(await page.locator('#ch-7 .soon').isVisible(), 'unbuilt chapters say בקרוב');
+    check(await page.locator('#btn-free.locked').count() === 1 && (await page.locator('#btn-free').innerText()).includes('🔒'), 'free flight is locked on a fresh start');
+    await tap('#btn-free'); await page.waitForTimeout(500); check(await page.evaluate(() => __dm.mode === 'title' && !document.querySelector('#title-toast').hidden), 'a tap on the locked free-flight button only gives a friendly hint'); await page.waitForTimeout(2700);
     await shot('01-title-map');
     await tap('#ch-2'); await tap('#ch-5'); await page.waitForTimeout(300);
     check(await page.evaluate(() => __dm.mode === 'title'), 'tapping a locked / unbuilt chapter only gives a friendly nudge');
@@ -499,6 +501,14 @@ async function run(dev) {
     await page.waitForFunction(() => __dm.G.fl.got >= 2, null, { timeout: 240000 }); await page.waitForTimeout(900);
     check(/^\d × 2 = \d+$/.test((await page.locator('#count').innerText()).replace(/\s+/g, ' ').trim()), 'puff pairs are counted in equal groups (n × 2)');
     await shot('ch6-03-puff-pairs');
+    // the team's power button: Kepri's sunbeam and Vulcan's fireball take turns
+    { await page.locator('#btn-team-power').waitFor({ state: 'visible', timeout: 30000 }); const r = await page.locator('#btn-team-power').boundingBox(), l0 = (await page.locator('#btn-team-power').innerText()).trim();
+      check(r.height >= (dev.name === 'ipad' ? 72 : 44) && l0.includes('קרן שמש'), `the team power button is a big touch target and starts with Kepri's sunbeam (${Math.round(r.width)}×${Math.round(r.height)})`); await clearOfActors('ch6 team flight HUD with the power button');
+      const far = await (await page.waitForFunction(() => { const fl = __dm.G.fl, i = fl.items.findIndex(s => !s.got), r = fl.items[i]; if (!r) return null; const d = r.base.distanceTo(fl.pos); if (d < 18) return null;
+        document.querySelector('#btn-team-power').dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); return { i, d: Math.round(d), t: performance.now() }; }, null, { timeout: 30000 })).jsonValue();
+      await page.waitForTimeout(250); await shot('ch6-03b-team-power');
+      const dt = await (await page.waitForFunction(f => __dm.G.fl.items[f.i].got ? (performance.now() - f.t) / 1000 : null, far, { timeout: 20000 })).jsonValue();
+      check(dt < far.d / 9 * 0.7 && (await page.locator('#btn-team-power').innerText()).includes('כדור אש'), `the sunbeam carried a pair ${far.d} m ahead to Worm in ${dt.toFixed(1)} s (flying there takes ${(far.d / 9).toFixed(1)} s) and the button now offers Vulcan's fireball`); }
     await advanceTo('c6-flight-done', 300000); check((await page.locator('#count').innerText()).replace(/\s+/g, ' ').trim() === '6 × 2 = 12', 'six pairs: 6 × 2 = 12 (rail flight collected all without input)');
     for (let n = 1; n <= 2; n++) {
       await advanceTo('c6-pots' + n); await page.waitForFunction(() => __dm.potScreen(), null, { timeout: 240000 }); await page.waitForTimeout(700);
@@ -535,6 +545,27 @@ async function run(dev) {
     // normal speed returns on the next frame after the button appears, so wait for it rather than sampling the same instant
     check(await page.waitForFunction(() => document.querySelector('#dialog').hidden && document.querySelector('#btn-skip').hidden && !__dm.fast, null, { timeout: 10000 }).then(() => true, () => false), '⏭ jumps past the talking to the "fly together" button, then hides and normal speed returns');
     await page.evaluate(() => __dm.go('title')); await page.waitForFunction(() => window.__dm.mode === 'title', null, { timeout: 15000 }); await page.evaluate(() => __dm.bubbles());
+    // ---- free flight from the title screen: open now, no talk at all, things to collect, friends with power buttons, 🏠 leaves, best is kept
+    await page.evaluate(() => __dm.go('title')); await page.waitForFunction(() => window.__dm.mode === 'title', null, { timeout: 15000 }); await page.waitForTimeout(1200);
+    check(await page.locator('#btn-free.locked').count() === 0 && (await page.locator('#btn-free').innerText()).includes('🐉'), 'free flight is open once chapter 1 is finished');
+    { const r = await page.locator('#btn-free').boundingBox(), vh = await page.evaluate(() => innerHeight); check(r.height >= (dev.name === 'ipad' ? 72 : 44) && r.y + r.height <= vh, `the free-flight button is a big touch target and on screen (${Math.round(r.width)}×${Math.round(r.height)})`); }
+    await shot('free-01-title-button');
+    await page.evaluate(() => __dm.bubbles()); await tap('#btn-free');
+    await page.waitForFunction(() => __dm.phase === 'free' && __dm.free.debug().flying && !document.querySelector('#joy').hidden, null, { timeout: 120000 }); await page.waitForTimeout(2500);
+    { const d = await page.evaluate(() => ({ ...__dm.free.debug(), dialog: !document.querySelector('#dialog').hidden, math: !document.querySelector('#math').hidden, card: !document.querySelector('#card').hidden, btns: [...document.querySelectorAll('#actions button')].map(b => { const r = b.getBoundingClientRect(); return Math.round(r.height); }) }));
+      check(!d.dialog && !d.math && !d.card, 'free flight starts straight in the air: no bubble, riddle or card');
+      check(d.items === 16 && d.unlocked.length === 4 && d.active.length === 2 && d.btns.length === 2 && d.btns.every(h => h >= (dev.name === 'ipad' ? 72 : 44)), `16 things on the loop, 4 friends unlocked, 2 flying along with 2 big power buttons (${d.active.join(' + ')})`);
+      await clearOfActors('free flight HUD'); await shot('free-02-flight'); }
+    { const c0 = await page.evaluate(() => __dm.free.debug().count); await page.waitForFunction(c => __dm.free.debug().count >= c + 3, c0, { timeout: 120000 }); log('ok', 'the counter rises by itself on the rail'); }
+    { const far = await (await page.waitForFunction(() => { const fl = __dm.G.fl, d0 = __dm.free.debug(), b = document.querySelector('#actions button'); let best = null; fl.items.forEach((s, i) => { if (s.got) return; const du = ((fl.itemU[i] - fl.u) % 1 + 1) % 1; if (!best || du < best.du) best = { i, du }; });
+        if (!best || !b) return null; const d = best.du * fl.len; if (d < 9) return null; b.dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); return { i: best.i, d: Math.round(d), t: performance.now(), n: d0.count }; }, null, { timeout: 30000 })).jsonValue();
+      const dt = await (await page.waitForFunction(f => __dm.free.debug().count > f.n ? (performance.now() - f.t) / 1000 : null, far, { timeout: 20000 })).jsonValue();
+      check(dt < far.d / 8.5 * 0.85, `a friend's power button brought the next thing (${far.d} m ahead) to Worm in ${dt.toFixed(1)} s (flying there takes ${(far.d / 8.5).toFixed(1)} s)`); }
+    await page.waitForFunction(() => __dm.free.debug().bursts >= 1, null, { timeout: 240000 }); await page.waitForTimeout(350); await shot('free-03-burst');
+    { const d = await page.evaluate(() => ({ ...__dm.free.debug(), said: __dm.bubbles().n })); check(d.count >= 10 && d.bursts >= 1 && d.said === 0 && d.ungot >= 6, `every 10 collected is a colour burst (${d.count} collected, ${d.bursts} burst); things keep coming back (${d.ungot} of 16 waiting); no speech bubble was ever shown`); }
+    await tap('#btn-home'); await page.waitForFunction(() => window.__dm.mode === 'title', null, { timeout: 30000 }); await page.waitForTimeout(1200);
+    { const st = await page.evaluate(() => ({ saved: JSON.parse(localStorage.getItem('dm.progress') || '{}').free || 0, note: document.querySelector('#free-best').hidden ? '' : document.querySelector('#free-best').textContent.replace(/\s+/g, ' ').trim(), flying: __dm.free.debug().flying, acts: document.querySelectorAll('#actions button').length, done: JSON.stringify(__dm.progress) }));
+      check(st.saved >= 10 && st.note.includes('שיא') && st.note.includes(String(st.saved)) && !st.flying && st.acts === 0 && st.done === '[1,2,3,4,5,6]', `🏠 leaves free flight; the best count is saved and shown on the title (${st.note})`); }
     // ---- no read-aloud anywhere
     check(await page.evaluate(() => window.__speech === 0), 'no speechSynthesis use');
     for (const f of ['src/audio.js', 'src/ui.js', 'src/main.js']) check(!/speechSynthesis|SpeechSynthesisUtterance/.test(await (await page.request.get(base + f)).text()), `${f} has no speech code`);

@@ -190,7 +190,7 @@ export function chapter2(G) {
   // Shu's splash (power button): she leaps, a column of water lifts the next pair of drops straight to Worm. Always works;
   // a short rest between uses. Wall-clock tween with a deadline, like every story animation.
   function splash() {
-    const i = G.nextItem(), it = bubbles.list[i], now = performance.now(); if (!swim || !it || splashing || now - splashAt < 1500 || fl.done) return;
+    const i = G.nextItem(), it = bubbles.list[i], now = performance.now(); if (!swim || !it || splashing || now - splashAt < 2500 || fl.done) return; // 2.5 s rest, like every chapter's power button
     splashing = true; splashAt = now; hop = 1; shu.wiggle(1.2); sfx.whoosh(); const from = it.g.position.clone(), foot = V(from.x, RIVER_Y + 0.3, riverZ(from.x));
     for (let k = 0; k <= 4; k++) fx.burst(foot.clone().lerp(from, k / 4), 0x9fdcff, 14, 3, 0.5, 0.9, -1);
     tween(0.5, k => { it.g.position.lerpVectors(from, fl.pos, k * k); fx.trail(it.g.position.clone(), 0xbfe6ff, 0.45); }).then(() => { splashing = false; if (swim && !it.got && G.nextItem() === i) G.collectNext(); });

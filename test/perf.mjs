@@ -5,7 +5,7 @@ import { webkit, devices } from 'playwright'; import { startServer } from './ser
 import { fileURLToPath } from 'node:url'; import { dirname, join } from 'node:path';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..'); const dsf = +(process.argv.find(a => a.startsWith('--dsf='))?.split('=')[1] || 1);
 const { server, port } = await startServer(root); const b = await webkit.launch();
-const SCENES = [['title', 'title'], ['cave (feed)', 'bond'], ['flight', 'flight'], ['ch2 river', 'ch2-glide'], ['ch2 cave + Bo', 'ch2-hatch'], ['ch3 garden', 'ch3-mirrors'], ['ch3 flight', 'ch3-flight'], ['ch4 bakery', 'ch4-catch'], ['ch4 flight', 'ch4-flight'], ['ch5 crystals', 'ch5-patterns'], ['ch5 tunnel', 'ch5-flight'], ['ch6 flight', 'ch6-flight'], ['ch6 pots', 'ch6-pots']];
+const SCENES = [['title', 'title'], ['cave (feed)', 'bond'], ['flight', 'flight'], ['ch2 river', 'ch2-glide'], ['ch2 cave + Bo', 'ch2-hatch'], ['ch3 garden', 'ch3-mirrors'], ['ch3 flight', 'ch3-flight'], ['ch4 bakery', 'ch4-catch'], ['ch4 flight', 'ch4-flight'], ['ch5 crystals', 'ch5-patterns'], ['ch5 tunnel', 'ch5-flight'], ['ch6 flight', 'ch6-flight'], ['ch6 pots', 'ch6-pots'], ['free flight', 'free']];
 for (const tier of ['low', 'high']) {
   const ctx = await b.newContext({ ...devices['iPhone 13 landscape'], viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, deviceScaleFactor: dsf });
   const p = await ctx.newPage(); await p.goto(`http://127.0.0.1:${port}/index.html?tier=${tier}&all=1`); await p.waitForFunction(() => window.__dm?.ready, null, { timeout: 120000 });

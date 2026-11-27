@@ -19,6 +19,7 @@ import { chapter3 } from './chapters/ch3.js';
 import { chapter4 } from './chapters/ch4.js';
 import { chapter5 } from './chapters/ch5.js';
 import { chapter6 } from './chapters/ch6.js';
+import { freeFlight } from './chapters/free.js';
 
 const $ = s => document.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -118,18 +119,18 @@ const CHAPTERS = [
   { n: 5, name: 'מערת הקריסטלים של פטרה', badge: '💎' }, { n: 6, name: 'הענן הרטנן', badge: '🖌️' }, { n: 7, name: 'המסע אל הר הקשת', badge: '🗺️' }, { n: 8, name: 'קשת של חברים', badge: '🏅' },
 ];
 const mods = {};                                    // built chapters: n → { start(beat) }
-const progress = { done: new Set(), last: null, all: false };
+const progress = { done: new Set(), last: null, all: false, free: 0 }; // free: best count in free flight ("שיא")
 let mathState = newAdaptive({}), lastRiddleKey = null;   // riddle difficulty: starts at level 2 and can climb to the ceiling (default 5)
 try {
   const p = JSON.parse(localStorage.getItem('dm.progress') || '{}') || {};
   for (const n of p.done || []) if (CHAPTERS.some(c => c.n === n)) progress.done.add(n);
   if (p.last && Number.isInteger(p.last.ch) && typeof p.last.beat === 'string') progress.last = { ch: p.last.ch, beat: p.last.beat };
-  progress.all = p.all === true;
+  progress.all = p.all === true; if (Number.isFinite(p.free) && p.free > 0) progress.free = Math.floor(p.free);
   if (p.math && typeof p.math === 'object') mathState = newAdaptive({ level: p.math.level, ceiling: p.math.ceiling, auto: p.math.auto }); // no saved ceiling → 5
 } catch { /* fresh start */ }
 const isUnlocked = n => n === 1 || params.get('all') === '1' || progress.all || progress.done.has(n - 1);
 function saveProgress() {
-  try { localStorage.setItem('dm.progress', JSON.stringify({ done: [...progress.done].sort(), last: progress.last, all: progress.all, math: { level: mathState.level, auto: mathState.auto, ceiling: mathState.ceiling } })); } catch { /* private mode: progress just isn't kept */ }
+  try { localStorage.setItem('dm.progress', JSON.stringify({ done: [...progress.done].sort(), last: progress.last, all: progress.all, free: progress.free, math: { level: mathState.level, auto: mathState.auto, ceiling: mathState.ceiling } })); } catch { /* private mode: progress just isn't kept */ }
 }
 if (params.has('lvl')) { const l = clampLevel(params.get('lvl')); mathState.level = l; mathState.ceiling = Math.max(mathState.ceiling, l); } // debugging, not saved until a riddle is answered
 // G.math.ask({ kind, title, fixed?, right?, wrong? }): one riddle at the current level; adapts the level afterwards
@@ -162,6 +163,7 @@ function buildChapterMap() {
     box.appendChild(b);
   }
 }
+$('#btn-free').addEventListener('pointerup', () => { unlock(); sfx.tap(); if (!isUnlocked(2)) { titleToast('קודם מסיימים את פרק 1 עם וורם 💚'); worm.wiggle(1); return; } if (settings.sound) music(true); guard(() => free.start()); });
 function refreshTitle() {
   for (const c of CHAPTERS) {
     const b = $(`#ch-${c.n}`), built = !!mods[c.n], open = isUnlocked(c.n), done = progress.done.has(c.n);
@@ -170,6 +172,8 @@ function refreshTitle() {
     b.querySelector('.soon').hidden = built;
     b.setAttribute('aria-label', `פרק ${c.n}: ${c.name}`);
   }
+  { const fb = $('#btn-free'), open = isUnlocked(2); fb.classList.toggle('locked', !open); fb.querySelector('.f-ic').textContent = open ? '🐉' : '🔒';   // free flight opens when chapter 1 is finished (or with "unlock all")
+    const best = $('#free-best'); best.hidden = !(open && progress.free > 0); best.querySelector('bdi').textContent = progress.free; }
   const r = resumePoint();
   $('#btn-continue').textContent = r ? `▶ המשך: פרק ${r.ch}` : '▶ מתחילים: פרק 1';
 }
@@ -191,6 +195,8 @@ const G = {
   get hdCloud() { return !!swapped.grumbleCloud; },
   get hdBaby() { return !!swapped.babyDragon; }, // the HD baby water dragon is in use (much smaller than the code-built one) // the HD Worm model is in use (more compact than the procedural one: some shots are framed differently)
   math: mathApi, makeRiddle,
+  chapterDone: n => progress.done.has(n) || progress.all || params.get('all') === '1',   // free flight: which friends have joined
+  get freeBest() { return progress.free; }, saveFree(n) { if (n > progress.free) { progress.free = n; saveProgress(); } },
   useScene, setupCave, faceEachOther, wormTapped, startFlight, collectNext: () => { const i = nextItem(); if (i >= 0) collect(i); return i; }, nextItem: () => nextItem(), glance, setCounter, markDone, checkpoint, enterTitle, resetOutdoorLook,
 };
 const fl = G.fl = { pos: new THREE.Vector3(), yaw: 0, vy: 0, yawRate: 0, got: 0, done: false, kingSaid: false, speed: 8.5, minClear: 3,
@@ -239,7 +245,8 @@ function wormTapped() {
 }
 
 // ---------------------------------------------------------------- FLIGHT (shared by ch1 stars and ch2 river bubbles)
-const nextItem = () => fl.items.findIndex(s => !s.got);
+// the next item: the first one not collected yet; with nextAhead (free flight: items respawn) the nearest one ahead on the rail
+const nextItem = () => { if (!fl.nextAhead) return fl.items.findIndex(s => !s.got); let best = -1, bd = 2; fl.items.forEach((s, i) => { if (s.got) return; const du = ((fl.itemU[i] - fl.u) % 1 + 1) % 1; if (du < bd) { bd = du; best = i; } }); return best; };
 // "look at me!" moment: Worm turns his head back to Drake with a happy wiggle while the camera eases
 // around to a 3/4 side view of his face, then drifts back to the chase view (smooth-damped, no cuts).
 function glance(hold = 1.1, amount = 1) { fl.glanceT = hold; fl.glanceAmt = amount; worm.glanceBack(hold + 0.15, fl.camSide); }
@@ -264,7 +271,7 @@ function startFlight(cfg) {
   const N = 800, itemU = cfg.items.map(() => 0), best = cfg.items.map(() => Infinity), q = new THREE.Vector3();
   for (let k = 0; k <= N; k++) { path.getPointAt(k / N, q); cfg.items.forEach((it, i) => { const d = q.distanceToSquared(it.base); if (d < best[i]) { best[i] = d; itemU[i] = k / N; } }); }
   Object.assign(fl, { got: 0, done: false, kingSaid: false, vy: 0, yawRate: 0, glanceT: 0, items: cfg.items, onCollect: cfg.onCollect || null,
-    speed: cfg.speed ?? 8.5, corridor: cfg.corridor ?? [5, 3.5], path, len: path.getLength(), loop: !!cfg.loop, itemU, u: cfg.startU ?? 0, ox: 0, oy: 0, since: 0, helped: false, yaw: null, camSide: cfg.camSide ?? 1, lookDown: cfg.lookDown ?? 0 });
+    speed: cfg.speed ?? 8.5, corridor: cfg.corridor ?? [5, 3.5], path, len: path.getLength(), loop: !!cfg.loop, itemU, u: cfg.startU ?? 0, ox: 0, oy: 0, since: 0, helped: false, yaw: null, camSide: cfg.camSide ?? 1, lookDown: cfg.lookDown ?? 0, nextAhead: !!cfg.nextAhead });
   fl.cam.v = fl.cam.vel = 0; path.getPointAt(((fl.u % 1) + 1) % 1, fl.pos);
   worm.setPose('fly'); worm.state.blend = 1; worm.setGlow(false); worm.lookAt(null);
   drake.setSit(1); drake.setWalk(0); drake.root.scale.setScalar(1);
@@ -409,8 +416,9 @@ $('#c').addEventListener('pointerdown', e => {
 
 // ---------------------------------------------------------------- chapters + buttons
 const ch1 = mods[1] = chapter1(G), ch2 = mods[2] = chapter2(G), ch3 = mods[3] = chapter3(G), ch4 = mods[4] = chapter4(G), ch5 = mods[5] = chapter5(G);
-G.grumble = ch3.cloudActor; G.team = { kepri: ch3.modelTargets.sunDragon, vulcan: ch4.modelTargets.fireDragon }; // shared with chapter 6
+G.grumble = ch3.cloudActor; G.team = { kepri: ch3.modelTargets.sunDragon, vulcan: ch4.modelTargets.fireDragon, shu: ch2.modelTargets.waterDragon, gem: ch5.modelTargets.crystalDragon }; // shared with chapter 6 and free flight
 const ch6 = mods[6] = chapter6(G);
+const free = freeFlight(G);
 // while Griffith speaks in the cave the camera turns to a shot of him (with Drake's side of the cave), then goes back;
 // a chapter can set G.keepShot for a beat that must stay on Worm (the Dragon Stone moment)
 let griffShot = null, griffPrev = null;
@@ -524,6 +532,7 @@ const GO = {
   ch1: () => guard(() => ch1.start('intro')),
   ch2: () => guard(() => ch2.start('intro')), 'ch2-glide': () => guard(() => ch2.start('glide')), 'ch2-warm': () => guard(() => ch2.start('warm')),
   'ch2-hatch': () => guard(() => ch2.start('hatch')), 'ch2-end': () => guard(() => ch2.start('end')),
+  free: () => guard(() => free.start()),
   ch6: () => guard(() => ch6.start('intro')), 'ch6-flight': () => guard(() => ch6.start('flight')), 'ch6-pots': () => guard(() => ch6.start('pots')), 'ch6-end': () => guard(() => ch6.start('end')),
   ch5: () => guard(() => ch5.start('intro')), 'ch5-patterns': () => guard(() => ch5.start('patterns')), 'ch5-flight': () => guard(() => ch5.start('flight')), 'ch5-end': () => guard(() => ch5.start('end')),
   ch4: () => guard(() => ch4.start('intro')), 'ch4-catch': () => guard(() => ch4.start('catch')), 'ch4-flight': () => guard(() => ch4.start('flight')), 'ch4-end': () => guard(() => ch4.start('end')),
@@ -558,7 +567,7 @@ window.__dm = {
   // screen position (CSS px) of the paint pot to tap in ch6, or null
   potScreen() { const p = ch6.nextPotPos(); if (!p) return null; const v = p.project(cam); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
   get progress() { return [...progress.done].sort(); }, get last() { return progress.last; },
-  resetProgress() { progress.done.clear(); progress.last = null; progress.all = false; mathState = newAdaptive({}); try { localStorage.removeItem('dm.progress'); } catch { } refreshTitle(); },
+  resetProgress() { progress.done.clear(); progress.last = null; progress.all = false; progress.free = 0; mathState = newAdaptive({}); try { localStorage.removeItem('dm.progress'); } catch { } refreshTitle(); },
   // screen-space boxes [x0, y0, x1, y1] (CSS px) of Drake and of Worm's head, for layout checks
   actorBoxes() {
     let behind = false; const px = v => { v.project(cam); if (v.z > 1) behind = true; return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; };
@@ -571,7 +580,7 @@ window.__dm = {
   },
   stats: () => ({ ...engine.info(), mode: G.mode, phase: G.phase, stars: fl.got, models: modelStatus(MODEL_KEYS, swapped) }),
   setTier: t => { engine.noAuto = true; engine.setTier(t); },
-  worm, engine, G, ch2, ch3, ch4, ch5, ch6, frameStats, get watchdog() { return dog.nudges; },
+  worm, engine, G, ch2, ch3, ch4, ch5, ch6, free, frameStats, get watchdog() { return dog.nudges; },
 };
 
 (async () => {

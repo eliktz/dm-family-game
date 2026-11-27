@@ -53,6 +53,11 @@ const t4 = Date.now(); check(await drive(p => p === 'c5-celebrate', 400000), `ch
 // 3d. chapter 6 without animation frames: intro, the rail flight collecting by itself, pots, riddles, the sad cloud
 await page.evaluate(() => __dm.go('ch6'));
 const t5 = Date.now(); check(await drive(p => p === 'c6-celebrate', 500000), `chapter 6 from start to the celebration without animation frames (${((Date.now() - t5) / 1000).toFixed(0)} s)`);
+// 3e. free flight without animation frames: the rail keeps collecting, and 🏠 still leaves
+await page.evaluate(() => __dm.go('free')); await page.waitForFunction(() => __dm.phase === 'free' && __dm.free.debug().flying, null, { timeout: 120000 });
+check(await page.waitForFunction(() => __dm.free.debug().count >= 6, null, { timeout: 120000 }).then(() => true, () => false), 'free flight keeps collecting without animation frames');
+await page.locator('#btn-home').dispatchEvent('pointerup');
+check(await page.waitForFunction(() => __dm.mode === 'title' && !__dm.free.debug().flying, null, { timeout: 60000 }).then(() => true, () => false), '🏠 leaves free flight without animation frames');
 // 4. chapter 1 feeding (was a bare requestAnimationFrame loop) without animation frames
 await page.evaluate(() => __dm.go('bond')); await page.locator('#btn-feed').waitFor({ timeout: 120000 }); await page.waitForTimeout(800);
 await page.locator('#btn-feed').dispatchEvent('pointerup');

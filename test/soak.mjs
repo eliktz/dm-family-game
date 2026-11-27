@@ -24,6 +24,19 @@ page.on('crash', () => console.log(`  !! PAGE CRASHED (web process died) at ${st
 page.on('pageerror', e => errors.push('pageerror: ' + e.message + ' @ ' + (e.stack || '').split('\n').slice(0, 4).join(' < ').replace(/https?:\/\/[^/]+\//g, '')));
 page.on('console', m => m.type() === 'error' && errors.push('console: ' + m.text()));
 await page.goto(base + 'index.html?tier=high&all=1'); await page.waitForFunction(() => window.__dm?.ready, null, { timeout: 120000 });
+if (opt('chapter', '') === 'free') { // free flight: fly, leave with 🏠, again; GPU counters must stay flat and the counter must keep rising
+  let bad = 0, first = null;
+  for (let i = 1; i <= LOOPS; i++) {
+    const t0 = Date.now(); await page.evaluate(() => __dm.go('free')); await page.waitForFunction(() => __dm.phase === 'free' && __dm.free.debug().flying, null, { timeout: 120000 });
+    let n = 0, last = Date.now(), stalled = false; while (Date.now() - t0 < 60000) { const c = await page.evaluate(() => __dm.free.debug().count); if (c > n) { n = c; last = Date.now(); } if (Date.now() - last > STALL_S * 1000) { stalled = true; break; } await page.waitForTimeout(500); }
+    await page.locator('#btn-home').dispatchEvent('pointerup'); const home = await page.waitForFunction(() => __dm.mode === 'title', null, { timeout: 60000 }).then(() => true, () => false);
+    const mem = await page.evaluate(() => { const r = __dm.engine.renderer.info; return { geo: r.memory.geometries, tex: r.memory.textures, prog: r.programs.length, tweens: __dm.G.tweenCount(), best: __dm.free.debug().best }; });
+    if (i === 2) first = mem; const grew = first && i > 2 && (mem.geo > first.geo || mem.tex > first.tex || mem.prog > first.prog);
+    const ok = !stalled && home && n >= 10 && !grew && !errors.length; if (!ok) bad++;
+    console.log(`loop ${i}: ${ok ? 'ok' : 'FAIL'} collected ${n} in 60 s, home ${home}, geometries ${mem.geo} textures ${mem.tex} programs ${mem.prog} tweens ${mem.tweens} best ${mem.best}${grew ? ' GPU counters grew' : ''}${errors.length ? ' errors: ' + errors.splice(0).join(' | ') : ''}`);
+  }
+  console.log(`SOAK DONE: ${LOOPS} loops, ${bad} stalls, ${((Date.now() - T0) / 60000).toFixed(1)} min`); await b.close(); server && server.close(); process.exit(bad ? 1 : 0);
+}
 const sig = () => page.evaluate(() => { const d = document.querySelector('#dialog'), c = __dm.math.current(); return [__dm.phase, d.hidden ? '' : d.querySelector('.text').textContent, c ? c.key : '', document.querySelector('#count').textContent, document.querySelector('#card').hidden ? '' : 'card', document.querySelector('#actions').children.length].join('|'); });
 async function diagnose(label) {
   const d = await page.evaluate(async () => {

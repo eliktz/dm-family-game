@@ -118,7 +118,7 @@ export function chapter1(G) {
   function ringTick(dt, time) { for (const r of rings) { if (r.got && lap2) { r.pop += dt; const k = Math.max(0, 1 - r.pop * 2.5); r.g.scale.setScalar(k * (1 + r.pop * 2)); r.g.visible = k > 0; } else if (!r.got && !lifting) r.g.rotation.z = time * 0.8; } ringM.emissiveIntensity = 0.9 + 0.35 * Math.sin(time * 4); }
   // Worm's mind-lift: the power button pulls the next ring straight to him (always works; a short rest between uses)
   function mindLift() {
-    const i = G.nextItem(), r = flightItems[i], now = performance.now(); if (!lap2 || !r || !r.gold || lifting || now - liftAt < 1500 || fl.done) return;
+    const i = G.nextItem(), r = flightItems[i], now = performance.now(); if (!lap2 || !r || !r.gold || lifting || now - liftAt < 2500 || fl.done) return; // 2.5 s rest, like every chapter's power button
     lifting = true; liftAt = now; worm.setGlow(true); worm.wiggle(1); sfx.magic(); const from = r.g.position.clone(); fx.burst(from.clone(), 0x7dffb0, 40, 5, 0.5, 1.0, 0);
     tween(0.45, k => { r.g.position.lerpVectors(from, fl.pos, k * k); fx.trail(r.g.position.clone(), 0x7dffb0, 0.4); }).then(() => { lifting = false; worm.setGlow(false); if (G.tick === ringTick && !r.got && G.nextItem() === i) G.collectNext(); });
   }

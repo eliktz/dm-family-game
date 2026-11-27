@@ -88,7 +88,7 @@ export function chapter6(G) {
     cam.position.lerp(camGoal.pos, Math.min(1, dt * 2)); camLook.lerp(camGoal.look, Math.min(1, dt * 2.5)); cam.lookAt(camLook);
     sun.position.copy(WORM_AT).addScaledVector(world.sunDir, 120); sun.target.position.copy(WORM_AT);
   }
-  function cleanup() { pouring = false; potsDone = null; busy = false; showAll(false); cloud.root.visible = false; cloud.state.mood = null; for (const d of team) { d.root.visible = false; d.setPose('rest'); } $('#counter').hidden = true; }
+  function cleanup() { pouring = false; potsDone = null; busy = false; clearActions(); showAll(false); cloud.root.visible = false; cloud.state.mood = null; for (const d of team) { d.root.visible = false; d.setPose('rest'); } $('#counter').hidden = true; }
   const begin = () => { G.tick = tick; G.onLeave = cleanup; G.tap = onTap; };
   function onTap(ray) { // a tap near the next pot pours into it (generous target)
     if (!pouring || busy) return false;
@@ -181,8 +181,19 @@ export function chapter6(G) {
     sparks = n * 2; G.setCounter(n === 1 ? '2' : `${n} × 2 = ${2 * n}`, '🎨');
     if (LINES[n - 1]) toast('worm', LINES[n - 1], 1900);
   }
+  // The team's power button: Kepri's sunbeam and Vulcan's fireball take turns carrying the next pair of puffs to Worm
+  // (the label shows whose turn it is). Always works; a 2.5 s rest between uses.
+  const POWER = [{ label: '☀️ קרן שמש!', col: 0xffe27a }, { label: '🔥 כדור אש!', col: 0xff8a2a }];
+  let powerAt = 0, powering = false, powerN = 0;
+  function teamPower(btn) {
+    const i = G.nextItem(), it = items[i], now = performance.now(); if (G.phase !== 'c6-flight' || !it || powering || now - powerAt < 2500 || fl.done) return;
+    powering = true; powerAt = now; const who = powerN++ % 2, mate = team[who], from = it.g.position.clone(), head = mate.headWorld(); mate.setGlow(true); mate.wiggle(1.2); if (who) sfx.hic(); else sfx.magic();
+    for (let k = 0; k <= 5; k++) fx.burst(head.clone().lerp(from, k / 5), POWER[who].col, 10, 2, 0.45, 0.7, 0);
+    btn.textContent = POWER[powerN % 2].label;
+    tween(0.5, k => { it.g.position.lerpVectors(from, fl.pos, k * k); fx.trail(it.g.position.clone(), POWER[who].col, 0.45); }).then(() => { powering = false; mate.setGlow(false); if (G.phase === 'c6-flight' && !it.got && G.nextItem() === i) G.collectNext(); });
+  }
   async function flight(step) {
-    showAll(false); cloud.root.visible = false; G.stars.group.visible = false;
+    showAll(false); cloud.root.visible = false; G.stars.group.visible = false; powering = false; powerN = 0; powerAt = 0;
     sparks = 0; for (const it of items) { it.got = false; it.pop = 0; it.g.visible = true; it.g.scale.setScalar(1); it.g.position.copy(it.base); }
     for (const d of team) { outdoor.add(d.root); d.root.visible = true; d.setPose('fly'); d.state.blend = 1; d.lookAt(null); }
     const P = (a, y) => V(Math.cos(a) * 41, PLATEAU + y, Math.sin(a) * 41);
@@ -190,8 +201,10 @@ export function chapter6(G) {
     G.phase = 'c6-flight'; G.checkpoint(6, 'flight'); G.setCounter('0', '🎨');
     await step(fade(false)); G.showJoy(true); worm.wiggle(1); G.glance(1.4);
     toast('worm', 'בכל זוג עננים מסתתרים 2 ניצוצות צבע. טסים סביב כל הטירה!', 3600);
+    await step(wait(3700));
+    actions([{ id: 'btn-team-power', label: POWER[0].label, onClick: teamPower }]);
     await step(G.waitFor(() => fl.got >= items.length));
-    G.phase = 'c6-flight-done'; fl.done = true; G.showJoy(false); sfx.fanfare(); worm.wiggle(2); G.glance(1.8);
+    G.phase = 'c6-flight-done'; fl.done = true; G.showJoy(false); clearActions(); sfx.fanfare(); worm.wiggle(2); G.glance(1.8);
     toast('worm', '6 זוגות של 2: שנים־עשר ניצוצות! תודה, צוות!', 2800);
     await step(wait(2800));
   }

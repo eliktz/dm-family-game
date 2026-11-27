@@ -78,8 +78,13 @@ A Hebrew, iPad-first, **plot-driven** three.js game for Elik's 7-year-old son, b
 - **Chapter 2 river glide:** ten pairs on a ~407 m rail (`buildBubbles(10, -168, 34)`, speed 7: about 44-49 s of real flying to the last pair). Shu is moved into the outdoor scene for
   the glide and swims just ahead of Worm (`swim` in ch2.js `tick`); `shuHome()` puts her back in the cave scene before her arrival beat and on
   leaving. `#btn-splash` (💦) lifts the next pair to Worm, the same pattern as chapter 1's `#btn-lift`.
+- **Free flight (`src/chapters/free.js`, `__dm.go('free')`, title button `#btn-free`):** opens when chapter 1 is finished (or with unlock-all). No
+  dialogue at all. The chapter 1 rail with a wide corridor and `startFlight({ nextAhead: true })` (the next item is the nearest one AHEAD, because
+  the 16 items respawn when Worm is on the far side of the loop). Every 10 collected is a burst; friends whose chapters are done fly along two at
+  a time (`G.team`: shu, kepri, vulcan, gem) and swap every 20, each with a power button (`#btn-free-<key>`). Shu and the crystal dragon are moved
+  back to the cave scene on leaving. Best count: `dm.progress.free`. All power buttons in the game rest 2.5 s.
 - **Chapter 6 (cloud):** `src/chapters/ch6.js`: a rail flight (`G.startFlight`, mode `flight`) with Kepri and Vulcan borrowed from chapters 3-4
-  through `G.team`, then the lawn (mode `paint`). The Grumble Cloud is one shared actor (`G.grumble`, built in ch3.js, GLB key `grumbleCloud`); its
+  through `G.team` (`#btn-team-power`: Kepri's sunbeam and Vulcan's fireball take turns carrying the next pair to Worm), then the lawn (mode `paint`). The Grumble Cloud is one shared actor (`G.grumble`, built in ch3.js, GLB key `grumbleCloud`); its
   expression loops are set with `state.mood` ('sad' / 'happy'). Debug: `__dm.go('ch6' | 'ch6-flight' | 'ch6-pots' | 'ch6-end')`, `__dm.potScreen()`.
 - **Chapter 5 (crystals):** `src/chapters/ch5.js` in the cave scene (mode `cave`, cameras through `G.camGoal`). After the rainbow crystal comes
   the crystal tunnel (mode `flight`, phases `c5-fly-ready` → `c5-flight` → `c5-flight-done`): a helix tube built once in the OUTDOOR scene high above
